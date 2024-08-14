@@ -6,9 +6,11 @@
     using LOR_DiceSystem;
     using StoryScene;
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
+    using System.Reflection.Emit;
     using TMPro;
     using UI;
     using UI.Title;
@@ -338,6 +340,24 @@
 
             return false;
         }
+
+        [HarmonyPatch(nameof(LibraryModel.IsBinahLockedInLibrary))]
+        [HarmonyPrefix]
+        static bool IsBinahLockedInLibraryPrefix(LibraryModel __instance, ref bool __result)
+        {
+            __result = !APPlaythruManager.BinahUnlocked;
+
+            return false;
+        }
+
+        [HarmonyPatch(nameof(LibraryModel.IsBlackSilenceLockedInLibrary))]
+        [HarmonyPrefix]
+        static bool IsBlackSilenceLockedInLibraryPrefix(LibraryModel __instance, ref bool __result)
+        {
+            __result = !APPlaythruManager.BlackSilenceUnlocked;
+
+            return false;
+        }
     }
 
     [HarmonyPatch(typeof(LibraryFloorModel))]
@@ -365,56 +385,6 @@
         [HarmonyPrefix]
         static bool FeedBookTargetSephirahPrefix(UIBookPanel __instance, SephirahType sep)
         {
-            // UIGachaResultPopup
-            string id = "";
-            switch (sep)
-            {
-                case SephirahType.None:
-                    id = "";
-                    break;
-                case SephirahType.Malkuth:
-                    id = "ui_malkuthfloor";
-                    break;
-                case SephirahType.Yesod:
-                    id = "ui_yesodfloor";
-                    break;
-                case SephirahType.Hod:
-                    id = "ui_hodfloor";
-                    break;
-                case SephirahType.Netzach:
-                    id = "ui_netzachfloor";
-                    break;
-                case SephirahType.Tiphereth:
-                    id = "ui_tipherethfloor";
-                    break;
-                case SephirahType.Chesed:
-                    id = "ui_chesedfloor";
-                    break;
-                case SephirahType.Gebura:
-                    id = "ui_geburafloor";
-                    break;
-                case SephirahType.Hokma:
-                    id = "ui_hokmafloor";
-                    break;
-                case SephirahType.Binah:
-                    id = "ui_binahfloor";
-                    break;
-                case SephirahType.Keter:
-                    id = "ui_keterfloor";
-                    break;
-            }
-            Traverse.Create(UIGachaResultPopup.Instance).Field<TextMeshProUGUI>("txt_floorName").Value.text = TextDataModel.GetText(id);
-            Traverse.Create(UIGachaResultPopup.Instance).Field<TextMeshProUGUI>("txt_floorName").Value.color = UIColorManager.Manager.GetSephirahColor(sep);
-            TextMeshProMaterialSetter component = Traverse.Create(UIGachaResultPopup.Instance).Field<TextMeshProUGUI>("txt_floorName").Value.GetComponent<TextMeshProMaterialSetter>();
-            if (component != null)
-            {
-                component.underlayColor = UIColorManager.Manager.GetSephirahGlowColor(sep);
-            }
-            Traverse.Create(UIGachaResultPopup.Instance).Field<Image>("Img_bgFrame").Value.color = UIColorManager.Manager.GetSephirahColor(sep);
-
-            UIGachaResultPopup.Instance.SetDefault();
-            UIGachaResultPopup.Instance._currentPage = 0;
-
             LibraryFloorModel floor = LibraryModel.Instance.GetFloor(sep);
             List<BookDropResult> list = new List<BookDropResult>();
 
@@ -425,18 +395,25 @@
                 switch (currentAddedBookId.id)
                 {
                     case 123456:
-                        book = APPlaythruManager.ObjetdartBook;
-                        BookDropResult result = new BookDropResult();
-
-                        var rng = RandomUtil.SelectOne(book.DropItemList.Where(p => Singleton<BookInventoryModel>.Instance.GetBookCount(p.id) == 0).ToList());
-                        result.id = rng.id;
-                        result.bookInstanceId = Singleton<BookInventoryModel>.Instance.CreateBook(new LorId(rng.id.id)).instanceId;
-                        result.itemType = DropItemType.Equip;
-                        result.number = 1;
-                        list.Add(result);
+                        list.Add(APPlaythruManager.GetDropEquip(Rarity.Common));
+                        break;
+                    case 123457:
+                        list.Add(APPlaythruManager.GetDropEquip(Rarity.Uncommon));
+                        break;
+                    case 123458:
+                        list.Add(APPlaythruManager.GetDropEquip(Rarity.Rare));
+                        break;
+                    case 123459:
+                        list.Add(APPlaythruManager.GetDropEquip(Rarity.Unique));
+                        break;
+                    case 123460:
+                        list.AddRange(APPlaythruManager.GetDropCards(9));
+                        break;
+                    case 123461:
+                        list.AddRange(APPlaythruManager.GetDropCards(18));
                         break;
                     default:
-                        result = new BookDropResult();
+                        var result = new BookDropResult();
                         result.bookInstanceId = 161616;
                         result.number = book.id.id;
                         list.Add(result);
@@ -448,9 +425,7 @@
 
             UIGachaEffect.instance.StartGachaProcess(sep, floor.Level);
 
-            Traverse.Create(UIGachaResultPopup.Instance).Field<List<BookDropResult>>("DropList").Value = list;
-
-            UIGachaResultPopup.Instance.UpdateGachaList();
+            UIGachaResultPopup.Instance?.SetData(list, sep);
 
             LibraryModel.Instance.CheckAllCards();
             LibraryModel.Instance.CheckAllEquips();
@@ -464,24 +439,36 @@
 
     [HarmonyPatch(typeof(UIGachaResultPopup))]
     internal class UIGachaResultPopupPatches
-    {
+    {   // Remove parts of the code that update cards, and only save parts of the code that make cards visible
+        // Don't even fucking ask me why. It just doesn't work otherwise.
         [HarmonyPatch(nameof(UIGachaResultPopup.UpdateGachaList))]
-        [HarmonyPrefix]
-        static bool UpdateGachaListPrefix(UIGachaResultPopup __instance)
+        [HarmonyTranspiler]
+        static IEnumerable<CodeInstruction> UpdateGachaListTranspiler(IEnumerable<CodeInstruction> instructions)
         {
-            __instance.InitPopup();
-            typeof(UIGachaResultPopup).GetMethod("UpdatePageButtons", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(__instance, null);
-            var _currentViewDropList = Traverse.Create(__instance).Field<List<BookDropResult>>("_currentViewDropList").Value;
-            _currentViewDropList = new List<BookDropResult>();
-            var _gachaSlotList = Traverse.Create(__instance).Field<List<UIGachaSlot>>("_gachaSlotList").Value;
-            var DropList = Traverse.Create(__instance).Field<List<BookDropResult>>("DropList").Value;
-            for (int i = _gachaSlotList.Count * __instance._currentPage; i < _gachaSlotList.Count * (__instance._currentPage + 1); i++)
+            List<CodeInstruction> newInstructions = instructions.ToList();
+
+            int index1 = newInstructions.FindIndex(instruction => instruction.opcode == OpCodes.Stloc_2) - 4;
+            int index2 = newInstructions.IndexOf(newInstructions.FindAll(instruction => instruction.opcode == OpCodes.Ldc_I4_1)[2]) - 4; //FindIndex(instruction => instruction.opcode == OpCodes.Ldc_I4_1) - 4;
+
+            for (int i = index1; i < index2; i++)
             {
-                if (i < DropList.Count)
-                {
-                    _currentViewDropList.Add(DropList[i]);
-                }
+                newInstructions[i] = new CodeInstruction(OpCodes.Nop);
             }
+
+            for (int z = 0; z < newInstructions.Count; z++)
+            {
+                yield return newInstructions[z];
+            }
+                
+        }
+        
+        // This postfix updates the cards
+        [HarmonyPatch(nameof(UIGachaResultPopup.UpdateGachaList))]
+        [HarmonyPostfix]
+        static void UpdateGachaListPostfix(UIGachaResultPopup __instance)
+        {
+            var _currentViewDropList = Traverse.Create(__instance).Field<List<BookDropResult>>("_currentViewDropList").Value;
+            var _gachaSlotList = Traverse.Create(__instance).Field<List<UIGachaSlot>>("_gachaSlotList").Value;
             for (int j = 0; j < _gachaSlotList.Count; j++)
             {
                 if (j < _currentViewDropList.Count)
@@ -501,12 +488,14 @@
                         slot.equipSlot.IconGlow.sprite = UISpriteDataManager.instance?.GetStoryIcon("Chapter1").iconGlow;
                         Color uIColor = UIColorManager.Manager.GetUIColor(UIColor.Default);
                         Color equipRarityColor = UIColorManager.Manager.GetEquipRarityColor(Rarity.Unique);
-                        typeof(UIGachaSlot).GetMethod("SetColor", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(slot.equipSlot, new object[] { uIColor });
-                        typeof(UIGachaSlot).GetMethod("SetGlowColor", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(slot.equipSlot, new object[] { equipRarityColor });
+                        typeof(UIGachaEquipSlot).GetMethod("SetColor", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(slot.equipSlot, new object[] { uIColor });
+                        typeof(UIGachaEquipSlot).GetMethod("SetGlowColor", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(slot.equipSlot, new object[] { equipRarityColor });
+
+                        slot.selectable.interactable = false;
 
                         continue;
                     }
-
+                    
                     if (bookDropResult.itemType == DropItemType.Card)
                     {
                         _gachaSlotList[j].SetCard(new DiceCardItemModel(ItemXmlDataList.instance.GetCardItem(bookDropResult.id)), j);
@@ -515,27 +504,39 @@
                     {
                         _gachaSlotList[j].SetEquip(Singleton<BookInventoryModel>.Instance.GetBookByInstanceId(bookDropResult.bookInstanceId), j);
                     }
-                    _gachaSlotList[j].SetActiveSlotAll(b: true);
-                }
-                else
-                {
-                    _gachaSlotList[j].SetActiveSlotAll(b: false);
                 }
             }
+        }
+    }
 
-            return false;
+    [HarmonyPatch(typeof(UIGachaSlot))]
+    internal class UIGachaSlotPatches
+    {
+        [HarmonyPatch(nameof(UIGachaSlot.OnPointerEnter))]
+        [HarmonyPrefix]
+        static bool OnPointerEnterPrefix(UIGachaSlot __instance)
+        {
+            if (!__instance.isCard && __instance.equipSlot._book == null)
+            {
+                return false;
+            }
+
+            return true;
         }
 
-        [HarmonyPatch(nameof(UIGachaResultPopup.PointerEnterSlot), typeof(UIGachaEquipSlot))]
+        [HarmonyPatch(nameof(UIGachaSlot.OnPointerExit))]
         [HarmonyPrefix]
-        static bool PointerEnterSlotPrefix(UIGachaResultPopup __instance, UIGachaEquipSlot gachaEquip)
+        static bool OnPointerExitPrefix(UIGachaSlot __instance)
         {
-            if (gachaEquip._book == null)
+            if (!__instance.isCard && __instance.equipSlot._book == null)
+            {
                 return false;
+            }
 
             return true;
         }
     }
+
 
     [HarmonyPatch(typeof(StageClassInfo))]
     internal class StageClassInfoPatches
@@ -719,11 +720,27 @@
         [HarmonyPrefix]
         static bool NamePrefix(DropBookXmlInfo __instance, ref string __result)
         {
-            if (__instance._id == 123456)
+            switch (__instance._id)
             {
-                __result = "Objet d'art Page";
-                return false;
-            } 
+                case 123456:
+                    __result = "Paperback Page";
+                    return false;
+                case 123457:
+                    __result = "Hardcover Page";
+                    return false;
+                case 123458:
+                    __result = "Limited Page";
+                    return false;
+                case 123459:
+                    __result = "Objet d'art Page";
+                    return false;
+                case 123460:
+                    __result = "x9 Combat Page Pack";
+                    return false;
+                case 123461:
+                    __result = "x18 Combat Page Pack";
+                    return false;
+            }
 
             return true;
         }
@@ -755,8 +772,28 @@
             switch (dropBookInfo.id.id)
             {
                 case 123456:
+                    fakeInfo.InnerName = "Random Paperback Key Page";
+                    fakeInfo.Rarity = Rarity.Common;
+                    break;
+                case 123457:
+                    fakeInfo.InnerName = "Random HardcoverKey Page";
+                    fakeInfo.Rarity = Rarity.Uncommon;
+                    break;
+                case 123458:
+                    fakeInfo.InnerName = "Random Limited Key Page";
+                    fakeInfo.Rarity = Rarity.Rare;
+                    break;
+                case 123459:
                     fakeInfo.InnerName = "Random Objet d'art Key Page";
                     fakeInfo.Rarity = Rarity.Unique;
+                    break;
+                case 123460:
+                    fakeInfo.InnerName = "Random Combat Page x9";
+                    fakeInfo.Rarity = Rarity.Common;
+                    break;
+                case 123461:
+                    fakeInfo.InnerName = "Random Combat Page x18";
+                    fakeInfo.Rarity = Rarity.Uncommon;
                     break;
                 default:
                     fakeInfo.InnerName = "Archipelago Check";
@@ -1103,6 +1140,19 @@
                 __result = RandomUtil.SelectOne(list);
             }
             __result = null;
+
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(BookModel))]
+    internal class BookModelPatches
+    {
+        [HarmonyPatch(nameof(BookModel.GetMaxPassiveCost))]
+        [HarmonyPrefix]
+        static bool NamePrefix(DropBookXmlInfo __instance, ref int __result)
+        {
+            __result = APPlaythruManager.MaxPassiveCost;
 
             return false;
         }
