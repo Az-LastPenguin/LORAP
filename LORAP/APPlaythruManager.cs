@@ -1,19 +1,34 @@
-﻿using CustomInvitation;
+﻿using GameSave;
 using HarmonyLib;
-using MonoMod.RuntimeDetour;
+using SaveTest;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using UI;
-using UnityEngine.UIElements.UIR;
 
 namespace LORAP
 {
+    internal class RarityDropInfo
+    {
+        public int totalPacks = 0;
+        public int packsUsed = 0;
+        public List<int> notFoundItems = new List<int>();
+    }
+
     internal static class APPlaythruManager
     {
+        internal static int ItemsReceived = 0;
+
+        internal static int Seed = 143;
+
+        internal static int Fillers = 10;
+
+        internal static int Traps = 10;
+
+
         internal static List<int> OpenedReceptions = new List<int>();
 
-        internal static Dictionary<SephirahType, int> EmotionCardAmounts = new Dictionary<SephirahType, int>()
+        internal static Dictionary<SephirahType, int> AbnoPageAmounts = new Dictionary<SephirahType, int>()
         {
             [SephirahType.Keter] = 0,
             [SephirahType.Malkuth] = 0,
@@ -61,109 +76,126 @@ namespace LORAP
 
         internal static int MaxPassiveCost = 8;
 
-        private static List<int> BookIds = new List<int>() { 200001, 200002, 200003, 200004, 200005, 200006, 200007, 200008, 200009, 200010, 200011, 200012, 200013, 200014, 200015, 200016,
-        210001, 210002, 210003, 210004, 210008, 210009,
-        220001, 220002, 220003, 220004, 220005, 220006, 220007, 220008, 220009, 220010, 220011, 220012, 220013, 220014, 220015, 220016, 220017, 220018, 220019, 220020, 220021,
-        230001, 230002, 230003, 230004, 230005, 230006, 230007, 230008, 230009, 230010, 230011, 230012, 230013, 230014, 230015, 230016, 230017, 230018, 230019, 230020, 230021, 230022, 230023,
-        230024, 230025, 230026, 230027, 230028, 230029, 230030,
-        240001, 240002, 240003, 240004, 240005, 240006, 240008, 240009, 240010, 240011, 240012, 240013, 240014, 240015, 240016, 240017, 240018, 240019, 240020, 240021, 240022, 240023, 243001,
-        243002, 243003, 243004,
-        250001, 250002, 250003, 250004, 250005, 250006, 250007, 250008, 250009, 250010, 250011, 250012, 250013, 250014, 250015, 250016, 250017, 250018, 250019, 250020, 250021, 250022, 250023,
-        250024, 250025, 250026, 250027, 250028, 250029, 250030, 250031, 250032, 250033, 250034, 250035, 250036, 250037, 243005, 252001, 252002, 253001, 254001, 254002, 255001, 255002, 256002,
-        260001, 260002, 260003, 260004};
-
-        internal static List<DropBookXmlInfo> CustomBooks = new List<DropBookXmlInfo>();
-
-        private static DropBookXmlInfo CreateCustomBook(int id, DropItemState state, int dropNum, List<BookDropItemInfo> dropList)
+        internal static Dictionary<Rarity, RarityDropInfo> RarityDrops = new Dictionary<Rarity, RarityDropInfo>()
         {
-            var Book = new DropBookXmlInfo();
-            Book._id = id;
-            Book.workshopName = "";
-            Book.workshopID = "Archipelago";
-            Book.itemDropState = state;
-            Book.DropNum = dropNum;
-            Book.DropItemList = dropList;
-            //Book.InitializeDropItemList(id.ToString());
-            Traverse.Create(Singleton<DropBookXmlList>.Instance).Field<List<DropBookXmlInfo>>("_list").Value.Add(Book);
-            Traverse.Create(Singleton<DropBookXmlList>.Instance).Field<Dictionary<LorId, DropBookXmlInfo>>("_dict").Value.Add(Book.id, Book);
+            [Rarity.Common] = new RarityDropInfo(),
+            [Rarity.Uncommon] = new RarityDropInfo(),
+            [Rarity.Rare] = new RarityDropInfo(),
+            [Rarity.Unique] = new RarityDropInfo(),
+        };
 
-            return Book;
-        }
 
-        internal static void SetupGame()
+        internal static void LoadFromSaveData(SaveData saveData)
         {
-            // Custom books for drops
-            List<BookDropItemInfo> CommonKeyPages = new List<BookDropItemInfo>();
-            List<BookDropItemInfo> UncommonKeyPages = new List<BookDropItemInfo>();
-            List<BookDropItemInfo> RareKeyPages = new List<BookDropItemInfo>();
-            List<BookDropItemInfo> UniqueKeyPages = new List<BookDropItemInfo>();
+            LORAP.Instance.LogInfo("Loading the game...");
 
-            List<BookDropItemInfo> CombatPages = new List<BookDropItemInfo>();
-
-            List<int> foundIds = new List<int>();
-
-            foreach (int bid in BookIds)
+            ItemsReceived = saveData.GetData("itemsReceived").GetIntSelf();
+            foreach (SaveData dat in saveData.GetData("openedReceptions"))
             {
-                var book = Singleton<DropBookXmlList>.Instance.GetData(bid);
-
-                foreach (var p in book.DropItemList)
-                {
-                    if (foundIds.Contains(p.id.id) || (p.itemType == DropItemType.Card && ItemXmlDataList.instance.GetCardItem(p.id).isError))
-                        continue;
-
-                    if (p.itemType == DropItemType.Equip)
-                    {
-                        var info = Singleton<BookXmlList>.Instance.GetData(p.id);
-
-                        switch (info.Rarity)
-                        {
-                            case Rarity.Common:
-                                CommonKeyPages.Add(p);
-                                break;
-                            case Rarity.Uncommon:
-                                UncommonKeyPages.Add(p);
-                                break;
-                            case Rarity.Rare:
-                                RareKeyPages.Add(p);
-                                break;
-                            case Rarity.Unique:
-                                UniqueKeyPages.Add(p);
-                                break;
-                        }
-                    }
-                    else if (p.itemType == DropItemType.Card)
-                    {
-                        CombatPages.Add(p);
-                    }
-
-                    foundIds.Add(p.id.id);
-                }
+                OpenedReceptions.Add(dat.GetIntSelf());
             }
 
-            CustomBooks.Add(CreateCustomBook(123456, DropItemState.Equip, 1, CommonKeyPages));
-            CustomBooks.Add(CreateCustomBook(123457, DropItemState.Equip, 1, UncommonKeyPages));
-            CustomBooks.Add(CreateCustomBook(123458, DropItemState.Equip, 1, RareKeyPages));
-            CustomBooks.Add(CreateCustomBook(123459, DropItemState.Equip, 1, UniqueKeyPages));
+            int num = 0;
+            foreach (var d in saveData.GetData("abnoPageAmounts"))
+            {
+                AbnoPageAmounts[AbnoPageAmounts.Keys.ElementAt(num)] = d.GetIntSelf();
+                num++;
+            }
 
-            CustomBooks.Add(CreateCustomBook(123460, DropItemState.Card, 9, CombatPages));
-            CustomBooks.Add(CreateCustomBook(123461, DropItemState.Card, 18, CombatPages));
+            num = 0;
+            foreach (var d in saveData.GetData("egoAmounts"))
+            {
+                EGOAmounts[EGOAmounts.Keys.ElementAt(num)] = d.GetIntSelf();
+                num++;
+            }
+
+            num = 0;
+            foreach (var d in saveData.GetData("abnoProgress"))
+            {
+                AbnoProgress[AbnoProgress.Keys.ElementAt(num)] = d.GetIntSelf();
+                num++;
+            }
+
+            BinahUnlocked = saveData.GetData("binahUnlocked").GetIntSelf() == 1;
+            BlackSilenceUnlocked = saveData.GetData("blackSilenceUnlocked").GetIntSelf() == 1;
+            MaxPassiveCost = saveData.GetData("maxPassiveCost").GetIntSelf();
+
+            num = 0;
+            foreach (var d in saveData.GetData("rarityDrops"))
+            {
+                RarityDrops[RarityDrops.Keys.ElementAt(num)].packsUsed = d.GetInt("packsUsed");
+                foreach (var dt in d.GetData("notFoundItems"))
+                {
+                    RarityDrops[RarityDrops.Keys.ElementAt(num)].notFoundItems.Add(dt.GetIntSelf());
+                }
+
+                num++;
+            }
         }
 
-        internal static void OpenReception(int id)
+        internal static SaveData GetSaveData()
         {
-            OpenedReceptions.Add(id);
+            LORAP.Instance.LogInfo("Saving the game...");
 
-            (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel.SetStoryLine();
+            SaveData saveData = new SaveData();
+
+            saveData.AddData("itemsReceived", new SaveData(ItemsReceived));
+            saveData.AddData("openedReceptions", new SaveData(OpenedReceptions));
+
+            SaveData _saveData = new SaveData();
+            foreach (var d in AbnoPageAmounts)
+            {
+                _saveData.AddToList(new SaveData(d.Value));
+            }
+            saveData.AddData("abnoPageAmounts", _saveData);
+
+            _saveData = new SaveData();
+            foreach (var d in EGOAmounts)
+            {
+                _saveData.AddToList(new SaveData(d.Value));
+            }
+            saveData.AddData("egoAmounts", _saveData);
+
+            _saveData = new SaveData();
+            foreach (var d in AbnoProgress)
+            {
+                _saveData.AddToList(new SaveData(d.Value));
+            }
+            saveData.AddData("abnoProgress", _saveData);
+
+            saveData.AddData("binahUnlocked", new SaveData(BinahUnlocked ? 1 : 0));
+            saveData.AddData("blackSilenceUnlocked", new SaveData(BlackSilenceUnlocked ? 1 : 0));
+            saveData.AddData("maxPassiveCost", new SaveData(MaxPassiveCost));
+
+            _saveData = new SaveData();
+            foreach (var d in RarityDrops)
+            {
+                SaveData _saveData2 = new SaveData();
+
+                _saveData2.AddData("packsUsed", new SaveData(d.Value.packsUsed));
+                SaveData _saveData3 = new SaveData();
+                foreach (var id in d.Value.notFoundItems)
+                {
+                    _saveData3.AddToList(new SaveData(id));
+                }
+                _saveData2.AddData("notFoundItems", _saveData3);
+
+                _saveData.AddToList(_saveData2);
+            }
+            saveData.AddData("rarityDrops", _saveData);
+
+            return saveData;
         }
 
-        internal static bool GetReceptionOpened(int id)
+
+        internal static bool IsReceptionOpened(int id)
         {
             return OpenedReceptions.Contains(id);
         }
 
         private static void FloorUpgradePopup(string text, SephirahType seph = SephirahType.None)
         {
-            if (UI.UIController.Instance.CurrentUIPhase == UIPhase.Sephirah && seph != SephirahType.None)
+            if (UI.UIController.Instance.CurrentUIPhase == UIPhase.Sephirah && seph != SephirahType.None && LibraryModel.Instance.IsOpenedSephirah(seph))
             {
                 GameSceneManager.Instance.ActivateUIController();
                 UI.UIController.Instance.SetCurrentSephirah(seph);
@@ -214,6 +246,14 @@ namespace LORAP
             return floor;
         }
 
+
+        internal static void OpenReception(int id)
+        {
+            OpenedReceptions.Add(id);
+
+            (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel.SetStoryLine();
+        }
+
         internal static void OpenFloor(SephirahType seph)
         {
             if (LibraryModel.Instance.IsOpenedSephirah(seph)) return;
@@ -230,23 +270,24 @@ namespace LORAP
             FloorUpgradePopup($"{FloorName(seph)} was Opened!", seph);
         }
 
-        internal static void LevelUpFloor(SephirahType seph)
+        internal static void AddAnboPages(SephirahType seph)
         {
-            if (EGOAmounts[seph] > 4) return;
+            if (AbnoPageAmounts[seph] > 4) return;
 
-            EmotionCardAmounts[seph]++;
+            AbnoPageAmounts[seph]++;
 
             //if (UI.UIController.Instance.CurrentUIPhase == UIPhase.Sephirah)
             //    UIGetAbnormalityPanel.instance.SetData(LibraryModel.Instance.GetFloor(seph));
             //else
-            FloorUpgradePopup($"{FloorName(seph)} upgrade! +3 Emotion Cards!", seph);
+            FloorUpgradePopup($"{FloorName(seph)} upgrade! +3 Abnormality Pages!", seph);
         }
 
         internal static void AddLibrarian(SephirahType seph)
         {
-            if (EGOAmounts[seph] > 4) return;
-
             var floor = Traverse.Create(LibraryModel.Instance).Field("_floorList").GetValue<List<LibraryFloorModel>>().Find(f => f.Sephirah == seph);
+
+            if (floor.GetOpendUnitCount() > 4) return;
+
             floor.SetOpenedUnitCount(Math.Min(5, floor.GetOpendUnitCount() + 1));
             FloorUpgradePopup($"{FloorName(seph)} upgrade! +1 Librarian!", seph);
         }
@@ -261,80 +302,14 @@ namespace LORAP
 
         internal static void AddAbnoProgress(SephirahType seph)
         {
-            if (EGOAmounts[seph] > 5) return;
+            if (AbnoProgress[seph] > 5) return;
 
             AbnoProgress[seph]++;
         }
 
         internal static void GiveCustomBook(int i, int num = 1)
         {
-            int max = 1;
-            switch (i)
-            {
-                case 0:
-                    max = 5;
-                    break;
-                case 1:
-                    max = 4;
-                    break;
-                case 2:
-                    max = 3;
-                    break;
-            }
-
-            if (CustomBooks[i].DropItemList.Where(p => Singleton<BookInventoryModel>.Instance.GetBookCount(p.id) < max).Count() > 0)
-                Singleton<DropBookInventoryModel>.Instance.AddBook(CustomBooks[i].id, num);
-        }
-
-        internal static BookDropResult GetDropEquip(Rarity rarity)
-        {
-            var pool = CustomBooks[(int)rarity];
-
-            BookDropResult result = new BookDropResult();
-
-            int max = 1;
-            switch (rarity)
-            {
-                case Rarity.Common:
-                    max = 5;
-                    break;
-                case Rarity.Uncommon:
-                    max = 4;
-                    break;
-                case Rarity.Rare:
-                    max = 3;
-                    break;
-            }
-
-            var rng = RandomUtil.SelectOne(pool.DropItemList.Where(p => Singleton<BookInventoryModel>.Instance.GetBookCount(p.id) < max).ToList());
-            result.id = rng.id;
-            result.bookInstanceId = Singleton<BookInventoryModel>.Instance.CreateBook(rng.id).instanceId;
-            result.itemType = DropItemType.Equip;
-            result.number = 1;
-
-            return result;
-        }
-
-        internal static List<BookDropResult> GetDropCards(int amount)
-        {
-            var pool = CustomBooks[4];
-            List<BookDropResult> Drops = new List<BookDropResult>();
-
-            for (int i = 0; i < amount; i++)
-            {
-                BookDropResult result = new BookDropResult();
-
-                var rng = RandomUtil.SelectOne(pool.DropItemList);
-                LORAP.Instance.LogInfo($"{rng.id} {ItemXmlDataList.instance.GetCardItem(rng.id).id} {ItemXmlDataList.instance.GetCardItem(rng.id).isError}");
-                Singleton<InventoryModel>.Instance.AddCard(rng.id);
-                result.id = rng.id;
-                result.itemType = DropItemType.Card;
-                result.number = 1;
-
-                Drops.Add(result);
-            }
-
-            return Drops;
+            Singleton<DropBookInventoryModel>.Instance.AddBook(CustomContentManager.CustomBooks[i].id, num);
         }
 
         internal static void UpMaxPassiveCost()
@@ -359,6 +334,116 @@ namespace LORAP
             LibraryModel.Instance.GetFloor(SephirahType.Keter).GetUnitDataList().Find((UnitDataModel x) => x.isSephirah)?.ResetForBlackSilence();
             FloorUpgradePopup($"Library upgrade! Black Silence unlocked!", SephirahType.Keter);
         }
+
+
+        internal static List<BookDropResult> GenerateBoosterDrops(Rarity rarity)
+        {
+            var amount = 16;
+            switch (rarity)
+            {
+                case Rarity.Uncommon:
+                    amount = 12;
+                    break;
+                case Rarity.Rare:
+                    amount = 8;
+                    break;
+                case Rarity.Unique:
+                    amount = 4;
+                    break;
+            }
+
+            RarityDropInfo info = RarityDrops[rarity];
+
+            info.packsUsed++;
+
+            var pack = CustomContentManager.CustomBooks[(int)rarity];
+            List<BookDropResult> Drops = new List<BookDropResult>();
+
+            var rng = new Random();
+
+            for (int i = 0; i < amount; i++)
+            {
+                BookDropResult result = new BookDropResult();
+
+                BookDropItemInfo selected;
+
+                // Guarantee a copy of each page
+                int amountToDrop = Math.Max(0, (info.totalPacks - info.packsUsed) * amount);
+                if (amountToDrop < info.notFoundItems.Count)
+                {
+                    int guarantee = info.notFoundItems[0];
+                    info.notFoundItems.RemoveAt(0);
+                    LORAP.Instance.LogInfo($"Guaranteeing drop of {guarantee}");
+
+                    var drop = pack.DropItemList.Find(i => i.id.id == guarantee);
+                    if (drop.itemType == DropItemType.Equip)
+                    {
+                        result.id = drop.id;
+                        result.bookInstanceId = Singleton<BookInventoryModel>.Instance.CreateBook(drop.id).instanceId;
+                        result.itemType = DropItemType.Equip;
+                        result.number = 1;
+                    }
+                    else
+                    {
+                        Singleton<InventoryModel>.Instance.AddCard(drop.id);
+                        result.id = drop.id;
+                        result.itemType = DropItemType.Card;
+                        result.number = 1;
+                    }
+
+                    Drops.Add(result);
+
+                    continue;
+                }
+
+                if (rng.NextDouble() < 0.50) // Equip
+                {
+                    int max = 1;
+                    switch (rarity)
+                    {
+                        case Rarity.Common:
+                            max = 5;
+                            break;
+                        case Rarity.Uncommon:
+                            max = 4;
+                            break;
+                        case Rarity.Rare:
+                            max = 3;
+                            break;
+                    }
+
+                    var pool = pack.DropItemList.Where(i => i.itemType == DropItemType.Equip && Singleton<BookInventoryModel>.Instance.GetBookCount(i.id) < max).ToList();
+
+                    if (pool.Count > 0)
+                    {
+                        selected = RandomUtil.SelectOne(pool);
+                        info.notFoundItems.Remove(selected.id.id);
+                        result.id = selected.id;
+                        result.bookInstanceId = Singleton<BookInventoryModel>.Instance.CreateBook(selected.id).instanceId;
+                        result.itemType = DropItemType.Equip;
+                        result.number = 1;
+
+                        Drops.Add(result);
+
+                        continue;
+                    }
+                }
+
+                selected = RandomUtil.SelectOne(pack.DropItemList.Where(i => i.itemType == DropItemType.Card).ToList());
+                info.notFoundItems.Remove(selected.id.id);
+                Singleton<InventoryModel>.Instance.AddCard(selected.id);
+                result.id = selected.id;
+                result.itemType = DropItemType.Card;
+                result.number = 1;
+
+                Drops.Add(result);
+            }
+
+            LORAP.Instance.LogInfo($"{rarity} Pack Use Progress: {info.packsUsed}/{info.totalPacks}");
+            LORAP.Instance.LogInfo($"{rarity} Drops Progress: {pack.DropItemList.Count - info.notFoundItems.Count}/{pack.DropItemList.Count}");
+
+            return Drops;
+        }
     }
 
     internal static class LORClassExtensions
@@ -370,7 +455,7 @@ namespace LORAP
 
         internal static int GetEmotionCardAmount(this LibraryFloorModel floor)
         {
-            return APPlaythruManager.EmotionCardAmounts[floor.Sephirah];
+            return APPlaythruManager.AbnoPageAmounts[floor.Sephirah];
         }
     }
 }

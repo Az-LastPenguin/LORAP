@@ -16,6 +16,7 @@
     using UI.Title;
     using UnityEngine;
     using UnityEngine.UI;
+    using static StageController;
 
     [HarmonyPatch(typeof(UIAbnormalityPanel))]
     internal class UIAbnormalityPanelPatches
@@ -201,7 +202,7 @@
             list.AddRange((LoadNewEmotionCard.Invoke(__instance, new object[] { "Xml/Card/EmotionCard/EmotionCard_hokma" }) as EmotionCardXmlRoot).emotionCardXmlList);
 
             List<EmotionCardXmlInfo> shuffledList = new List<EmotionCardXmlInfo>();
-            var Random = new System.Random(LORAP.Seed);
+            var Random = new System.Random(APPlaythruManager.Seed);
             List<SephirahType> sephirahs = new List<SephirahType>() {SephirahType.Keter, SephirahType.Malkuth, SephirahType.Yesod, SephirahType.Hod, SephirahType.Netzach, SephirahType.Tiphereth, SephirahType.Gebura, SephirahType.Chesed, SephirahType.Binah, SephirahType.Hokma};
             foreach (var seph in sephirahs)
             {
@@ -216,6 +217,7 @@
                         card.Sephirah = seph;
                         card.Level = i;
                         card.EmotionLevel = Random.Next(1, 4);
+                        card.State = Random.Next(1, 3) == 1 ? MentalState.Positive : MentalState.Negative;
                         shuffledList.Add(card);
                     }
                 }
@@ -237,7 +239,7 @@
             list.AddRange((LoadNewEmotionEgo.Invoke(__instance, new object[] { "Xml/Card/EmotionCard/EmotionEgo" }) as EmotionEgoXmlRoot).egoXmlList);
 
             List<EmotionEgoXmlInfo> shuffledList = new List<EmotionEgoXmlInfo>();
-            var Random = new System.Random(LORAP.Seed);
+            var Random = new System.Random(APPlaythruManager.Seed);
             List<SephirahType> sephirahs = new List<SephirahType>() { SephirahType.Keter, SephirahType.Malkuth, SephirahType.Yesod, SephirahType.Hod, SephirahType.Netzach, SephirahType.Tiphereth, SephirahType.Gebura, SephirahType.Chesed, SephirahType.Binah, SephirahType.Hokma };
             foreach (var seph in sephirahs)
             {
@@ -331,7 +333,7 @@
                     break;
                 case SephirahType.Binah:
                 case SephirahType.Hokma:
-                    if (floor.Level == 4)
+                    if (APPlaythruManager.AbnoProgress[floor.Sephirah] == 4)
                     {
                         __result = true;
                     }
@@ -394,7 +396,7 @@
 
                 switch (currentAddedBookId.id)
                 {
-                    case 123456:
+                    /*case 123456:
                         list.Add(APPlaythruManager.GetDropEquip(Rarity.Common));
                         break;
                     case 123457:
@@ -411,12 +413,25 @@
                         break;
                     case 123461:
                         list.AddRange(APPlaythruManager.GetDropCards(18));
+                        break;*/
+                    case 123462:
+                        list.AddRange(APPlaythruManager.GenerateBoosterDrops(Rarity.Common));
+                        break;
+                    case 123463:
+                        list.AddRange(APPlaythruManager.GenerateBoosterDrops(Rarity.Uncommon));
+                        break;
+                    case 123464:
+                        list.AddRange(APPlaythruManager.GenerateBoosterDrops(Rarity.Rare));
+                        break;
+                    case 123465:
+                        list.AddRange(APPlaythruManager.GenerateBoosterDrops(Rarity.Unique));
                         break;
                     default:
                         var result = new BookDropResult();
                         result.bookInstanceId = 161616;
                         result.number = book.id.id;
                         list.Add(result);
+                        ItemLocationManager.SendBookCheck(book.id.id);
                         break;
                 }
 
@@ -550,7 +565,7 @@
             if ((__instance.chapter == 1 || __instance.chapter == 2) && __instance.storyType != "Chapter2")
                 __result = StoryState.Clear;
 
-            if (APPlaythruManager.GetReceptionOpened(__instance.id.id))
+            if (APPlaythruManager.IsReceptionOpened(__instance.id.id))
                 __result = StoryState.Clear;
 
             return false;
@@ -582,7 +597,7 @@
                 List<StageClassInfo> story = storyLineData != null ? storyLineData.stageList : Traverse.Create(icon).Field<List<StageClassInfo>>("storyData").Value;
                 icon.SetSlotData(story);
                 icon.SetActiveStory(true);
-                if (story[0].chapter == 7 && story[0].id != 60001)
+                if (story[0].chapter == 7 && (story[0].id != 60001 && story[0].id != 123456))
                 {
                     icon.SetActiveStory(false);
                 }
@@ -614,6 +629,35 @@
             endFunc();
 
             return false;
+        }
+
+        [HarmonyPatch(nameof(UIController.CallUIPhase), typeof(UIPhase))]
+        [HarmonyPrefix]
+        static void CallUIPhasePostfix(UIController __instance, UIPhase phase)
+        {
+            switch(phase)
+            {
+                case UIPhase.Sepiroth:
+                case UIPhase.Sephirah:
+                case UIPhase.Librarian:
+                case UIPhase.Librarian_CardList:
+                case UIPhase.FloorFeedingBookFixed:
+                case UIPhase.GachaResult:
+                case UIPhase.Invitation:
+                case UIPhase.Main_ItemList:
+                    APLog.Show();
+                    APLog.SetLogAtBottom(true);
+                    break;
+                case UIPhase.DUMMY:
+                    APLog.Show();
+                    APLog.SetLogAtBottom(false);
+                    break;
+                case UIPhase.Story:
+                case UIPhase.BattleSetting:
+                case UIPhase.BattleResult:
+                    APLog.Hide();
+                    break;
+            }
         }
 
         [HarmonyPatch(nameof(UIController.OnClickStartCreatureStage))]
@@ -722,7 +766,7 @@
         {
             switch (__instance._id)
             {
-                case 123456:
+                /*case 123456:
                     __result = "Paperback Page";
                     return false;
                 case 123457:
@@ -739,6 +783,18 @@
                     return false;
                 case 123461:
                     __result = "x18 Combat Page Pack";
+                    return false;*/
+                case 123462:
+                    __result = "Paperback Booster Pack";
+                    return false;
+                case 123463:
+                    __result = "Hardcover Booster Pack";
+                    return false;
+                case 123464:
+                    __result = "Limited Booster Pack";
+                    return false;
+                case 123465:
+                    __result = "Objet d'art Booster Pack";
                     return false;
             }
 
@@ -771,12 +827,12 @@
             fakeInfo.workshopID = "Archipelago";
             switch (dropBookInfo.id.id)
             {
-                case 123456:
+                /*case 123456:
                     fakeInfo.InnerName = "Random Paperback Key Page";
                     fakeInfo.Rarity = Rarity.Common;
                     break;
                 case 123457:
-                    fakeInfo.InnerName = "Random HardcoverKey Page";
+                    fakeInfo.InnerName = "Random Hardcover Key Page";
                     fakeInfo.Rarity = Rarity.Uncommon;
                     break;
                 case 123458:
@@ -794,6 +850,22 @@
                 case 123461:
                     fakeInfo.InnerName = "Random Combat Page x18";
                     fakeInfo.Rarity = Rarity.Uncommon;
+                    break;*/
+                case 123462:
+                    fakeInfo.InnerName = "Random Paperback Key and Combat Pages x16";
+                    fakeInfo.Rarity = Rarity.Common;
+                    break;
+                case 123463:
+                    fakeInfo.InnerName = "Random Hardcover Key and Combat Pages x12";
+                    fakeInfo.Rarity = Rarity.Uncommon;
+                    break;
+                case 123464:
+                    fakeInfo.InnerName = "Random Limited Key and Combat Pages x8";
+                    fakeInfo.Rarity = Rarity.Rare;
+                    break;
+                case 123465:
+                    fakeInfo.InnerName = "Random Objet d'art Key and Combat Pages x4";
+                    fakeInfo.Rarity = Rarity.Unique;
                     break;
                 default:
                     fakeInfo.InnerName = "Archipelago Check";
@@ -968,7 +1040,6 @@
                 __instance.button_SendButton.interactable = true;
                 __instance.SetColorAllFrames(__instance.Color_Selectedcolor);
                 __instance.SetColorInvitationSlots(__instance.Color_Selectedcolor);
-                __instance.confirmAreaRoot.SetActive(value: false);
             }
 
             return false;
@@ -993,12 +1064,27 @@
 
         [HarmonyPatch(nameof(UIInvitationRightMainPanel.SendInvitation))]
         [HarmonyPrefix]
-        static bool Prefix(UIInvitationRightMainPanel __instance)
+        static bool SendInvitationPrefix(UIInvitationRightMainPanel __instance)
         {
             if (__instance.GetBookRecipe() != null)
                 __instance.confirmAreaRoot.SetActive(value: true);
 
             return false;
+        }
+
+        [HarmonyPatch(nameof(UIInvitationRightMainPanel.GetBookRecipe))]
+        [HarmonyPrefix]
+        static bool GetBookRecipePrefix(UIInvitationRightMainPanel __instance, ref StageClassInfo __result)
+        {
+            var cur = ((UIInvitationPanel)Traverse.Create(__instance).Field("invPanel").GetValue()).CurrentStage;
+            if (cur != null && cur.invitationInfo.combine == StageCombineType.BookValue)
+            {
+                __result = cur;
+
+                return false;
+            }
+
+            return true;
         }
     }
 
@@ -1024,7 +1110,7 @@
             LibraryFloorModel floor = LibraryModel.Instance.GetFloor(Singleton<StageController>.Instance.CurrentFloor);
             int num3 = 1;
             num3 = ((emotionLevel <= 2) ? 1 : ((emotionLevel > 4) ? 3 : 2));
-            List<EmotionCardXmlInfo> dataList = Singleton<EmotionCardXmlList>.Instance.GetDataList(Singleton<StageController>.Instance.CurrentFloor, APPlaythruManager.EmotionCardAmounts[floor.Sephirah]+1, num3);
+            List<EmotionCardXmlInfo> dataList = Singleton<EmotionCardXmlList>.Instance.GetDataList(Singleton<StageController>.Instance.CurrentFloor, APPlaythruManager.AbnoPageAmounts[floor.Sephirah]+1, num3);
             foreach (EmotionCardXmlInfo selected in Traverse.Create(__instance).Field<List<EmotionCardXmlInfo>>("_selectedList").Value)
             {
                 dataList.Remove(selected);
@@ -1103,7 +1189,7 @@
         {
             List<EmotionCardXmlInfo> list = new List<EmotionCardXmlInfo>();
             LibraryFloorModel floor = LibraryModel.Instance.GetFloor(Singleton<StageController>.Instance.CurrentFloor);
-            list = Singleton<EmotionCardXmlList>.Instance.GetDataList(Singleton<StageController>.Instance.CurrentFloor, APPlaythruManager.EmotionCardAmounts[floor.Sephirah]+1, 1);
+            list = Singleton<EmotionCardXmlList>.Instance.GetDataList(Singleton<StageController>.Instance.CurrentFloor, APPlaythruManager.AbnoPageAmounts[floor.Sephirah]+1, 1);
             foreach (EmotionCardXmlInfo item in duplicated)
             {
                 list.Remove(item);
@@ -1150,11 +1236,229 @@
     {
         [HarmonyPatch(nameof(BookModel.GetMaxPassiveCost))]
         [HarmonyPrefix]
-        static bool NamePrefix(DropBookXmlInfo __instance, ref int __result)
+        static bool GetMaxPassiveCostPrefix(DropBookXmlInfo __instance, ref int __result)
         {
             __result = APPlaythruManager.MaxPassiveCost;
 
             return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(SaveManager))]
+    internal class SaveManagerPatches
+    {
+        [HarmonyPatch(nameof(SaveManager.SavePlayData))]
+        [HarmonyPrefix]
+        static bool SavePlayDataPrefix(SaveManager __instance)
+        {
+            APSaveManager.SaveGame();
+
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(UIControlButtonPanel))]
+    internal class UIControlButtonPanelPatches
+    {
+        [HarmonyPatch(nameof(UIControlButtonPanel.UpdateButtons))]
+        [HarmonyPostfix]
+        static void UpdateButtonsPostfix(UIControlButtonPanel __instance)
+        {
+            var item = Traverse.Create(__instance).Field<List<UIMenuItem>>("menuItems").Value.Find(i => i.TapState == UIMainMenuTap.Story);
+
+            item.SetDisabled();
+            item.SetTargetHide();
+            item.SetActiveOrigin(false);
+            Traverse.Create(item).Field("isDisabled").SetValue(true);
+        }
+    }
+
+    [HarmonyPatch(typeof(UIMenuItem))]
+    internal class UIMenuItemPatches
+    {
+        [HarmonyPatch(nameof(UIMenuItem.SetTargetReveal))]
+        [HarmonyPrefix]
+        static bool SetTargetRevealPrefix(UIMenuItem __instance)
+        {
+            if (__instance.TapState == UIMainMenuTap.Story)
+            {
+                Traverse.Create(__instance).Field<Animator>("anim").Value.SetTrigger("Reveal");
+                return false;
+            }
+            
+            return true;
+        }
+
+        [HarmonyPatch(nameof(UIMenuItem.SetTargetHide))]
+        [HarmonyPrefix]
+        static bool SetTargetHidePrefix(UIMenuItem __instance)
+        {
+            if (__instance.TapState == UIMainMenuTap.Story)
+            {
+                Traverse.Create(__instance).Field<Animator>("anim").Value.SetTrigger("Hide");
+                return false;
+            }
+
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(StageController))]
+    internal class StageControllerPatches
+    {
+        [HarmonyPatch("EndBattlePhase_creature")]
+        [HarmonyPrefix]
+        static bool EndBattlePhase_creaturePrefix(StageController __instance)
+        {
+            StageModel stageModel = __instance.GetStageModel();
+            StageWaveModel wave = stageModel.GetWave(__instance.CurrentWave);
+            StageLibraryFloorModel floor = stageModel.GetFloor(__instance.CurrentFloor);
+            if (stageModel.GetFrontAvailableWave() == null || stageModel.GetFrontAvailableFloor() == null)
+            {
+                bool flag = stageModel.GetFrontAvailableWave() == null;
+                if (LibraryModel.Instance.PlayHistory.Start_EndContents == 1 && !__instance.IsRebattle && flag)
+                {
+                    // Keter Realization or something idk, will find out later
+                    /*if (stageModel.ClassInfo.id == 210005 || stageModel.ClassInfo.id == 210006 || stageModel.ClassInfo.id == 210007 || stageModel.ClassInfo.id == 210008)
+                    {
+                        LatestDataModel latestDataModel = new LatestDataModel();
+                        Singleton<SaveManager>.Instance.LoadLatestData(latestDataModel);
+                        latestDataModel.LatestStorychapter = 100;
+                        latestDataModel.LatestStorygroup = 10;
+                        latestDataModel.LatestStoryepisode = 4;
+                        Singleton<SaveManager>.Instance.SaveLatestData(latestDataModel);
+                        _enemyStageManager.OnStageClear();
+                        LibraryModel.Instance.ClearInfo.SetClearCountForEndContents(stageModel.ClassInfo.id);
+                        Singleton<SaveManager>.Instance.SavePlayData(1);
+                        SingletonBehavior<BattleManagerUI>.Instance.ui_TargetArrow.ActiveTargetParent(on: false);
+                        if (SingletonBehavior<BattleManagerUI>.Instance.ui_emotionInfoBar.autoCardButton != null)
+                        {
+                            SingletonBehavior<BattleManagerUI>.Instance.ui_emotionInfoBar.autoCardButton.SetActivate(on: false);
+                        }
+                        if (SingletonBehavior<BattleManagerUI>.Instance.ui_emotionInfoBar.unequipcardallButton != null)
+                        {
+                            SingletonBehavior<BattleManagerUI>.Instance.ui_emotionInfoBar.unequipcardallButton.SetActivate(on: false);
+                        }
+                        SingletonBehavior<BattleManagerUI>.Instance.ui_TargetArrow.ClearCloneArrows();
+                        SingletonBehavior<BattleManagerUI>.Instance.ui_emotionInfoBar.targetingToggle.SetDefault();
+                        firstStartState = false;
+                        int num = 210005;
+                        int keterCompleteOpenPhase = LibraryModel.Instance.GetKeterCompleteOpenPhase();
+                        switch (keterCompleteOpenPhase)
+                        {
+                            case 2:
+                                num = 210006;
+                                break;
+                            case 3:
+                                num = 210007;
+                                break;
+                            case 4:
+                                num = 210008;
+                                break;
+                            case 5:
+                                num = 210009;
+                                break;
+                            default:
+                                Debug.LogError("Phase Count Error, Phase : " + keterCompleteOpenPhase);
+                                break;
+                            case 1:
+                                break;
+                        }
+                        StageClassInfo data = Singleton<StageClassInfoList>.Instance.GetData(num);
+                        if (data != null)
+                        {
+                            InitStageForKeterCompleteOpen(data);
+                            StageStoryInfo prevBattleStory = data.GetPrevBattleStory();
+                            if (prevBattleStory != null)
+                            {
+                                UI.UIController.Instance.OpenStory(prevBattleStory, delegate
+                                {
+                                    GlobalGameManager.Instance.LoadBattleScene();
+                                }, skipEnable: false, save: false);
+                            }
+                            else
+                            {
+                                GlobalGameManager.Instance.LoadBattleScene();
+                            }
+                        }
+                        else
+                        {
+                            Debug.LogError("Stage가 존재하지 않음 ID : " + num);
+                        }
+                        return;
+                    }
+                    if (stageModel.ClassInfo.id == 210009 && floor.Sephirah == SephirahType.Keter && floor._floorModel.Level == 5)
+                    {
+                        floor._floorModel.LevelUp();
+                        Singleton<SaveManager>.Instance.SavePlayData(1);
+                        (UI.UIController.Instance.GetUIPanel(UIPanelType.Main) as UIMainPanel).LevelUpFloor(floor._floorModel);
+                        return;
+                    }*/
+                }
+
+                __instance.battleState = BattleState.None;
+                if (__instance.IsRebattle)
+                {
+                    GameSceneManager.Instance.ActivateUIController();
+                    UI.UIController.Instance.CallUIPhase(UIPhase.Story);
+                    return false;
+                }
+                GameSceneManager.Instance.ActivateUIController();
+                UIFloorPanel.firstSelectableState = FirstSelectableState.Center;
+                UI.UIController.Instance.CallUIPhase(UIPhase.Sephirah);
+                if (!flag)
+                {
+                    return false;
+                }
+                LibraryFloorModel floor2 = LibraryModel.Instance.GetFloor(floor.Sephirah);
+                if (floor2 != null)
+                {
+                    /*UIMainPanel obj = UI.UIController.Instance.GetUIPanel(UIPanelType.Main) as UIMainPanel;
+                    floor2.LevelUp();
+                    if ((floor2.Sephirah == SephirahType.Binah || floor2.Sephirah == SephirahType.Hokma) && floor2.Level == 5)
+                    {
+                        floor2.LevelUp();
+                    }
+                    obj.LevelUpFloor(floor2);*/
+
+                    ItemLocationManager.SendAbnoChecks(floor.Sephirah);
+
+                    APPlaythruManager.AddAbnoProgress(floor.Sephirah);
+
+                    Singleton<SaveManager>.Instance.SavePlayData(1);
+                }
+            }
+            else
+            {
+                __instance.battleState = BattleState.Setting;
+                if (wave.IsUnavailable())
+                {
+                    Singleton<LibraryQuestManager>.Instance.OnWinWave(floor);
+                    __instance.SetCurrentWave(__instance.CurrentWave + 1);
+                    Traverse.Create(__instance).Field("_prevDefeatFloor").SetValue(SephirahType.None);
+                }
+                if (floor.IsUnavailable())
+                {
+                    __instance.GameOver(iswin: false);
+                    UI.UIController.Instance.CallUIPhase(UIPhase.Sephirah);
+                }
+            }
+
+            return false;
+        }
+
+        [HarmonyPatch("EndBattlePhase_invitation")]
+        [HarmonyPrefix]
+        static bool EndBattlePhase_invitationPrefix(StageController __instance)
+        {
+            StageModel stageModel = __instance.GetStageModel();
+
+            if (stageModel.GetFrontAvailableWave() == null && stageModel.ClassInfo.id.id == 123456)
+            {
+                LORAP.Instance.SendGoalReached();
+            }
+
+            return true;
         }
     }
 }
