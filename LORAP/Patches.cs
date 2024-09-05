@@ -6,7 +6,6 @@
     using LOR_DiceSystem;
     using StoryScene;
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
@@ -181,6 +180,26 @@
         }
     }
 
+    [HarmonyPatch(typeof(ItemXmlDataList))]
+    internal class ItemXmlDataListPatches
+    {
+        [HarmonyPatch("InitCardInfo")]
+        [HarmonyPrefix]
+        static void InitCardInfoPrefix(ItemXmlDataList __instance, ref List<DiceCardXmlInfo> list)
+        {
+            List<DiceCardXmlInfo> res = new List<DiceCardXmlInfo>();
+
+            foreach (var card in list)
+            {
+                //card.optionList.Remove(CardOption.Personal);
+                card.optionList.Remove(CardOption.OnlyPage);
+                res.Add(card);
+            }
+
+            list = res;
+        }
+    }
+
     [HarmonyPatch(typeof(StaticDataLoader))]
     internal class StaticDataLoaderPatches
     {
@@ -319,21 +338,20 @@
                 case SephirahType.Keter: // Do something about keter realization
                     __result = false;
                     break;
-                case SephirahType.Malkuth:
-                case SephirahType.Yesod:
-                case SephirahType.Hod:
-                case SephirahType.Netzach:
-                case SephirahType.Tiphereth:
-                case SephirahType.Gebura:
-                case SephirahType.Chesed:
-                    if (APPlaythruManager.AbnoProgress[floor.Sephirah] == 5)
+                case SephirahType.Binah:
+                    if (APPlaythruManager.AbnoProgress[floor.Sephirah] == 4)
                     {
                         __result = true;
                     }
                     break;
-                case SephirahType.Binah:
                 case SephirahType.Hokma:
                     if (APPlaythruManager.AbnoProgress[floor.Sephirah] == 4)
+                    {
+                        __result = true;
+                    }
+                    break;
+                default:
+                    if (APPlaythruManager.AbnoProgress[floor.Sephirah] == 5)
                     {
                         __result = true;
                     }
@@ -619,6 +637,51 @@
         }
     }
 
+    [HarmonyPatch(typeof(UIStoryProgressIconSlot))]
+    internal class UIStoryProgressIconSlotPatches
+    {
+        [HarmonyPatch("SetSlotOpen")]
+        [HarmonyPrefix]
+        static void SetSlotOpenPrefix(UIStoryProgressIconSlot __instance, bool open)
+        {
+            if (__instance.transform.Find("Checkmark") == null)
+                return;
+
+            StoryLineData storyLineData = StoryTotal.instance._lineList.Find((StoryLineData x) => x.currentstory == __instance.currentStory);
+            List<StageClassInfo> story = storyLineData != null ? storyLineData.stageList : Traverse.Create(__instance).Field<List<StageClassInfo>>("storyData").Value;
+
+            // If all books are found, show the checkmark
+            List<LorId> list = new List<LorId>();
+
+            foreach (StageClassInfo stage in story)
+            {
+                foreach (StageWaveInfo wave in stage.waveList)
+                {
+                    foreach (LorId enemyUnitId in wave.enemyUnitIdList)
+                    {
+                        EnemyUnitClassInfo data = Singleton<EnemyUnitClassInfoList>.Instance.GetData(enemyUnitId);
+                        foreach (EnemyDropItemTable dropTable in data.dropTableList)
+                        {
+                            foreach (EnemyDropItem dropItem in dropTable.dropItemList)
+                            {
+                                LorId item = new LorId(data.workshopID, dropItem.bookId);
+                                if (!list.Contains(item) && (!ItemLocationManager.BookIds.Contains(item.id) || !APPlaythruManager.FoundBooks.Contains(item.id)))
+                                {
+                                    list.Add(item);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (list.Count == 0 && !open)
+                __instance.transform.Find("Checkmark").gameObject.SetActive(true);
+            else
+                __instance.transform.Find("Checkmark").gameObject.SetActive(false);
+        }
+    }
+
     [HarmonyPatch(typeof(UIController))]
     internal class UIControllerPatches
     {
@@ -882,6 +945,27 @@
             Traverse.Create(__instance).Field<UICustomGraphicObject>("button_rewardResetButton").Value.interactable = false;
 
             return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(UIRewardDropBookList))]
+    internal class UIRewardDropBookListPatches
+    {
+        [HarmonyPatch(nameof(UIRewardDropBookList.SetData))]
+        [HarmonyPrefix]
+        static bool SetDataPrefix(UIRewardDropBookList __instance, ref List<LorId> bookids)
+        {
+            List<LorId> res = new List<LorId>();
+
+            foreach (var id in bookids)
+            {
+                if (!ItemLocationManager.BookIds.Contains(id.id) || !APPlaythruManager.FoundBooks.Contains(id.id))
+                    res.Add(id);
+            }
+
+            bookids = res;
+
+            return true;
         }
     }
 
@@ -1457,6 +1541,32 @@
             {
                 LORAP.Instance.SendGoalReached();
             }
+
+            return true;
+        }
+
+        [HarmonyPatch(nameof(StageController.OnEnemyDropBookForAdded))]
+        [HarmonyPrefix]
+        static bool OnEnemyDropBookForAddedPrefix(StageController __instance, DropBookDataForAddedReward data)
+        {
+            if (ItemLocationManager.BookIds.Contains(data.id.id) && APPlaythruManager.FoundBooks.Contains(data.id.id))
+                return false;
+
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(BattleUnitView))]
+    internal class BattleUnitViewPatches
+    {
+        [HarmonyPatch(nameof(BattleUnitView.OnEnemyDropBook))]
+        [HarmonyPrefix]
+        static bool OnEnemyDropBookPrefix(BattleUnitView __instance, LorId id)
+        {
+            if (ItemLocationManager.BookIds.Contains(id.id) && APPlaythruManager.FoundBooks.Contains(id.id))
+                return false;
+
+            APPlaythruManager.FoundBooks.Add(id.id);
 
             return true;
         }

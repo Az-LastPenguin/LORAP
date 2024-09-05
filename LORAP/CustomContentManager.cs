@@ -24,6 +24,8 @@ namespace LORAP
 
         internal static List<DropBookXmlInfo> CustomBooks = new List<DropBookXmlInfo>();
 
+        internal static Dictionary<Rarity, DropBookXmlInfo> BoosterPacks = new Dictionary<Rarity, DropBookXmlInfo>();
+
         private static DropBookXmlInfo CreateCustomBook(int id, DropItemState state, int dropNum, List<BookDropItemInfo> dropList)
         {
             var Book = new DropBookXmlInfo();
@@ -35,6 +37,8 @@ namespace LORAP
             Book.DropItemList = dropList;
             Traverse.Create(Singleton<DropBookXmlList>.Instance).Field<List<DropBookXmlInfo>>("_list").Value.Add(Book);
             Traverse.Create(Singleton<DropBookXmlList>.Instance).Field<Dictionary<LorId, DropBookXmlInfo>>("_dict").Value.Add(Book.id, Book);
+
+            CustomBooks.Add(Book);
 
             return Book;
         }
@@ -103,11 +107,23 @@ namespace LORAP
                 }
             }
 
-            CustomBooks.Add(CreateCustomBook(123462, DropItemState.All, 16, CommonPages));
-            CustomBooks.Add(CreateCustomBook(123463, DropItemState.All, 12, UncommonPages));
-            CustomBooks.Add(CreateCustomBook(123464, DropItemState.All, 8, RarePages));
-            CustomBooks.Add(CreateCustomBook(123465, DropItemState.All, 6, UniquePages));
+            BoosterPacks.Add(Rarity.Common, CreateCustomBook(123462, DropItemState.All, 16, CommonPages));
+            BoosterPacks.Add(Rarity.Uncommon, CreateCustomBook(123463, DropItemState.All, 12, UncommonPages));
+            BoosterPacks.Add(Rarity.Rare, CreateCustomBook(123464, DropItemState.All, 8, RarePages));
+            BoosterPacks.Add(Rarity.Unique, CreateCustomBook(123465, DropItemState.All, 6, UniquePages));
 
+            // Checkmarks for all found books receptions
+            UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
+            var IconList = Traverse.Create(MapPanel).Field<List<UIStoryProgressIconSlot>>("iconList").Value;
+
+            var CheckmarkIcon = UICardListDetailFilterPopup.Instance.transform.Find("[Image]Frame/Scroll View/Viewport/Content/RarityGroup/Group/[Toggle]DetailSlot/[Toggle]SelectableToggle/[Image]IconGlow").gameObject;
+
+            foreach (var icon in IconList)
+            {
+                var copy = GameObject.Instantiate(CheckmarkIcon, icon.transform);
+                copy.transform.localPosition = new Vector3(30, 100, 0);
+                copy.name = "Checkmark";
+            }
 
             // Custom Reception
             StageClassInfo end = new StageClassInfo();

@@ -1,6 +1,5 @@
 ﻿using GameSave;
 using HarmonyLib;
-using SaveTest;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,6 +26,8 @@ namespace LORAP
 
 
         internal static List<int> OpenedReceptions = new List<int>();
+
+        internal static List<int> FoundBooks = new List<int>();
 
         internal static Dictionary<SephirahType, int> AbnoPageAmounts = new Dictionary<SephirahType, int>()
         {
@@ -95,6 +96,11 @@ namespace LORAP
                 OpenedReceptions.Add(dat.GetIntSelf());
             }
 
+            foreach (SaveData dat in saveData.GetData("foundBooks"))
+            {
+                FoundBooks.Add(dat.GetIntSelf());
+            }
+
             int num = 0;
             foreach (var d in saveData.GetData("abnoPageAmounts"))
             {
@@ -141,6 +147,7 @@ namespace LORAP
 
             saveData.AddData("itemsReceived", new SaveData(ItemsReceived));
             saveData.AddData("openedReceptions", new SaveData(OpenedReceptions));
+            saveData.AddData("foundBooks", new SaveData(FoundBooks));
 
             SaveData _saveData = new SaveData();
             foreach (var d in AbnoPageAmounts)
@@ -231,16 +238,16 @@ namespace LORAP
                     floor = "Floor of Natural Sciences";
                     break;
                 case SephirahType.Chesed:
-                    floor = "Floor of Language";
-                    break;
-                case SephirahType.Gebura:
                     floor = "Floor of Social Sciences";
                     break;
+                case SephirahType.Gebura:
+                    floor = "Floor of Language";
+                    break;
                 case SephirahType.Hokma:
-                    floor = "Floor of Philosophy";
+                    floor = "Floor of Religion";
                     break;
                 case SephirahType.Binah:
-                    floor = "Floor of Religion";
+                    floor = "Floor of Philosophy";
                     break;
             }
             return floor;
@@ -310,6 +317,11 @@ namespace LORAP
         internal static void GiveCustomBook(int i, int num = 1)
         {
             Singleton<DropBookInventoryModel>.Instance.AddBook(CustomContentManager.CustomBooks[i].id, num);
+        }
+
+        internal static void GiveBoosterPack(Rarity rarity, int num = 1)
+        {
+            Singleton<DropBookInventoryModel>.Instance.AddBook(CustomContentManager.BoosterPacks[rarity].id, num);
         }
 
         internal static void UpMaxPassiveCost()
@@ -396,50 +408,38 @@ namespace LORAP
                     continue;
                 }
 
-                if (rng.NextDouble() < 0.50) // Equip
+                int max = 1; // Max of Key Page by rarity
+                switch (rarity)
                 {
-                    int max = 1;
-                    switch (rarity)
-                    {
-                        case Rarity.Common:
-                            max = 5;
-                            break;
-                        case Rarity.Uncommon:
-                            max = 4;
-                            break;
-                        case Rarity.Rare:
-                            max = 3;
-                            break;
-                    }
-
-                    var pool = pack.DropItemList.Where(i => i.itemType == DropItemType.Equip && Singleton<BookInventoryModel>.Instance.GetBookCount(i.id) < max).ToList();
-
-                    if (pool.Count > 0)
-                    {
-                        selected = RandomUtil.SelectOne(pool);
-                        info.notFoundItems.Remove(selected.id.id);
-                        result.id = selected.id;
-                        result.bookInstanceId = Singleton<BookInventoryModel>.Instance.CreateBook(selected.id).instanceId;
-                        result.itemType = DropItemType.Equip;
-                        result.number = 1;
-
-                        Drops.Add(result);
-
-                        continue;
-                    }
+                    case Rarity.Common:
+                        max = 5;
+                        break;
+                    case Rarity.Uncommon:
+                        max = 4;
+                        break;
+                    case Rarity.Rare:
+                        max = 3;
+                        break;
                 }
 
-                selected = RandomUtil.SelectOne(pack.DropItemList.Where(i => i.itemType == DropItemType.Card).ToList());
+                var Pool = pack.DropItemList.Where(i => i.itemType == DropItemType.Card).ToList();
+                Pool.AddRange(pack.DropItemList.Where(i => i.itemType == DropItemType.Equip && Singleton<BookInventoryModel>.Instance.GetBookCount(i.id) < max).ToList());
+
+                selected = RandomUtil.SelectOne(Pool);
                 info.notFoundItems.Remove(selected.id.id);
-                Singleton<InventoryModel>.Instance.AddCard(selected.id);
                 result.id = selected.id;
-                result.itemType = DropItemType.Card;
+                result.itemType = selected.itemType;
                 result.number = 1;
+
+                if (selected.itemType == DropItemType.Equip)
+                    result.bookInstanceId = Singleton<BookInventoryModel>.Instance.CreateBook(selected.id).instanceId;
+                else
+                    Singleton<InventoryModel>.Instance.AddCard(selected.id);
 
                 Drops.Add(result);
             }
 
-            LORAP.Instance.LogInfo($"{rarity} Pack Use Progress: {info.packsUsed}/{info.totalPacks}");
+            LORAP.Instance.LogInfo($"{rarity} Pack Opening Progress: {info.packsUsed}/{info.totalPacks}");
             LORAP.Instance.LogInfo($"{rarity} Drops Progress: {pack.DropItemList.Count - info.notFoundItems.Count}/{pack.DropItemList.Count}");
 
             return Drops;

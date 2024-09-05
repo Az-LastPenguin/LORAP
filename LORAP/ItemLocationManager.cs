@@ -1,20 +1,166 @@
 ﻿using HarmonyLib;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LORAP
 {
     internal static class ItemLocationManager
     {
+        internal enum ItemType
+        {
+            AbnoPages,
+            Librarian,
+            EGO,
+            PassivePoint,
+            BoosterPack,
+            Reception,
+            Binah,
+            BlackSilence
+        }
+
+        internal class APItem
+        {
+            public ItemType category;
+        }
+
+        private class FloorUpgrade : APItem
+        {
+            public SephirahType seph;
+        }
+
+        private class BoosterPack : APItem
+        {
+            public BoosterPack()
+            {
+                category = ItemType.BoosterPack;
+            }
+
+            public Rarity rarity;
+        }
+
+        private class Reception : APItem
+        {
+            public Reception()
+            {
+                category = ItemType.Reception;
+            }
+
+            public int id;
+        }
+
         private static int LocationBookOffset = 143000;
         private static int LocationAbnoOffset = 143300;
 
-        public static int LibraryUpgradesOffset = 143000;
-        public static int LibrarianUpgradesOffset = 143000 + 40;
-        public static int ReceptionsOffset = 143000 + 46;
-        public static int BinahOffset = LibraryUpgradesOffset + 100;
-        public static int BlackSilenceOffset = LibraryUpgradesOffset + 101;
+        public static int BaseOffset = 143000;
 
-        private static List<int> BookIds = new List<int>()
+        internal static Dictionary<long, APItem> ItemMap = new Dictionary<long, APItem>()
+        {
+            [BaseOffset + 10] = new FloorUpgrade() { category = ItemType.AbnoPages, seph = SephirahType.Keter },
+            [BaseOffset + 11] = new FloorUpgrade() { category = ItemType.AbnoPages, seph = SephirahType.Malkuth },
+            [BaseOffset + 12] = new FloorUpgrade() { category = ItemType.AbnoPages, seph = SephirahType.Yesod },
+            [BaseOffset + 13] = new FloorUpgrade() { category = ItemType.AbnoPages, seph = SephirahType.Hod },
+            [BaseOffset + 14] = new FloorUpgrade() { category = ItemType.AbnoPages, seph = SephirahType.Netzach },
+            [BaseOffset + 15] = new FloorUpgrade() { category = ItemType.AbnoPages, seph = SephirahType.Tiphereth },
+            [BaseOffset + 16] = new FloorUpgrade() { category = ItemType.AbnoPages, seph = SephirahType.Gebura },
+            [BaseOffset + 17] = new FloorUpgrade() { category = ItemType.AbnoPages, seph = SephirahType.Chesed },
+            [BaseOffset + 18] = new FloorUpgrade() { category = ItemType.AbnoPages, seph = SephirahType.Binah },
+            [BaseOffset + 19] = new FloorUpgrade() { category = ItemType.AbnoPages, seph = SephirahType.Hokma },
+
+            [BaseOffset + 20] = new FloorUpgrade() { category = ItemType.Librarian, seph = SephirahType.Keter },
+            [BaseOffset + 21] = new FloorUpgrade() { category = ItemType.Librarian, seph = SephirahType.Malkuth },
+            [BaseOffset + 22] = new FloorUpgrade() { category = ItemType.Librarian, seph = SephirahType.Yesod },
+            [BaseOffset + 23] = new FloorUpgrade() { category = ItemType.Librarian, seph = SephirahType.Hod },
+            [BaseOffset + 24] = new FloorUpgrade() { category = ItemType.Librarian, seph = SephirahType.Netzach },
+            [BaseOffset + 25] = new FloorUpgrade() { category = ItemType.Librarian, seph = SephirahType.Tiphereth },
+            [BaseOffset + 26] = new FloorUpgrade() { category = ItemType.Librarian, seph = SephirahType.Gebura },
+            [BaseOffset + 27] = new FloorUpgrade() { category = ItemType.Librarian, seph = SephirahType.Chesed },
+            [BaseOffset + 28] = new FloorUpgrade() { category = ItemType.Librarian, seph = SephirahType.Binah },
+            [BaseOffset + 29] = new FloorUpgrade() { category = ItemType.Librarian, seph = SephirahType.Hokma },
+
+            [BaseOffset + 30] = new FloorUpgrade() { category = ItemType.EGO, seph = SephirahType.Keter },
+            [BaseOffset + 31] = new FloorUpgrade() { category = ItemType.EGO, seph = SephirahType.Malkuth },
+            [BaseOffset + 32] = new FloorUpgrade() { category = ItemType.EGO, seph = SephirahType.Yesod },
+            [BaseOffset + 33] = new FloorUpgrade() { category = ItemType.EGO, seph = SephirahType.Hod },
+            [BaseOffset + 34] = new FloorUpgrade() { category = ItemType.EGO, seph = SephirahType.Netzach },
+            [BaseOffset + 35] = new FloorUpgrade() { category = ItemType.EGO, seph = SephirahType.Tiphereth },
+            [BaseOffset + 36] = new FloorUpgrade() { category = ItemType.EGO, seph = SephirahType.Gebura },
+            [BaseOffset + 37] = new FloorUpgrade() { category = ItemType.EGO, seph = SephirahType.Chesed },
+            [BaseOffset + 38] = new FloorUpgrade() { category = ItemType.EGO, seph = SephirahType.Binah },
+            [BaseOffset + 39] = new FloorUpgrade() { category = ItemType.EGO, seph = SephirahType.Hokma },
+
+            [BaseOffset + 40] = new APItem() { category = ItemType.PassivePoint },
+
+            [BaseOffset + 41] = new BoosterPack() { rarity = Rarity.Common },
+            [BaseOffset + 42] = new BoosterPack() { rarity = Rarity.Uncommon },
+            [BaseOffset + 43] = new BoosterPack() { rarity = Rarity.Rare },
+            [BaseOffset + 44] = new BoosterPack() { rarity = Rarity.Unique },
+
+            [BaseOffset + 46] = new Reception() { id = 20001 },
+            [BaseOffset + 47] = new Reception() { id = 20004 },
+            [BaseOffset + 48] = new Reception() { id = 20005 },
+
+            [BaseOffset + 49] = new Reception() { id = 30001 },
+            [BaseOffset + 50] = new Reception() { id = 30006 },
+            [BaseOffset + 51] = new Reception() { id = 30002 },
+            [BaseOffset + 52] = new Reception() { id = 30007 },
+            [BaseOffset + 53] = new Reception() { id = 30003 },
+            [BaseOffset + 54] = new Reception() { id = 30008 },
+            [BaseOffset + 55] = new Reception() { id = 30004 },
+            [BaseOffset + 56] = new Reception() { id = 30005 },
+
+            [BaseOffset + 57] = new Reception() { id = 40004 },
+            [BaseOffset + 58] = new Reception() { id = 40005 },
+            [BaseOffset + 59] = new Reception() { id = 40001 },
+            [BaseOffset + 60] = new Reception() { id = 40007 },
+            [BaseOffset + 61] = new Reception() { id = 40003 },
+            [BaseOffset + 62] = new Reception() { id = 40008 },
+            [BaseOffset + 63] = new Reception() { id = 40002 },
+            [BaseOffset + 64] = new Reception() { id = 40006 },
+
+            [BaseOffset + 65] = new Reception() { id = 50003 },
+            [BaseOffset + 66] = new Reception() { id = 50007 },
+            [BaseOffset + 67] = new Reception() { id = 50014 },
+            [BaseOffset + 68] = new Reception() { id = 50006 },
+            [BaseOffset + 69] = new Reception() { id = 50009 },
+            [BaseOffset + 70] = new Reception() { id = 50012 },
+            [BaseOffset + 71] = new Reception() { id = 50001 },
+            [BaseOffset + 72] = new Reception() { id = 50008 },
+            [BaseOffset + 73] = new Reception() { id = 50013 },
+            [BaseOffset + 74] = new Reception() { id = 50005 },
+            [BaseOffset + 75] = new Reception() { id = 50010 },
+            [BaseOffset + 76] = new Reception() { id = 50011 },
+
+            [BaseOffset + 77] = new Reception() { id = 60001 },
+
+            [BaseOffset + 78] = new Reception() { id = 100001 },
+            [BaseOffset + 79] = new Reception() { id = 100002 },
+            [BaseOffset + 80] = new Reception() { id = 100003 },
+
+            [BaseOffset + 81] = new Reception() { id = 100004 },
+            [BaseOffset + 82] = new Reception() { id = 100005 },
+            [BaseOffset + 83] = new Reception() { id = 100006 },
+            [BaseOffset + 84] = new Reception() { id = 100007 },
+            [BaseOffset + 85] = new Reception() { id = 100008 },
+
+            [BaseOffset + 86] = new Reception() { id = 100009 },
+            [BaseOffset + 87] = new Reception() { id = 100010 },
+            [BaseOffset + 88] = new Reception() { id = 100014 },
+
+            [BaseOffset + 89] = new Reception() { id = 100011 },
+            [BaseOffset + 90] = new Reception() { id = 100012 },
+
+            [BaseOffset + 91] = new Reception() { id = 100013 },
+            [BaseOffset + 92] = new Reception() { id = 100015 },
+            [BaseOffset + 93] = new Reception() { id = 100016 },
+            [BaseOffset + 94] = new Reception() { id = 100017 },
+            [BaseOffset + 95] = new Reception() { id = 100018 },
+            [BaseOffset + 96] = new Reception() { id = 100019 },
+
+            [BaseOffset + 100] = new APItem() { category = ItemType.Binah },
+            [BaseOffset + 101] = new APItem() { category = ItemType.BlackSilence },
+        };
+
+        internal static List<int> BookIds = new List<int>()
         {
             200001,
             200002,
@@ -31,7 +177,6 @@ namespace LORAP
             200014,
             200015,
             200016,
-            200017,
 
             210001,
             210002,
@@ -174,71 +319,6 @@ namespace LORAP
             260004,
         };
 
-        private static List<int> ReceptionsIds = new List<int>()
-        {
-            20001,
-            20004,
-            20005,
-
-            30001,
-            30006,
-            30002,
-            30007,
-            30003,
-            30008,
-            30004,
-            30005,
-
-            40004,
-            40005,
-            40001,
-            40007,
-            40003,
-            40008,
-            40002,
-            40006,
-
-            50003,
-            50007,
-            50014,
-            50006,
-            50009,
-            50012,
-            50001,
-            50008,
-            500013,
-            50005,
-            50010,
-            50011,
-
-            60001,
-
-
-            100001,
-            100002,
-            100003,
-
-            100004,
-            100005,
-            100006,
-            100007,
-            100008,
-
-            100009,
-            100010,
-            100014,
-
-            100011,
-            100012,
-
-            100013,
-            100015,
-            100016,
-            100017,
-            100018,
-            100019,
-        };
-
         private static Dictionary<SephirahType, int> AbnoIds = new Dictionary<SephirahType, int>()
         {
             [SephirahType.Keter] = LocationAbnoOffset,
@@ -253,24 +333,14 @@ namespace LORAP
             [SephirahType.Hokma] = LocationAbnoOffset + 216,
         };
 
-        internal static int BookToLocation(int id)
-        {
-            return LocationBookOffset + BookIds.IndexOf(id);
-        }
-
         internal static int SephAbnoToLocation(SephirahType seph)
         {
             return AbnoIds[seph];
         }
 
-        internal static int ItemIdToReception(long id)
-        {
-            return ReceptionsIds[(int)(id - ReceptionsOffset)];
-        }
-
         internal static void SendBookCheck(int id)
         {
-            LORAP.Instance.SendCheck(BookToLocation(id));
+            LORAP.Instance.SendCheck(LocationBookOffset + BookIds.IndexOf(id));
         }
 
         internal static void SendAbnoChecks(SephirahType seph)
@@ -278,158 +348,100 @@ namespace LORAP
             int id = SephAbnoToLocation(seph);
             id = id + (APPlaythruManager.AbnoProgress[seph] - 1) * 4;
 
-            long[] ids = new long[] { }; 
+            int num = 0;
             if (seph == SephirahType.Binah || seph == SephirahType.Hokma && APPlaythruManager.AbnoProgress[seph] < 5)
             {
                 if (APPlaythruManager.AbnoProgress[seph] < 4)
                 {
-                    ids.AddItem(id + 0);
-                    ids.AddItem(id + 1);
-                    ids.AddItem(id + 2);
-                    ids.AddItem(id + 3);
+                    num = 4;
                 } 
                 else
                 {
-                    ids.AddItem(id + 0);
-                    ids.AddItem(id + 1);
-                    ids.AddItem(id + 2);
-
-                    ids.AddItem(id + 3);
-                    ids.AddItem(id + 4);
-                    ids.AddItem(id + 5);
-
-                    ids.AddItem(id + 6);
-                    ids.AddItem(id + 7);
-                    ids.AddItem(id + 8);
-                    ids.AddItem(id + 9);
-                    ids.AddItem(id + 10);
+                    num = 11;
                 }
             }
             else if (APPlaythruManager.AbnoProgress[seph] < 6)
             {
                 if (APPlaythruManager.AbnoProgress[seph] < 5)
                 {
-                    ids.AddItem(id + 0);
-                    ids.AddItem(id + 1);
-                    ids.AddItem(id + 2);
-                    ids.AddItem(id + 3);
+                    num = 4;
                 } 
                 else
                 {
-                    ids.AddItem(id + 0);
-                    ids.AddItem(id + 1);
-                    ids.AddItem(id + 2);
-
-                    ids.AddItem(id + 3);
-                    ids.AddItem(id + 4);
-                    ids.AddItem(id + 5);
-                    ids.AddItem(id + 6);
-                    ids.AddItem(id + 7);
+                    num = 8;
                 }
             }
 
-            LORAP.Instance.SendCheck(ids);
+            for(int i = 0; i < num; i++)
+            {
+                LORAP.Instance.SendCheck(id + i);
+            }
         }
 
         internal static void ReceiveItem(long id)
         {
-            LORAP.Instance.LogInfo($"Receiving {id}");
-
-            SephirahType NumToSeph(long num)
+            if (!ItemMap.ContainsKey(id))
             {
-                switch (num)
-                {
-                    case 0:
-                        return SephirahType.Keter;
-                    case 1:
-                        return SephirahType.Malkuth;
-                    case 2:
-                        return SephirahType.Yesod;
-                    case 3:
-                        return SephirahType.Hod;
-                    case 4:
-                        return SephirahType.Netzach;
-                    case 5:
-                        return SephirahType.Tiphereth;
-                    case 6:
-                        return SephirahType.Gebura;
-                    case 7:
-                        return SephirahType.Chesed;
-                    case 8:
-                        return SephirahType.Binah;
-                    case 9:
-                        return SephirahType.Hokma;
-                }
-
-                return SephirahType.None;
+                LORAP.Instance.LogInfo($"Cannot receive {id}!!");
+                return;
             }
 
-            if (id == BlackSilenceOffset)
-            {
-                APPlaythruManager.UnlockBlackSilence();
-            }
-            else if (id == BinahOffset)
-            {
-                APPlaythruManager.UnlockBinah();
-            }
-            else if (id >= ReceptionsOffset) // Open receptions
-            {
-                LORAP.Instance.LogInfo("Reception");
+            APItem item = ItemMap[id];
 
-                int receptionId = ItemIdToReception(id);
-                switch (receptionId)
-                {
-                    case 20001:
-                        APPlaythruManager.OpenReception(receptionId);
-                        APPlaythruManager.OpenReception(receptionId + 1);
-                        APPlaythruManager.OpenReception(receptionId + 2);
-                        break;
-                    case 50003:
-                        APPlaythruManager.OpenReception(receptionId);
-                        APPlaythruManager.OpenReception(receptionId + 1);
-                        break;
-                    case 50001:
-                        APPlaythruManager.OpenReception(receptionId);
-                        APPlaythruManager.OpenReception(receptionId + 1);
-                        break;
-                    case 60001:
-                        APPlaythruManager.OpenReception(receptionId);
-                        APPlaythruManager.OpenReception(receptionId + 1);
-                        break;
-                    default:
-                        APPlaythruManager.OpenReception(receptionId);
-                        break;
-                }
-            }
-            else if (id > LibrarianUpgradesOffset) // Give booster packs
+            LORAP.Instance.LogInfo($"Receiving {id} - {item.category}");
+
+            switch (item.category)
             {
-                LORAP.Instance.LogInfo("Booster Pack");
-                APPlaythruManager.GiveCustomBook((int)(id - LibrarianUpgradesOffset - 1));
-            }
-            else if (id == LibrarianUpgradesOffset) // Upgrade max passive cost
-            {
-                LORAP.Instance.LogInfo("Up Passive Cost");
-                APPlaythruManager.UpMaxPassiveCost();
-            }
-            else if (id >= LibraryUpgradesOffset + 30) // Give EGO
-            {
-                LORAP.Instance.LogInfo("EGO Page");
-                APPlaythruManager.AddEGO(NumToSeph(id - LibraryUpgradesOffset - 30));
-            }
-            else if (id >= LibraryUpgradesOffset + 20) // Unlock Librarians
-            {
-                LORAP.Instance.LogInfo("Librarian");
-                APPlaythruManager.AddLibrarian(NumToSeph(id - LibraryUpgradesOffset - 20));
-            }
-            else if (id >= LibraryUpgradesOffset + 10) // Give Abno Pages
-            {
-                LORAP.Instance.LogInfo("Abno Pages");
-                APPlaythruManager.AddAnboPages(NumToSeph(id - LibraryUpgradesOffset - 10));
-            }
-            else if (id >= LibraryUpgradesOffset) // Open Floors
-            {
-                LORAP.Instance.LogInfo("Open Floor");
-                APPlaythruManager.OpenFloor(NumToSeph(id - LibraryUpgradesOffset));
+                case ItemType.AbnoPages:
+                    APPlaythruManager.AddAnboPages(((FloorUpgrade)item).seph);
+                    break;
+                case ItemType.Librarian:
+                    APPlaythruManager.AddLibrarian(((FloorUpgrade)item).seph);
+                    break;
+                case ItemType.EGO:
+                    APPlaythruManager.AddEGO(((FloorUpgrade)item).seph);
+                    break;
+                case ItemType.PassivePoint:
+                    APPlaythruManager.UpMaxPassiveCost();
+                    break;
+                case ItemType.BoosterPack:
+                    APPlaythruManager.GiveBoosterPack(((BoosterPack)item).rarity);
+                    break;
+                case ItemType.Reception:
+                    Reception reception = (Reception)item;
+                    switch (reception.id)
+                    {
+                        case 20001:
+                            APPlaythruManager.OpenReception(reception.id);
+                            APPlaythruManager.OpenReception(reception.id + 1);
+                            APPlaythruManager.OpenReception(reception.id + 2);
+                            break;
+                        case 50003:
+                            APPlaythruManager.OpenReception(reception.id);
+                            APPlaythruManager.OpenReception(reception.id + 1);
+                            break;
+                        case 50001:
+                            APPlaythruManager.OpenReception(reception.id);
+                            APPlaythruManager.OpenReception(reception.id + 1);
+                            break;
+                        case 60001:
+                            APPlaythruManager.OpenReception(reception.id);
+                            APPlaythruManager.OpenReception(reception.id + 1);
+                            break;
+                        default:
+                            APPlaythruManager.OpenReception(reception.id);
+                            break;
+                    }
+                    break;
+                case ItemType.Binah:
+                    APPlaythruManager.UnlockBinah();
+                    break;
+                case ItemType.BlackSilence:
+                    APPlaythruManager.UnlockBlackSilence();
+                    break;
+                default:
+                    LORAP.Instance.LogInfo($"That item has no type???");
+                    return;
             }
         }
     }

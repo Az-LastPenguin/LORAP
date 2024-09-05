@@ -2,6 +2,7 @@
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
 using BepInEx;
+using GameSave;
 using HarmonyLib;
 using LORAP.CustomUI;
 using System;
@@ -142,12 +143,17 @@ namespace LORAP
             CustomContentManager.AddCustomContent();
 
             // Create new game / Continue Game
-            APSaveManager.CurrentSaveFile = $"{IP}_{SlotName}_{session.RoomState.Seed}";
+            APSaveManager.CurrentSaveFile = new string((from c in $"{IP}_{SlotName}_{session.RoomState.Seed}" where char.IsWhiteSpace(c) || char.IsLetterOrDigit(c) select c).ToArray());
             APSaveManager.LoadGame();
 
             // Recieve any items sent while not playing the game
-            foreach (var item in session.Items.AllItemsReceived.Skip(APPlaythruManager.ItemsReceived))
+            LogInfo($"Items Received: {APPlaythruManager.ItemsReceived}");
+            LogInfo($"AllItems: {session.Items.AllItemsReceived.Count}");
+            for (int i = 0; i < session.Items.AllItemsReceived.Count; i++)
             {
+                var item = session.Items.DequeueItem();
+                if (i < APPlaythruManager.ItemsReceived) continue;
+
                 ItemsToReceive.Add(item.ItemId);
                 APPlaythruManager.ItemsReceived++;
 
@@ -173,15 +179,16 @@ namespace LORAP
         {
             while (ItemsToReceive.Count > 0)
             {
+                yield return new WaitForSeconds(0.2f);
                 var item = ItemsToReceive.First();
                 ItemsToReceive.RemoveAt(0);
 
                 ItemLocationManager.ReceiveItem(item);
-
-                yield return new WaitForSeconds(0.2f);
             }
 
             _itemReceiveCoroutine = null;
+
+            Singleton<SaveManager>.Instance.SavePlayData(1);
         }
 
         private void OnMessageRecieved(LogMessage message)

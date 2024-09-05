@@ -25,8 +25,11 @@ namespace LORAP
             saveData.AddData("floorData", GetFloorData());
             saveData.AddData("openedFloorData", GetOpenedFloorData());
 
-            string SaveFilePath = $"{Application.persistentDataPath}/{CurrentSaveFile}";
+            string SaveFilePath = $"{Application.persistentDataPath}/Archipelago/{CurrentSaveFile}";
             object serializedData = saveData.GetSerializedData();
+
+            if (!Directory.Exists($"{Application.persistentDataPath}/Archipelago"))
+                Directory.CreateDirectory($"{Application.persistentDataPath}/Archipelago");
 
             using (FileStream serializationStream = File.Create(SaveFilePath))
             {
@@ -57,7 +60,10 @@ namespace LORAP
 
 
             // Now to the actual load
-            string SaveFilePath = $"{Application.persistentDataPath}/{CurrentSaveFile}";
+            string SaveFilePath = $"{Application.persistentDataPath}/Archipelago/{CurrentSaveFile}";
+
+            if (!Directory.Exists($"{Application.persistentDataPath}/Archipelago"))
+                Directory.CreateDirectory($"{Application.persistentDataPath}/Archipelago");
 
             // If there is save like that, we load it, else we just create and empty one
             if (File.Exists(SaveFilePath))
@@ -67,21 +73,17 @@ namespace LORAP
                 SaveData saveData = new SaveData();
                 try
                 {
-                    if (File.Exists(SaveFilePath))
+                    object obj;
+                    using (FileStream fileStream = File.Open(SaveFilePath, FileMode.Open))
                     {
-                        object obj;
-                        using (FileStream fileStream = File.Open(SaveFilePath, FileMode.Open))
-                        {
-                            obj = binaryFormatter.Deserialize(fileStream);
-                        }
-                        if (obj == null)
-                        {
-                            throw new Exception();
-                        }
-
-                        saveData.LoadFromSerializedData(obj);
+                        obj = binaryFormatter.Deserialize(fileStream);
                     }
-                    else throw new FileNotFoundException();
+                    if (obj == null)
+                    {
+                        throw new Exception();
+                    }
+
+                    saveData.LoadFromSerializedData(obj);
                 }
                 catch (Exception)
                 {
