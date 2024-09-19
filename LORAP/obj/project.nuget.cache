@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "fiJEsfpFnDLfWYMAPtlT/t7xUplXSZUHKXlRTbCGDTABalImXlg/zL3+PJhjIbhoyJlOabRXzDGH8Y6i+UUClg==",
+  "dgSpecHash": "5yYP9sSCIR4OOmWXXG8ZOonfR/DfSucxtGoIqcJn9tNFJ1N6PQUiZs2g/OhrDJlsSl3pj/o5aChOUVWwZCeB9w==",
   "success": true,
   "projectFilePath": "C:\\Users\\Az\\source\\repos\\LoRAP\\LORAP\\LORAP.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\Az\\.nuget\\packages\\archipelago.multiclient.net\\6.2.0\\archipelago.multiclient.net.6.2.0.nupkg.sha512",
+    "C:\\Users\\Az\\.nuget\\packages\\archipelago.multiclient.net\\6.3.1\\archipelago.multiclient.net.6.3.1.nupkg.sha512",
     "C:\\Users\\Az\\.nuget\\packages\\bepinex.analyzers\\1.0.8\\bepinex.analyzers.1.0.8.nupkg.sha512",
     "C:\\Users\\Az\\.nuget\\packages\\bepinex.baselib\\5.4.20\\bepinex.baselib.5.4.20.nupkg.sha512",
     "C:\\Users\\Az\\.nuget\\packages\\bepinex.core\\5.4.21\\bepinex.core.5.4.21.nupkg.sha512",

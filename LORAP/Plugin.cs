@@ -29,7 +29,7 @@ namespace LORAP
         {
 
         }
-        
+
         private void Awake()
         {
             Instance = this;
@@ -41,9 +41,9 @@ namespace LORAP
             Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
         }
 
-        internal void LogInfo(object message)
+        internal static void Log(object message)
         {
-            Logger.LogInfo(message);
+            Instance.Logger.LogInfo(message);
         }
 
         internal int GetTotalLocationAmount()
@@ -59,11 +59,6 @@ namespace LORAP
         internal void SendCheck(int id)
         {
             session.Locations.CompleteLocationChecks(id);
-        }
-
-        internal void SendCheck(long[] ids)
-        {
-            session.Locations.CompleteLocationChecks(ids);
         }
 
         internal void SendGoalReached()
@@ -106,36 +101,36 @@ namespace LORAP
             }
 
             var successResult = (LoginSuccessful)result;
-            if (successResult.SlotData.TryGetValue("seed", out var seed))
-            {
-                APPlaythruManager.Seed = int.Parse((string)seed);
-            }
 
-            if (successResult.SlotData.TryGetValue("fillers", out var fillers))
-            {
-                APPlaythruManager.Fillers = Convert.ToInt32(fillers);
-            }
-            if (successResult.SlotData.TryGetValue("traps", out var traps))
-            {
-                APPlaythruManager.Traps = Convert.ToInt32(traps);
-            }
+            APPlaythruManager.Seed = Convert.ToInt32(successResult.SlotData.GetValueSafe("seed"));
+            APPlaythruManager.Fillers = Convert.ToInt32(successResult.SlotData.GetValueSafe("fillers"));
+            APPlaythruManager.Traps = Convert.ToInt32(successResult.SlotData.GetValueSafe("traps"));
 
-            if (successResult.SlotData.TryGetValue("total_common", out var totalCommon))
-            {
-                APPlaythruManager.RarityDrops[Rarity.Common].totalPacks = Convert.ToInt32(totalCommon);
-            }
-            if (successResult.SlotData.TryGetValue("total_uncommon", out var totalUncommon))
-            {
-                APPlaythruManager.RarityDrops[Rarity.Uncommon].totalPacks = Convert.ToInt32(totalUncommon);
-            }
-            if (successResult.SlotData.TryGetValue("total_rare", out var totalRare))
-            {
-                APPlaythruManager.RarityDrops[Rarity.Rare].totalPacks = Convert.ToInt32(totalRare);
-            }
-            if (successResult.SlotData.TryGetValue("total_unique", out var totalUnique))
-            {
-                APPlaythruManager.RarityDrops[Rarity.Unique].totalPacks = Convert.ToInt32(totalUnique);
-            }
+            APPlaythruManager.RarityDrops[Rarity.Common].totalPacks = Convert.ToInt32(successResult.SlotData.GetValueSafe("total_common"));
+            APPlaythruManager.RarityDrops[Rarity.Uncommon].totalPacks = Convert.ToInt32(successResult.SlotData.GetValueSafe("total_uncommon"));
+            APPlaythruManager.RarityDrops[Rarity.Rare].totalPacks = Convert.ToInt32(successResult.SlotData.GetValueSafe("total_rare"));
+            APPlaythruManager.RarityDrops[Rarity.Unique].totalPacks = Convert.ToInt32(successResult.SlotData.GetValueSafe("total_unique"));
+
+            APPlaythruManager.AbnoPageBalance = (APPlaythruManager.AbnoPageBalanceType)Convert.ToInt32(successResult.SlotData.GetValueSafe("abno_page_balance"));
+
+            APPlaythruManager.Goals = Convert.ToString(successResult.SlotData.GetValueSafe("end_goals")).Split(',').ToList().ConvertAll(g => 
+            { 
+                switch (g) 
+                {
+                    case "Reverberation Ensemble":
+                        return APPlaythruManager.GoalType.ReverbEnsemble;
+                    case "Black Silence":
+                        return APPlaythruManager.GoalType.BlackSilence;
+                    case "Keter Realization":
+                        return APPlaythruManager.GoalType.KeterRealization;
+                    case "Distorted Ensemble":
+                        return APPlaythruManager.GoalType.DistortedEnsemble;
+                }
+
+                return APPlaythruManager.GoalType.ReverbEnsemble;
+            });
+
+            APPlaythruManager.EnsembleBattles = Convert.ToInt32(successResult.SlotData.GetValueSafe("ensemble_battles"));
 
             APConnectWindow.Close();
 
@@ -143,12 +138,12 @@ namespace LORAP
             CustomContentManager.AddCustomContent();
 
             // Create new game / Continue Game
-            APSaveManager.CurrentSaveFile = new string((from c in $"{IP}_{SlotName}_{session.RoomState.Seed}" where char.IsWhiteSpace(c) || char.IsLetterOrDigit(c) select c).ToArray());
+            APSaveManager.CurrentSaveFile = session.RoomState.Seed;
             APSaveManager.LoadGame();
 
             // Recieve any items sent while not playing the game
-            LogInfo($"Items Received: {APPlaythruManager.ItemsReceived}");
-            LogInfo($"AllItems: {session.Items.AllItemsReceived.Count}");
+            Log($"Items Received: {APPlaythruManager.ItemsReceived}");
+            Log($"AllItems: {session.Items.AllItemsReceived.Count}");
             for (int i = 0; i < session.Items.AllItemsReceived.Count; i++)
             {
                 var item = session.Items.DequeueItem();
@@ -175,6 +170,11 @@ namespace LORAP
             };
         }
 
+        internal void APDisconnect()
+        {
+            if (session != null && session.Socket.Connected)
+                session.Socket.DisconnectAsync();
+        }
         private IEnumerator ItemReceivingCoroutine()
         {
             while (ItemsToReceive.Count > 0)

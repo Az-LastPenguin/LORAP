@@ -1,5 +1,4 @@
-﻿using Archipelago.MultiClient.Net.Models;
-using GameSave;
+﻿using GameSave;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
@@ -14,6 +13,8 @@ namespace LORAP
     {
         internal static string CurrentSaveFile;
 
+        internal static SaveData lastSaveData;
+
         internal static void SaveGame()
         {
             SaveData saveData = new SaveData();
@@ -24,6 +25,8 @@ namespace LORAP
             saveData.AddData("archipelago", APPlaythruManager.GetSaveData());
             saveData.AddData("floorData", GetFloorData());
             saveData.AddData("openedFloorData", GetOpenedFloorData());
+
+            lastSaveData = saveData;
 
             string SaveFilePath = $"{Application.persistentDataPath}/Archipelago/{CurrentSaveFile}";
             object serializedData = saveData.GetSerializedData();
@@ -170,6 +173,8 @@ namespace LORAP
         {
             LibraryModel.Instance.Init();
 
+            lastSaveData = saveData;
+
             foreach (var floor in Traverse.Create(LibraryModel.Instance).Field("_floorList").GetValue<List<LibraryFloorModel>>())
             {
                 LibraryModel.Instance.OpenSephirah(floor.Sephirah);
@@ -252,6 +257,57 @@ namespace LORAP
 
                 Traverse.Create(floor).Field("_level").SetValue(6);
             }
+
+            APPlaythruManager.OpenedReceptions = new List<int>();
+            APPlaythruManager.FoundBooks = new List<int>();
+
+            APPlaythruManager.AbnoPageAmounts = new Dictionary<SephirahType, int>()
+            {
+                [SephirahType.Keter] = 0,
+                [SephirahType.Malkuth] = 0,
+                [SephirahType.Yesod] = 0,
+                [SephirahType.Hod] = 0,
+                [SephirahType.Netzach] = 0,
+                [SephirahType.Tiphereth] = 0,
+                [SephirahType.Gebura] = 0,
+                [SephirahType.Chesed] = 0,
+                [SephirahType.Binah] = 0,
+                [SephirahType.Hokma] = 0,
+            };
+
+            APPlaythruManager.EGOAmounts = new Dictionary<SephirahType, int>()
+            {
+                [SephirahType.Keter] = 0,
+                [SephirahType.Malkuth] = 0,
+                [SephirahType.Yesod] = 0,
+                [SephirahType.Hod] = 0,
+                [SephirahType.Netzach] = 0,
+                [SephirahType.Tiphereth] = 0,
+                [SephirahType.Gebura] = 0,
+                [SephirahType.Chesed] = 0,
+                [SephirahType.Binah] = 0,
+                [SephirahType.Hokma] = 0,
+            };
+
+            APPlaythruManager.AbnoProgress = new Dictionary<SephirahType, int>()
+            {
+                [SephirahType.Keter] = 1,
+                [SephirahType.Malkuth] = 1,
+                [SephirahType.Yesod] = 1,
+                [SephirahType.Hod] = 1,
+                [SephirahType.Netzach] = 1,
+                [SephirahType.Tiphereth] = 1,
+                [SephirahType.Gebura] = 1,
+                [SephirahType.Chesed] = 1,
+                [SephirahType.Binah] = 1,
+                [SephirahType.Hokma] = 1,
+            };
+
+            APPlaythruManager.BinahUnlocked = false;
+            APPlaythruManager.BlackSilenceUnlocked = false;
+            APPlaythruManager.MaxPassiveCost = 8;
+
+            APPlaythruManager.ItemsReceived = 0;
 
             APPlaythruManager.RarityDrops[Rarity.Common].notFoundItems = CustomContentManager.CustomBooks[0].DropItemList.ConvertAll(i => i.id.id);
             APPlaythruManager.RarityDrops[Rarity.Uncommon].notFoundItems = CustomContentManager.CustomBooks[1].DropItemList.ConvertAll(i => i.id.id);

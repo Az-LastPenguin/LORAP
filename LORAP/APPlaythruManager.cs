@@ -1,5 +1,6 @@
 ﻿using GameSave;
 using HarmonyLib;
+using LORAP.CustomUI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +17,21 @@ namespace LORAP
 
     internal static class APPlaythruManager
     {
+        internal enum AbnoPageBalanceType
+        {
+            Unbalanced,
+            Balanced,
+            Vanilla
+        }
+
+        internal enum GoalType
+        {
+            ReverbEnsemble,
+            BlackSilence,
+            KeterRealization,
+            DistortedEnsemble
+        }
+
         internal static int ItemsReceived = 0;
 
         internal static int Seed = 143;
@@ -24,6 +40,15 @@ namespace LORAP
 
         internal static int Traps = 10;
 
+        internal static AbnoPageBalanceType AbnoPageBalance = AbnoPageBalanceType.Balanced;
+
+        internal static List<GoalType> Goals = new List<GoalType>();
+
+        internal static int EnsembleBattles = 1;
+
+
+
+        internal static List<int> EndGameBattlesBeaten = new List<int>();
 
         internal static List<int> OpenedReceptions = new List<int>();
 
@@ -88,7 +113,7 @@ namespace LORAP
 
         internal static void LoadFromSaveData(SaveData saveData)
         {
-            LORAP.Instance.LogInfo("Loading the game...");
+            LORAP.Log("Loading the game...");
 
             ItemsReceived = saveData.GetData("itemsReceived").GetIntSelf();
             foreach (SaveData dat in saveData.GetData("openedReceptions"))
@@ -141,7 +166,7 @@ namespace LORAP
 
         internal static SaveData GetSaveData()
         {
-            LORAP.Instance.LogInfo("Saving the game...");
+            LORAP.Log("Saving the game...");
 
             SaveData saveData = new SaveData();
 
@@ -194,6 +219,38 @@ namespace LORAP
             return saveData;
         }
 
+        internal static void CheckEndConditions()
+        {
+            int num = Goals.Count;
+            int completed = 0;
+
+            foreach (var g in Goals)
+            {
+                switch (g) {
+                    case GoalType.ReverbEnsemble:
+                        var ensembleBattles = new List<int>() { 70001, 70002, 70003, 70004, 70005, 70006, 70007, 70008, 70009, 70010 };
+                        if (EndGameBattlesBeaten.Count(id => ensembleBattles.Contains(id)) >= EnsembleBattles)
+                            completed++;
+                        break;
+                    case GoalType.BlackSilence:
+                        if (EndGameBattlesBeaten.Contains(60003))
+                            completed++;
+                        break;
+                    case GoalType.KeterRealization:
+                        if (AbnoProgress[SephirahType.Keter] == 6)
+                            completed++;
+                        break;
+                    case GoalType.DistortedEnsemble:
+                        if (EndGameBattlesBeaten.Contains(60004))
+                            completed++;
+                        break;
+                }
+            }
+
+            if (completed >= num)
+                LORAP.Instance.SendGoalReached();
+        }
+
 
         internal static bool IsReceptionOpened(int id)
         {
@@ -208,7 +265,8 @@ namespace LORAP
                 UI.UIController.Instance.SetCurrentSephirah(seph);
                 UI.UIController.Instance.CallUIPhase(UIPhase.Sephirah);
             }
-            UIAlarmPopup.instance.SetAlarmText(text);
+
+            MessagePopup.ShowMessage(text);
         }
 
         private static string FloorName(SephirahType seph)
@@ -254,14 +312,17 @@ namespace LORAP
         }
 
 
-        internal static void OpenReception(int id)
+        internal static void OpenReception(int id, bool silent = false)
         {
             OpenedReceptions.Add(id);
 
             (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel.SetStoryLine();
+
+            if (!silent)
+                FloorUpgradePopup($"Reception of {StageNameXmlList.Instance.GetName(id)} was unlocked!");
         }
 
-        internal static void OpenFloor(SephirahType seph)
+        internal static void OpenFloor(SephirahType seph, bool silent = false)
         {
             if (LibraryModel.Instance.IsOpenedSephirah(seph)) return;
 
@@ -277,19 +338,16 @@ namespace LORAP
             FloorUpgradePopup($"{FloorName(seph)} was Opened!", seph);
         }
 
-        internal static void AddAnboPages(SephirahType seph)
+        internal static void AddAnboPages(SephirahType seph, bool silent = false)
         {
             if (AbnoPageAmounts[seph] > 4) return;
 
             AbnoPageAmounts[seph]++;
 
-            //if (UI.UIController.Instance.CurrentUIPhase == UIPhase.Sephirah)
-            //    UIGetAbnormalityPanel.instance.SetData(LibraryModel.Instance.GetFloor(seph));
-            //else
-            FloorUpgradePopup($"{FloorName(seph)} upgrade! +3 Abnormality Pages!", seph);
+            MessagePopup.ShowPages(LibraryModel.Instance.GetFloor(seph), AbnoPageAmounts[seph]);
         }
 
-        internal static void AddLibrarian(SephirahType seph)
+        internal static void AddLibrarian(SephirahType seph, bool silent = false)
         {
             var floor = Traverse.Create(LibraryModel.Instance).Field("_floorList").GetValue<List<LibraryFloorModel>>().Find(f => f.Sephirah == seph);
 
@@ -299,12 +357,13 @@ namespace LORAP
             FloorUpgradePopup($"{FloorName(seph)} upgrade! +1 Librarian!", seph);
         }
 
-        internal static void AddEGO(SephirahType seph)
+        internal static void AddEGO(SephirahType seph, bool silent = false)
         {
             if (EGOAmounts[seph] > 4) return; 
 
             EGOAmounts[seph]++;
-            FloorUpgradePopup($"{FloorName(seph)} upgrade! +1 EGO card!", seph);
+
+            MessagePopup.ShowPages(LibraryModel.Instance.GetFloor(seph), EGOAmounts[seph], true);
         }
 
         internal static void AddAbnoProgress(SephirahType seph)
@@ -319,18 +378,37 @@ namespace LORAP
             Singleton<DropBookInventoryModel>.Instance.AddBook(CustomContentManager.CustomBooks[i].id, num);
         }
 
-        internal static void GiveBoosterPack(Rarity rarity, int num = 1)
+        internal static void GiveBoosterPack(Rarity rarity, int num = 1, bool silent = false)
         {
             Singleton<DropBookInventoryModel>.Instance.AddBook(CustomContentManager.BoosterPacks[rarity].id, num);
+
+            string type = "";
+            switch (rarity)
+            {
+                case Rarity.Common:
+                    type = "Paperback";
+                    break;
+                case Rarity.Uncommon:
+                    type = "Hardcover";
+                    break;
+                case Rarity.Rare:
+                    type = "Limited";
+                    break;
+                case Rarity.Unique:
+                    type = "Objet d'Art";
+                    break;
+            }
+
+            MessagePopup.ShowMessage($"You received {type} Booster Pack!");
         }
 
-        internal static void UpMaxPassiveCost()
+        internal static void UpMaxPassiveCost(bool silent = false)
         {
             MaxPassiveCost++;
             FloorUpgradePopup($"Library upgrade! +1 Max Passive Point!");
         }
 
-        internal static void UnlockBinah()
+        internal static void UnlockBinah(bool silent = false)
         {
             if (BinahUnlocked) return;
 
@@ -338,7 +416,7 @@ namespace LORAP
             FloorUpgradePopup($"Library upgrade! Binah unlocked!", SephirahType.Binah);
         }
 
-        internal static void UnlockBlackSilence()
+        internal static void UnlockBlackSilence(bool silent = false)
         {
             if (BlackSilenceUnlocked) return;
 
@@ -385,7 +463,7 @@ namespace LORAP
                 {
                     int guarantee = info.notFoundItems[0];
                     info.notFoundItems.RemoveAt(0);
-                    LORAP.Instance.LogInfo($"Guaranteeing drop of {guarantee}");
+                    LORAP.Log($"Guaranteeing drop of {guarantee}");
 
                     var drop = pack.DropItemList.Find(i => i.id.id == guarantee);
                     if (drop.itemType == DropItemType.Equip)
@@ -439,8 +517,8 @@ namespace LORAP
                 Drops.Add(result);
             }
 
-            LORAP.Instance.LogInfo($"{rarity} Pack Opening Progress: {info.packsUsed}/{info.totalPacks}");
-            LORAP.Instance.LogInfo($"{rarity} Drops Progress: {pack.DropItemList.Count - info.notFoundItems.Count}/{pack.DropItemList.Count}");
+            LORAP.Log($"{rarity} Pack Opening Progress: {info.packsUsed}/{info.totalPacks}");
+            LORAP.Log($"{rarity} Drops Progress: {pack.DropItemList.Count - info.notFoundItems.Count}/{pack.DropItemList.Count}");
 
             return Drops;
         }

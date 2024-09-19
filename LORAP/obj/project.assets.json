@@ -2,7 +2,7 @@
   "version": 3,
   "targets": {
     ".NETFramework,Version=v4.6": {
-      "Archipelago.MultiClient.Net/6.2.0": {
+      "Archipelago.MultiClient.Net/6.3.1": {
         "type": "package",
         "compile": {
           "lib/net45/Archipelago.MultiClient.Net.dll": {
@@ -220,15 +220,15 @@
     }
   },
   "libraries": {
-    "Archipelago.MultiClient.Net/6.2.0": {
-      "sha512": "lsVm/zOjpnuXE3P7daztvU8GFyNtfrGXp4ttHlyOkISWdN6BrSJ0Gwa4Pw9zxv2ocSpdvODfgJ/j1md5KokF4w==",
+    "Archipelago.MultiClient.Net/6.3.1": {
+      "sha512": "x7N0KHS1UjD1ZS6XGkJrBu6w//pNCe4PgYXEwPedRls/GcbbhgtEsGJmtxfPk/9/cCBXTymHNGMCrWmG9PGlLw==",
       "type": "package",
-      "path": "archipelago.multiclient.net/6.2.0",
+      "path": "archipelago.multiclient.net/6.3.1",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "README.md",
-        "archipelago.multiclient.net.6.2.0.nupkg.sha512",
+        "archipelago.multiclient.net.6.3.1.nupkg.sha512",
         "archipelago.multiclient.net.nuspec",
         "blue-icon.png",
         "lib/net35/Archipelago.MultiClient.Net.dll",
@@ -926,7 +926,7 @@
   },
   "projectFileDependencyGroups": {
     ".NETFramework,Version=v4.6": [
-      "Archipelago.MultiClient.Net >= 6.2.0",
+      "Archipelago.MultiClient.Net >= 6.3.1",
       "BepInEx.Analyzers >= 1.*",
       "BepInEx.Core >= 5.*",
       "BepInEx.PluginInfoProps >= 1.*",
@@ -976,7 +976,7 @@
         "dependencies": {
           "Archipelago.MultiClient.Net": {
             "target": "Package",
-            "version": "[6.2.0, )"
+            "version": "[6.3.1, )"
           },
           "BepInEx.Analyzers": {
             "suppressParent": "All",

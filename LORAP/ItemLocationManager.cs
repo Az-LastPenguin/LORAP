@@ -382,13 +382,13 @@ namespace LORAP
         {
             if (!ItemMap.ContainsKey(id))
             {
-                LORAP.Instance.LogInfo($"Cannot receive {id}!!");
+                LORAP.Log($"Cannot receive {id}!!");
                 return;
             }
 
             APItem item = ItemMap[id];
 
-            LORAP.Instance.LogInfo($"Receiving {id} - {item.category}");
+            LORAP.Log($"Receiving {id} - {item.category}");
 
             switch (item.category)
             {
@@ -440,7 +440,7 @@ namespace LORAP
                     APPlaythruManager.UnlockBlackSilence();
                     break;
                 default:
-                    LORAP.Instance.LogInfo($"That item has no type???");
+                    LORAP.Log($"That item has no type???");
                     return;
             }
         }
