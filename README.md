@@ -6,6 +6,8 @@ You can either download this mod from this github page, or download it in the [S
 
 If you wish to install this mod manually, you have to download the mod and drop it into Library Of Ruina/LibraryOfRuina_Data/Mods folder. (v0.3 or newer, older ones use BepInEx, don't use them.)
 
+**THE MOD IS STANDALONE**
+
 ## PROGRESS
 You can check progress for the mod, things that are completed, will be done, or still just an idea in [this project](https://github.com/users/Az-LastPenguin/projects/1/views/1?layout=board). (Not properly set up just yet.)
 
