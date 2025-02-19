@@ -3,6 +3,7 @@ The mod is in a semi-playable state, meaning you can play it from beginning to e
 
 ## INSTALLATION
 You can either download this mod from this github page, or download it in the [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3430626765).
+
 If you wish to install this mod manually, you have to download the mod and drop it into Library Of Ruina/LibraryOfRuina_Data/Mods folder. (v0.3 or newer, older ones use BepInEx, don't use them.)
 
 ## PROGRESS
