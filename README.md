@@ -1,8 +1,9 @@
 # DISCLAIMER
 The mod is in a semi-playable state, meaning you can play it from beginning to end, but may and **WILL** experience bugs. I myself would not recemmend doing actual serious runs with it, as it may brick sometimes.
 
-## WORKSHOP MOD
+## INSTALLATION
 You can either download this mod from this github page, or download it in the [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3430626765).
+If you wish to install this mod manually, you have to download the mod and drop it into Library Of Ruina/LibraryOfRuina_Data/Mods folder. (v0.3 or newer, older ones use BepInEx, don't use them.)
 
 ## PROGRESS
 You can check progress for the mod, things that are completed, will be done, or still just an idea in [this project](https://github.com/users/Az-LastPenguin/projects/1/views/1?layout=board).
