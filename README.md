@@ -1,6 +1,24 @@
 # DISCLAIMER
 The mod is in a semi-playable state, meaning you can play it from beginning to end, but may and **WILL** experience bugs. I myself would not recemmend doing actual serious runs with it, as it may brick sometimes.
 
+## WORKSHOP MOD
+You can either download this mod from this github page, or download it in the [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3430626765).
 
-## For bug reports
-Message last_penguin on discord, or find the page for the game in the future-game-design forum in the AP After Dark discord server, i'm always checking the chat for new messages, when i can
+## PROGRESS
+You can check progress for the mod, things that are completed, will be done, or still just an idea in [this project](https://github.com/users/Az-LastPenguin/projects/1/views/1?layout=board).
+
+## IDEAS AND CONTACT
+Visit [AfterDark Archipelago server](https://discord.gg/Sbhy4ykUKn) and [this channel](https://ptb.discord.com/channels/1085716850370957462/1137643745051955200) where me and the testers reside. You can discuss the mod, ideas for it, or anything relevant there. I'm always checking the chat.
+You can also contact me on Discord directly: last_penguin
+
+## BUG REPORTS
+You can send screenshots and descriptions of bugs you found in the aforementioned channel. But i would **REALLY** appreciate if you could [create an issue](https://github.com/Az-LastPenguin/LORAP/issues/new), just so i could keep track of things more easily.
+
+## CONTRIBUTING OR COMPILING
+If you wish to try and compile this beast (not in a good way) of a spaghetti monster:
+- I compile it with .NET 4.6
+- Packages:
+  - Archipelago.MultiClient.Net (To connect to AP)
+  - Lib.Harmony (What makes it work)
+  - UnityEngine.Modules 2019.3.15 (Unity Stuff)
+  - Krafs.Publicizer (For easier access to private fields)
