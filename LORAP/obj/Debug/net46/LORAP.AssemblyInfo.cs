@@ -11,11 +11,12 @@
 using System;
 using System.Reflection;
 
+[assembly: System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute("Assembly-CSharp")]
 [assembly: System.Reflection.AssemblyCompanyAttribute("LORAP")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("Bruh")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6efeab5ffafe1782d12139dfccfebb1bdb04d0a3")]
 [assembly: System.Reflection.AssemblyProductAttribute("LORAP")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LORAP")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

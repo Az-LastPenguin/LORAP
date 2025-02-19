@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using LOR_DiceSystem;
+using LORAP.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -28,7 +29,7 @@ namespace LORAP.CustomUI
             Panel = GameObject.Instantiate(PrefabHelper.GetPrefab("messagepopup", "MessagePopup"));
             Panel.transform.Find("Popup/Buttons/Layout/Confirm").gameObject.AddComponent<CustomSelectable>().MouseClickEvent.AddListener(ConfirmClick);
             Panel.transform.Find("Popup/Buttons/Layout/Skip").gameObject.AddComponent<CustomSelectable>().MouseClickEvent.AddListener(SkipClick);
-            Panel.transform.Find("Popup/PopupText").gameObject.GetComponent<TextMeshProUGUI>().font = UIAlarmPopup.instance.transform.Find("[Rect]Normal/[Text]AlarmText").gameObject.GetComponent<TextMeshProUGUI>().font;
+            Panel.transform.Find("Popup/PopupText").gameObject.GetComponent<TextMeshProUGUI>().font = UIHelper.Font1;
 
             Panel.SetActive(false);
         }
@@ -81,19 +82,19 @@ namespace LORAP.CustomUI
 
             UIGetAbnormalityPanel panel = UIGetAbnormalityPanel.instance;
 
-            var currentFloor = Traverse.Create(panel).Field<LibraryFloorModel>("currentFloor").Value;
+            var currentFloor = panel.currentFloor;
             currentFloor = floor;
-            Traverse.Create(panel).Field<GameObject>("ob_blackbgForKeterCompleterOpen").Value.gameObject.SetActive(LibraryModel.Instance.IsKeterCompleteOpen(floor));
+            panel.ob_blackbgForKeterCompleterOpen.gameObject.SetActive(LibraryModel.Instance.IsKeterCompleteOpen(floor));
 
-            var currentSettinfCardCount = Traverse.Create(panel).Field<int>("currentSettinfCardCount").Value;
+            var currentSettinfCardCount = panel.currentSettinfCardCount;
 
             currentSettinfCardCount = -1;
             panel.Open();
 
-            var sep = Traverse.Create(panel).Field<SephirahType>("sep").Value;
+            var sep = panel.sep;
             sep = floor.Sephirah;
 
-            Traverse.Create(panel).Field<Image>("img_floorIcon").Value.sprite = UISpriteDataManager.instance._floorIconSet[(int)sep].icon;
+            panel.img_floorIcon.sprite = UISpriteDataManager.instance._floorIconSet[(int)sep].icon;
 
             List<EmotionCardXmlInfo> dataListByLevel = Singleton<EmotionCardXmlList>.Instance.GetDataListByLevel(floor.Sephirah, lv+1);
             currentSettinfCardCount = dataListByLevel.Count;
@@ -136,7 +137,7 @@ namespace LORAP.CustomUI
                     break;
             }
 
-            Traverse.Create(panel).Field<TextMeshProUGUI>("txt_floorname").Value.text = TextDataModel.GetText(id);
+            panel.txt_floorname.text = TextDataModel.GetText(id);
 
             string text = "I";
             switch (lv)
@@ -173,26 +174,24 @@ namespace LORAP.CustomUI
                     break;
             }
 
-            Traverse.Create(panel).Field<TextMeshProUGUI>("txt_level").Value.text = text;
+            panel.txt_level.text = text;
 
             panel.SetColor(UIColorManager.Manager.GetSephirahColor(sep));
 
             if (sep == SephirahType.Binah)
-            {
                 panel.SetColor(UIColorManager.Manager.GetSephirahGlowColor(sep));
-            }
 
             if (!ego && dataListByLevel.Count > 0)
             {
-                Traverse.Create(panel).Field<GameObject>("AbnormalitiesRoot").Value.SetActive(value: true);
-                Traverse.Create(panel).Field<GameObject>("EgoCardsRoot").Value.SetActive(value: false);
+                panel.AbnormalitiesRoot.SetActive(value: true);
+                panel.EgoCardsRoot.SetActive(value: false);
 
-                Traverse.Create(panel).Field<TextMeshProUGUI>("txt_getabcardtxt").Value.gameObject.SetActive(value: true);
-                Traverse.Create(panel).Field<TextMeshProUGUI>("txt_getegocardtxt").Value.gameObject.SetActive(value: false);
+                panel.txt_getabcardtxt.gameObject.SetActive(value: true);
+                panel.txt_getegocardtxt.gameObject.SetActive(value: false);
 
                 panel.selectablePanel.ChildSelectable = panel.abpanelSelectable;
 
-                var AbnormalityList = Traverse.Create(panel).Field<List<UIEmotionPassiveCardInven>>("AbnormalityList").Value;
+                var AbnormalityList = panel.AbnormalityList;
 
                 for (int i = 0; i < dataListByLevel.Count; i++)
                 {
@@ -208,15 +207,15 @@ namespace LORAP.CustomUI
                     abnormality.SetActiveDetail(on: true);
                 }
 
-                Traverse.Create(panel).Field<bool>("isShowEgo").Value = false;
+                panel.isShowEgo = false;
             }
             else if (ego && Singleton<EmotionEgoXmlList>.Instance.GetEgoCardList(currentFloor.Sephirah).Count > 0)
             {
-                Traverse.Create(panel).Field<GameObject>("AbnormalitiesRoot").Value.SetActive(value: false);
-                Traverse.Create(panel).Field<GameObject>("EgoCardsRoot").Value.SetActive(value: true);
+                panel.AbnormalitiesRoot.SetActive(value: false);
+                panel.EgoCardsRoot.SetActive(value: true);
 
-                Traverse.Create(panel).Field<TextMeshProUGUI>("txt_getabcardtxt").Value.gameObject.SetActive(value: false);
-                Traverse.Create(panel).Field<TextMeshProUGUI>("txt_getegocardtxt").Value.gameObject.SetActive(value: true);
+                panel.txt_getabcardtxt.gameObject.SetActive(value: false);
+                panel.txt_getegocardtxt.gameObject.SetActive(value: true);
 
                 panel.selectablePanel.ChildSelectable = panel.egopanelSelectable;
 
@@ -227,21 +226,21 @@ namespace LORAP.CustomUI
                     list2.Add(new DiceCardItemModel(list[i]));
                 }
 
-                Traverse.Create(panel).Field<UIEgoCardList>("egoCardList").Value.SetEgoCards(list2);
+                panel.egoCardList.SetEgoCards(list2);
 
-                Traverse.Create(panel).Field<bool>("isShowEgo").Value = true;
+                panel.isShowEgo = true;
             }
 
-            typeof(UIGetAbnormalityPanel).GetMethod("SetDefault", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(panel, null);
+            panel.SetDefault();
 
-            Traverse.Create(panel).Field<Animator>("anim").Value.SetTrigger("Reveal");
+            panel.anim.SetTrigger("Reveal");
         }
 
         internal static void PagesClose()
         {
             UIGetAbnormalityPanel panel = UIGetAbnormalityPanel.instance;
 
-            typeof(UIGetAbnormalityPanel).GetMethod("SetDefault", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(panel, null);
+            panel.SetDefault();
 
             panel.Close();
 
@@ -257,7 +256,7 @@ namespace LORAP.CustomUI
             Panel.SetActive(true);
 
             UISoundManager.instance.PlayEffectSound(UISoundType.Gacha_Hexagon);
-            LORAP.Instance.StartCoroutine(RevealAnim());
+            Timing.Coroutine(RevealAnim());
         }
 
         private static void Close()

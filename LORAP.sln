@@ -3,18 +3,30 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34018.315
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LORAP", "LORAP\LORAP.csproj", "{AACE0510-385B-4E4E-BE95-7806D55602C6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LORAP", "LORAP\LORAP.csproj", "{AACE0510-385B-4E4E-BE95-7806D55602C6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
 		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Test|Any CPU = Test|Any CPU
+		Test|x64 = Test|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{AACE0510-385B-4E4E-BE95-7806D55602C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{AACE0510-385B-4E4E-BE95-7806D55602C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AACE0510-385B-4E4E-BE95-7806D55602C6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{AACE0510-385B-4E4E-BE95-7806D55602C6}.Debug|x64.Build.0 = Debug|Any CPU
 		{AACE0510-385B-4E4E-BE95-7806D55602C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AACE0510-385B-4E4E-BE95-7806D55602C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AACE0510-385B-4E4E-BE95-7806D55602C6}.Release|x64.ActiveCfg = Release|Any CPU
+		{AACE0510-385B-4E4E-BE95-7806D55602C6}.Release|x64.Build.0 = Release|Any CPU
+		{AACE0510-385B-4E4E-BE95-7806D55602C6}.Test|Any CPU.ActiveCfg = Test|Any CPU
+		{AACE0510-385B-4E4E-BE95-7806D55602C6}.Test|Any CPU.Build.0 = Test|Any CPU
+		{AACE0510-385B-4E4E-BE95-7806D55602C6}.Test|x64.ActiveCfg = Test|Any CPU
+		{AACE0510-385B-4E4E-BE95-7806D55602C6}.Test|x64.Build.0 = Test|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

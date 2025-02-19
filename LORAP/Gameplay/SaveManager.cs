@@ -1,32 +1,81 @@
 ﻿using GameSave;
 using HarmonyLib;
+using LORAP.Archipelago;
+using LORAP.Playthru;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using UI;
 using UnityEngine;
 
-namespace LORAP
+namespace LORAP.Gameplay
 {
-    internal static class APSaveManager
+    internal static class SaveManager
     {
         internal static string CurrentSaveFile;
 
-        internal static SaveData lastSaveData;
+        internal static SessionData LoadLastSessionData()
+        {
+            if (!Directory.Exists($"{Application.persistentDataPath}/Archipelago"))
+                Directory.CreateDirectory($"{Application.persistentDataPath}/Archipelago");
+
+            if (!File.Exists($"{Application.persistentDataPath}/Archipelago/LastSession"))
+            {
+                ConnectionManager.currentSessionData = new SessionData();
+                return ConnectionManager.currentSessionData;
+            }
+
+            BinaryFormatter binaryFormatter = new BinaryFormatter();
+            try
+            {
+                SessionData Data;
+                using (FileStream fileStream = File.Open($"{Application.persistentDataPath}/Archipelago/LastSession", FileMode.Open))
+                {
+                    Data = binaryFormatter.Deserialize(fileStream) as SessionData;
+                }
+                if (Data == null)
+                {
+                    throw new Exception();
+                }
+
+                ConnectionManager.currentSessionData = Data;
+
+                return ConnectionManager.currentSessionData;
+            }
+            catch (Exception)
+            {
+                ConnectionManager.currentSessionData = new SessionData();
+
+                return ConnectionManager.currentSessionData;
+            }
+        }
+
+        internal static void SaveLastSessionData()
+        {
+            if (!Directory.Exists($"{Application.persistentDataPath}/Archipelago"))
+                Directory.CreateDirectory($"{Application.persistentDataPath}/Archipelago");
+
+            using (FileStream serializationStream = File.Create($"{Application.persistentDataPath}/Archipelago/LastSession"))
+            {
+                new BinaryFormatter().Serialize(serializationStream, ConnectionManager.GetSessionData());
+            }
+        }
 
         internal static void SaveGame()
         {
-            SaveData saveData = new SaveData();
-            saveData.AddData("inventory", Singleton<InventoryModel>.Instance.GetSaveData());
-            saveData.AddData("bookInventory", Singleton<BookInventoryModel>.Instance.GetSaveData());
-            saveData.AddData("bookDropInventory", GetDropBookData());
-            saveData.AddData("deckList", Singleton<DeckListModel>.Instance.GetSaveData());
-            saveData.AddData("archipelago", APPlaythruManager.GetSaveData());
-            saveData.AddData("floorData", GetFloorData());
-            saveData.AddData("openedFloorData", GetOpenedFloorData());
+            Debug.Log("Saving the game...");
 
-            lastSaveData = saveData;
+            SaveLastSessionData();
+
+            SaveData saveData = new SaveData();
+            saveData.AddData("inventory", InventoryModel.Instance.GetSaveData());
+            saveData.AddData("bookInventory", BookInventoryModel.Instance.GetSaveData());
+            saveData.AddData("bookDropInventory", GetDropBookData());
+            saveData.AddData("deckList", DeckListModel.Instance.GetSaveData());
+            saveData.AddData("archipelago", PlaythruManager.GetSaveData());
+            saveData.AddData("floorData", GetFloorData());
 
             string SaveFilePath = $"{Application.persistentDataPath}/Archipelago/{CurrentSaveFile}";
             object serializedData = saveData.GetSerializedData();
@@ -40,29 +89,26 @@ namespace LORAP
             }
         }
 
-        internal static void LoadGame()
+        internal static void LoadGame(string seed)
         {
-            // GlobalGameManager.ContinueGame
-            Traverse.Create(GlobalGameManager.Instance).Field("_gamePlayInitialized").SetValue(false);
-            if ((bool)Traverse.Create(GlobalGameManager.Instance).Field("_initialized").GetValue() == false)
-            {
-                if (UIAlarmPopup.instance != null)
-                {
-                    UIAlarmPopup.instance.SetAlarmText("The game is not initialized. cannot start game");
-                }
+            Debug.Log("Loading the game...");
 
+            // GlobalGameManager.ContinueGame
+            GlobalGameManager.Instance._gamePlayInitialized = false;
+            if (!GlobalGameManager.Instance._initialized && UIAlarmPopup.instance != null)
+            {
+                UIAlarmPopup.instance.SetAlarmText("The game is not initialized. cannot start game");
                 return;
             }
 
             if (PlatformManager.Instance.IsProccessing)
-            {
                 return;
-            }
 
-            Singleton<AssetBundleManagerRemake>.Instance.Init();
+            AssetBundleManagerRemake.Instance.Init();
 
 
             // Now to the actual load
+            CurrentSaveFile = seed;
             string SaveFilePath = $"{Application.persistentDataPath}/Archipelago/{CurrentSaveFile}";
 
             if (!Directory.Exists($"{Application.persistentDataPath}/Archipelago"))
@@ -101,7 +147,8 @@ namespace LORAP
                 LoadNew();
             }
 
-            PlayHistoryModel model = Traverse.Create(LibraryModel.Instance).Field("_playHistory").GetValue() as PlayHistoryModel;
+            PlayHistoryModel model = LibraryModel.Instance._playHistory;
+            model.prologueOpenInvtationManual = 1;
             model.tutorial_keterOpenbyratsClear = 1;
             model.tutorialInteractUI_HighlightedInvitaionButton = 1;
             model.tutorial_SelectOneBook = 1;
@@ -139,7 +186,7 @@ namespace LORAP
             model.story_BlackSilence_progress = 0;
             model.Start_EndContents = 0;
             model.Clear_TwistedBluePrevUpdate = 0;
-            model.Clear_EndcontentsAllStage = 0;
+            model.Clear_EndcontentsAllStage = 1;
             model.ResetSecondRewardClearEndContents = 0;
             model.tutorial_EnterBattle = 1;
             model.tutorial_EnterBattleSpaceDice = 1;
@@ -156,77 +203,59 @@ namespace LORAP
             model.feedBookCount = 1;
             model.furiosoKill1 = 1;
             model.furiosoKill2 = 1;
-            
-            Traverse.Create(LibraryModel.Instance).Field("_playHistory").SetValue(model); // Check
 
-            Traverse.Create(LibraryModel.Instance).Field("_currentChapter").SetValue(7);
+            LibraryModel.Instance._currentChapter = 7;
 
-            LibraryModel.Instance.ClearInfo.AddClearCount(2);
+            //LibraryModel.Instance.ClearInfo.AddClearCount(2);
 
             // Put the player in the game, loading is done
             GameSceneManager.Instance.ActivateUIController(initUIScene: true);
 
-            Traverse.Create(GlobalGameManager.Instance).Field("_gamePlayInitialized").SetValue(true);
+            GlobalGameManager.Instance._gamePlayInitialized = true;
         }
 
         private static void LoadFromSave(SaveData saveData)
         {
             LibraryModel.Instance.Init();
+            LibraryModel.Instance._floorList.ForEach(f => f._level = 6);
 
-            lastSaveData = saveData;
-
-            foreach (var floor in Traverse.Create(LibraryModel.Instance).Field("_floorList").GetValue<List<LibraryFloorModel>>())
-            {
-                LibraryModel.Instance.OpenSephirah(floor.Sephirah);
-
-                if (floor.Sephirah == SephirahType.Binah)
-                {
-                    floor.SetOpenedUnitCount(2);
-                }
-
-                Traverse.Create(floor).Field("_level").SetValue(6);
-            }
-
-            Singleton<InventoryModel>.Instance.LoadFromSaveData(saveData.GetData("inventory"));
-            Singleton<BookInventoryModel>.Instance.LoadFromSaveData(saveData.GetData("bookInventory"));
-            Singleton<DeckListModel>.Instance.LoadFromSaveData(saveData.GetData("deckList"));
-            APPlaythruManager.LoadFromSaveData(saveData.GetData("archipelago"));
-
+            // Load base game stuff
+            InventoryModel.Instance.LoadFromSaveData(saveData.GetData("inventory"));
+            BookInventoryModel.Instance.LoadFromSaveData(saveData.GetData("bookInventory"));
+            DeckListModel.Instance.LoadFromSaveData(saveData.GetData("deckList"));
             // Drop Books
-            Traverse.Create(Singleton<DropBookInventoryModel>.Instance).Field<List<OwnDropBookModel>>("_bookList").Value.Clear();
-            Traverse.Create(Singleton<DropBookInventoryModel>.Instance).Field<Dictionary<LorId, OwnDropBookModel>>("_bookDictionary").Value.Clear();
+            DropBookInventoryModel.Instance._bookList.Clear();
+            DropBookInventoryModel.Instance._bookDictionary.Clear();
+
             SaveData data = saveData.GetData("bookDropInventory");
             if (data != null)
             {
                 foreach (SaveData d in data.GetData("bookList"))
                 {
-                    SaveData data2 = d.GetData("id");
-                    LorId bookId = LorId.None;
-                    if (data2 != null)
-                    {
-                        bookId = LorId.LoadFromSaveData(data2);
-                    }
-                    int @int = d.GetInt("num");
-                    Singleton<DropBookInventoryModel>.Instance.AddBook(bookId, @int);
+                    SaveData id = d.GetData("id");
+                    SaveData pkg = d.GetData("pkg");
+
+                    LorId bookId = new LorId(pkg.GetStringSelf(), id.GetIntSelf());
+                    Debug.Log($"Loading book: {bookId}");
+
+                    int num = d.GetInt("num");
+                    DropBookInventoryModel.Instance.AddBook(bookId, num);
                 }
             }
 
-            // Opened Floor Info
-            data = saveData.GetData("openedFloorData");
-            foreach (SaveData dat in data)
-            {
-                var sephs = Traverse.Create(LibraryModel.Instance).Field<HashSet<SephirahType>>("_openedSephirah").Value;
+            // Load PlaythruManager
+            PlaythruManager.LoadFromSaveData(saveData.GetData("archipelago"));
 
-                SephirahType sephirahTypeByName = SephirahName.GetSephirahTypeByName(dat.GetStringSelf());
-                if (sephirahTypeByName != 0 && !sephs.Contains(sephirahTypeByName))
-                {
-                    sephs.Add(sephirahTypeByName);
-                }
+            // Set Floors Opened
+            foreach (var f in PlaythruManager.Floors)
+            {
+                if (f.Value.Open)
+                    LibraryModel.Instance._openedSephirah.Add(f.Key);
             }
 
             // Floor unit info
             data = saveData.GetData("floorData");
-            foreach (LibraryFloorModel floor in Traverse.Create(LibraryModel.Instance).Field<List<LibraryFloorModel>>("_floorList").Value)
+            foreach (LibraryFloorModel floor in LibraryModel.Instance._floorList)
             {
                 SaveData _data = data.GetData(SephirahName.GetSephirahNameByType(floor.Sephirah));
                 if (_data == null) continue;
@@ -246,7 +275,7 @@ namespace LORAP
         {
             LibraryModel.Instance.Init();
 
-            foreach (var floor in Traverse.Create(LibraryModel.Instance).Field("_floorList").GetValue<List<LibraryFloorModel>>())
+            foreach (var floor in LibraryModel.Instance._floorList)
             {
                 LibraryModel.Instance.OpenSephirah(floor.Sephirah);
 
@@ -255,74 +284,35 @@ namespace LORAP
                     floor.SetOpenedUnitCount(2);
                 }
 
-                Traverse.Create(floor).Field("_level").SetValue(6);
+                floor._level = 6;
             }
 
-            APPlaythruManager.OpenedReceptions = new List<int>();
-            APPlaythruManager.FoundBooks = new List<int>();
-
-            APPlaythruManager.AbnoPageAmounts = new Dictionary<SephirahType, int>()
+            PlaythruManager.OpenedReceptions = new List<int>()
             {
-                [SephirahType.Keter] = 0,
-                [SephirahType.Malkuth] = 0,
-                [SephirahType.Yesod] = 0,
-                [SephirahType.Hod] = 0,
-                [SephirahType.Netzach] = 0,
-                [SephirahType.Tiphereth] = 0,
-                [SephirahType.Gebura] = 0,
-                [SephirahType.Chesed] = 0,
-                [SephirahType.Binah] = 0,
-                [SephirahType.Hokma] = 0,
+                2, 3, 4, 5, 6, 7, 10001, 10002, 10003, 100001, 100002, 100003
             };
 
-            APPlaythruManager.EGOAmounts = new Dictionary<SephirahType, int>()
-            {
-                [SephirahType.Keter] = 0,
-                [SephirahType.Malkuth] = 0,
-                [SephirahType.Yesod] = 0,
-                [SephirahType.Hod] = 0,
-                [SephirahType.Netzach] = 0,
-                [SephirahType.Tiphereth] = 0,
-                [SephirahType.Gebura] = 0,
-                [SephirahType.Chesed] = 0,
-                [SephirahType.Binah] = 0,
-                [SephirahType.Hokma] = 0,
-            };
+            PlaythruManager.FoundBooks = new List<int>();
 
-            APPlaythruManager.AbnoProgress = new Dictionary<SephirahType, int>()
-            {
-                [SephirahType.Keter] = 1,
-                [SephirahType.Malkuth] = 1,
-                [SephirahType.Yesod] = 1,
-                [SephirahType.Hod] = 1,
-                [SephirahType.Netzach] = 1,
-                [SephirahType.Tiphereth] = 1,
-                [SephirahType.Gebura] = 1,
-                [SephirahType.Chesed] = 1,
-                [SephirahType.Binah] = 1,
-                [SephirahType.Hokma] = 1,
-            };
+            PlaythruManager.Floors = Enum.GetValues(typeof(SephirahType)).Cast<SephirahType>().ToDictionary(k => k, v => new FloorInfo());
 
-            APPlaythruManager.BinahUnlocked = false;
-            APPlaythruManager.BlackSilenceUnlocked = false;
-            APPlaythruManager.MaxPassiveCost = 8;
+            PlaythruManager.BinahUnlocked = false;
+            PlaythruManager.BlackSilenceUnlocked = false;
+            PlaythruManager.MaxPassiveCost = 8;
 
-            APPlaythruManager.ItemsReceived = 0;
-
-            APPlaythruManager.RarityDrops[Rarity.Common].notFoundItems = CustomContentManager.CustomBooks[0].DropItemList.ConvertAll(i => i.id.id);
-            APPlaythruManager.RarityDrops[Rarity.Uncommon].notFoundItems = CustomContentManager.CustomBooks[1].DropItemList.ConvertAll(i => i.id.id);
-            APPlaythruManager.RarityDrops[Rarity.Rare].notFoundItems = CustomContentManager.CustomBooks[2].DropItemList.ConvertAll(i => i.id.id);
-            APPlaythruManager.RarityDrops[Rarity.Unique].notFoundItems = CustomContentManager.CustomBooks[3].DropItemList.ConvertAll(i => i.id.id);
+            PlaythruManager.ItemsReceived = 0;
         }
 
         private static SaveData GetDropBookData()
         {
             SaveData saveData = new SaveData();
             SaveData saveData2 = new SaveData();
-            foreach (OwnDropBookModel book in Traverse.Create(Singleton<DropBookInventoryModel>.Instance).Field<List<OwnDropBookModel>>("_bookList").Value)
+            foreach (OwnDropBookModel book in DropBookInventoryModel.Instance._bookList)
             {
+                Debug.Log($"Saving book: {book.XmlInfo.id}");
                 SaveData saveData3 = new SaveData();
                 saveData3.AddData("id", new SaveData(book.XmlInfo.id.id));
+                saveData3.AddData("pkg", new SaveData(book.XmlInfo.id.packageId));
                 saveData3.AddData("num", new SaveData(book.num));
                 saveData2.AddToList(saveData3);
             }
@@ -334,11 +324,11 @@ namespace LORAP
         private static SaveData GetFloorData()
         {
             SaveData saveData = new SaveData();
-            foreach (LibraryFloorModel floor in Traverse.Create(LibraryModel.Instance).Field<List<LibraryFloorModel>>("_floorList").Value)
+            foreach (LibraryFloorModel floor in LibraryModel.Instance._floorList)
             {
                 SaveData saveData2 = new SaveData();
                 SaveData saveData3 = new SaveData();
-                foreach (UnitDataModel unitData in Traverse.Create(floor).Field<List<UnitDataModel>>("_unitDataList").Value)
+                foreach (UnitDataModel unitData in floor._unitDataList)
                 {
                     saveData3.AddToList(unitData.GetSaveData());
                 }
@@ -346,18 +336,6 @@ namespace LORAP
                 saveData2.AddData("unitsOpened", new SaveData(floor.GetOpendUnitCount()));
 
                 saveData.AddData(SephirahName.GetSephirahNameByType(floor.Sephirah), saveData2);
-            }
-
-            return saveData;
-        }
-
-        private static SaveData GetOpenedFloorData()
-        {
-            SaveData saveData = new SaveData();
-            
-            foreach (var seph in LibraryModel.Instance.GetOpenedSephirahList())
-            {
-                saveData.AddToList(new SaveData(SephirahName.GetSephirahNameByType(seph)));
             }
 
             return saveData;

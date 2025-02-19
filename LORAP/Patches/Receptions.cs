@@ -1,8 +1,9 @@
 ﻿using HarmonyLib;
-using System;
+using LORAP.Playthru;
+using LORAP.Utils;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using System.Reflection.Emit;
 using UI;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,8 +13,6 @@ namespace LORAP.Patches
     [HarmonyPatch(typeof(StageClassInfo))]
     internal class ClosedReceptionsPatch
     {
-        internal static List<int> shownIds = new List<int>();
-
         // Block receptions that are not unlocked for the player
         [HarmonyPatch(nameof(StageClassInfo.currentState), MethodType.Getter)]
         [HarmonyPrefix]
@@ -21,13 +20,7 @@ namespace LORAP.Patches
         {
             __result = StoryState.Close;
 
-            if ((__instance.chapter == 1 || __instance.chapter == 2) && __instance.storyType != "Chapter2")
-                __result = StoryState.Clear;
-
-            if (shownIds.Contains(__instance.id.id))
-                __result = StoryState.Clear;
-
-            if (APPlaythruManager.IsReceptionOpened(__instance.id.id))
+            if (PlaythruManager.IsReceptionOpened(__instance.id.id))
                 __result = StoryState.Clear;
 
             return false;
@@ -42,45 +35,48 @@ namespace LORAP.Patches
         static bool HideReceptions(UIStoryProgressPanel __instance)
         {
             __instance.currentSlot = null;
-            StoryTotal.instance.SetData();
-            foreach (GameObject chapter in Traverse.Create(__instance).Field<List<GameObject>>("chapterList").Value)
+            StoryTotal.instance.SetData(); // What's it for?
+            __instance.chapterList.ForEach(c => c.SetActive(true)); // Show all chapters and receptions
+            __instance.blockChapterList.ForEach(b => b.root.gameObject.SetActive(false)); // Hide all chapter block things
+
+            List<int> ensembleIds = new List<int>() { 70001, 70002, 70003, 70004, 70005, 70006, 70007, 70008, 70009, 70010 };
+            List<int> hideIDs = new List<int>() { 610000, 60007 };
+            foreach (var icon in __instance.iconList) // Set all receptions info and icons
             {
-                chapter.SetActive(true);
-            }
+                List<StageClassInfo> storyData = StoryTotal.instance._lineList.Find((StoryLineData x) => x.currentstory == icon.currentStory)?.stageList ?? icon.storyData;
+                icon.SetSlotData(storyData);
 
-            foreach (var block in Traverse.Create(__instance).Field<List<UIBlockChapterAlarm>>("blockChapterList").Value)
-            {
-                block.root.gameObject.SetActive(false);
-            }
-
-            foreach (var icon in Traverse.Create(__instance).Field<List<UIStoryProgressIconSlot>>("iconList").Value)
-            {
-                StoryLineData storyLineData = StoryTotal.instance._lineList.Find((StoryLineData x) => x.currentstory == icon.currentStory);
-                List<StageClassInfo> story = storyLineData != null ? storyLineData.stageList : Traverse.Create(icon).Field<List<StageClassInfo>>("storyData").Value;
-                icon.SetSlotData(story);
-                icon.SetActiveStory(true);
-
-                List<int> ensembleIds = new List<int>() { 70001, 70002, 70003, 70004, 70005, 70006, 70007, 70008, 70009, 70010 };
-                if (ensembleIds.Contains(story[0].id.id))
-                {
-                    typeof(UIStoryProgressIconSlot).GetMethod("SetIcon", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(icon, new object[] { UISpriteDataManager.instance._floorIconSet[story[0].id.id-70000] });
-                }
-
-                List<int> hiddenIds = new List<int>() {610000, 60007};
-                if (hiddenIds.Contains(story[0].id.id))
+                if (hideIDs.Contains(storyData[0]._id)) // Hide some receptions
                     icon.SetActiveStory(false);
+                else
+                    icon.SetActiveStory(true);
+
+                if (ensembleIds.Contains(storyData[0]._id)) // Set custom ensemble icons
+                {
+                    if (storyData[0].currentState == StoryState.Clear)
+                        icon.SetIcon(UISpriteDataManager.instance._floorIconSet[storyData[0]._id - 70000]);
+                    else
+                        icon.SetIcon(UISpriteDataManager.instance._questionicon[1]);
+                }
+                    
+
+                // Show checkmark for the completed receptions that have every book collected
+                if (icon.transform.Find("Checkmark") == null)
+                    continue;
+
+                var notFound = storyData.SelectMany(s => s.waveList).SelectMany(w => w.enemyUnitIdList).SelectMany(u => EnemyUnitClassInfoList.Instance.GetData(u).dropTableList).SelectMany(t => t.dropItemList).Where(i => !PlaythruManager.FoundBooks.Contains(i.bookId)).Count();
+
+                if (PlaythruManager.ReceptionsCompleted.Contains(storyData[0]._id) && notFound == 0)
+                    icon.transform.Find("Checkmark").gameObject.SetActive(true);
             }
 
-            foreach (UIStoryProgressIconSlot chapterIcon in Traverse.Create(__instance).Field<List<UIStoryProgressIconSlot>>("chapterIconList").Value)
+            foreach (UIStoryProgressIconSlot chapterIcon in __instance.chapterIconList) // Make chapter buttons not interactable (and some other default stuff)
             {
                 chapterIcon.SetChapterStoryIcon();
                 chapterIcon.SetChapterStoryIconDefault();
-            }
-
-            foreach (var c in Traverse.Create(__instance).Field("chapterIconList").GetValue() as List<UIStoryProgressIconSlot>)
-            {
-                Traverse.Create(c).Field("isDisabled").SetValue(true);
-                c.GetComponentInChildren<UICustomSelectable>().interactable = false;
+                chapterIcon.enabled = false;
+                chapterIcon.isDisabled = true;
+                chapterIcon.transform.Find("[Rect]ChapterTitle/[Rect]Close (1)/[Xbox]SelectableTarget").gameObject.GetComponent<UICustomSelectable>().interactable = false;
             }
 
             return false;
@@ -90,72 +86,6 @@ namespace LORAP.Patches
     [HarmonyPatch(typeof(UIStoryProgressIconSlot))]
     internal class CheckmarkPatch
     {
-        // Add a checkmark to completed receptions
-        [HarmonyPatch("SetSlotOpen")]
-        [HarmonyPrefix]
-        static void Checkmark(UIStoryProgressIconSlot __instance, bool open)
-        {
-            if (__instance.transform.Find("Checkmark") == null)
-                return;
-
-            StoryLineData storyLineData = StoryTotal.instance._lineList.Find((StoryLineData x) => x.currentstory == __instance.currentStory);
-            List<StageClassInfo> story = storyLineData != null ? storyLineData.stageList : Traverse.Create(__instance).Field<List<StageClassInfo>>("storyData").Value;
-
-            // List of not yet found books
-            List<LorId> list = new List<LorId>();
-            foreach (StageClassInfo stage in story)
-            {
-                if (stage.id == 40008)
-                {
-                    list.Add(new LorId(240023));
-                }
-
-                foreach (StageWaveInfo wave in stage.waveList)
-                {
-                    foreach (LorId enemyUnitId in wave.enemyUnitIdList)
-                    {
-                        EnemyUnitClassInfo data = Singleton<EnemyUnitClassInfoList>.Instance.GetData(enemyUnitId);
-                        foreach (EnemyDropItemTable dropTable in data.dropTableList)
-                        {
-                            foreach (EnemyDropItem dropItem in dropTable.dropItemList)
-                            {
-                                LorId item = new LorId(data.workshopID, dropItem.bookId);
-                                if (!list.Contains(item) && (!ItemLocationManager.BookIds.Contains(item.id) || !APPlaythruManager.FoundBooks.Contains(item.id)))
-                                {
-                                    list.Add(item);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-
-            // Other requirements
-            List<int> ensembleIds = new List<int>() { 70001, 70002, 70003, 70004, 70005, 70006, 70007, 70008, 70009, 70010 };
-            bool cleared = true;
-            if (ClosedReceptionsPatch.shownIds.Contains(__instance._storyData.First().id.id) && !APPlaythruManager.EndGameBattlesBeaten.Contains(__instance._storyData.First().id.id))
-                cleared = false;
-
-
-            if (list.Count == 0 && cleared)
-                __instance.transform.Find("Checkmark").gameObject.SetActive(true);
-            else
-                __instance.transform.Find("Checkmark").gameObject.SetActive(false);
-        }
-
-        // Fix opening Black Silence and Distorted Ensemble receptions
-        [HarmonyPatch("ClickMainIcon")]
-        [HarmonyPrefix]
-        static bool EndReceptionsPatch(UIStoryProgressIconSlot __instance)
-        {
-            if (!new List<int>() { 60003, 60004 }.Contains(__instance._storyData.First().id.id)) return true;
-
-            if (ClosedReceptionsPatch.shownIds.Contains(__instance._storyData.First().id.id)) return true;
-
-            return false;
-        }
-
         // Custom icon highlight for Ensemble
         [HarmonyPatch("SetHighlighted")]
         [HarmonyPrefix]
@@ -191,8 +121,8 @@ namespace LORAP.Patches
 
             if (!CustomHighlightColors.ContainsKey(__instance.currentStory)) return true;
 
-            var isChapterIcon = Traverse.Create(__instance).Field<bool>("isChapterIcon").Value;
-            var originalcolor = Traverse.Create(__instance).Field<Color>("originalcolor").Value;
+            var isChapterIcon = __instance.isChapterIcon;
+            var originalcolor = __instance.originalcolor;
 
             var highlightColor = CustomHighlightColors[__instance.currentStory];
             var defaultColor = CustomDefaultColors[__instance.currentStory];
@@ -209,6 +139,40 @@ namespace LORAP.Patches
             __instance.transform.Find("[Rect]Open/[Rect]OpenIcon/[Image]Icon_bg").gameObject.GetComponent<Image>().color = UIColorManager.Manager.DefaultGlowColor;
 
             return false;
+        }
+
+        // Fix opening Black Silence and Distorted Ensemble receptions
+        [HarmonyPatch("ClickMainIcon")]
+        [HarmonyPrefix]
+        static bool EndReceptionsPatch(UIStoryProgressIconSlot __instance)
+        {
+            if (!new List<int>() { 60003, 60004 }.Contains(__instance._storyData.First().id.id)) return true;
+
+            if (PlaythruManager.IsReceptionOpened(__instance._storyData.First().id.id)) return true;
+
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(StageController))]
+    internal class BonusRewardRemovePatch
+    {
+        [HarmonyPatch(nameof(StageController.EndBattlePhase_invitation))]
+        [HarmonyTranspiler]
+        static IEnumerable<CodeInstruction> BonusRewardRemove(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+        {
+            // Remove additional page rewards from the receptions because those rewards are now in the book of everything
+            CIWriter Writer = new CIWriter(instructions, generator);
+
+            // Remove part with giving additional pages for endgame content stuff
+            Writer.ToPattern(OpCodes.Ldloc_0, OpCodes.Callvirt, OpCodes.Ldfld, OpCodes.Callvirt, OpCodes.Stloc_S);
+            Writer.Remove(169);
+
+            // Remove part with giving pages for ending the game
+            Writer.ToPattern(OpCodes.Call, OpCodes.Callvirt, OpCodes.Callvirt, OpCodes.Stloc_S, OpCodes.Br);
+            Writer.Remove(175);
+            
+            return Writer.Instructions;
         }
     }
 }

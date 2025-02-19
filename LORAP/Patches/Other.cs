@@ -1,14 +1,20 @@
 ﻿using GameSave;
 using HarmonyLib;
 using LOR_DiceSystem;
+using LORAP.Archipelago;
 using LORAP.CustomUI;
+using LORAP.Gameplay;
+using LORAP.Playthru;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection.Emit;
+using System.Runtime.ConstrainedExecution;
 using TMPro;
 using UI;
 using UnityEngine;
 using UnityEngine.UI;
-using static PassiveModel;
-using static StageClearInfoListModel;
 using static StageController;
 
 namespace LORAP.Patches
@@ -21,43 +27,39 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool QuestToHints(UIFloorQuestPanel __instance, LibraryFloorModel floor)
         {
-            var questSlotList = Traverse.Create(__instance).Field<UIFloorQuestSlot[]>("questSlotList").Value;
+            var questSlotList = __instance.questSlotList;
 
-            var setText = (UIFloorQuestSlot slot, string text, bool complete) =>
+            var setQuestText = (UIFloorQuestSlot slot, string text, bool complete) =>
             {
                 slot.SetActiveSlot(on: true);
-                Color color = (complete ? UIColorManager.Manager.GetUIColor(UIColor.Disabled) : UIColorManager.Manager.GetUIColor(UIColor.Default));
-                slot.SetColor(color);
+                slot.SetColor(complete ? UIColorManager.Manager.GetUIColor(UIColor.Disabled) : UIColorManager.Manager.GetUIColor(UIColor.Default));
 
-                var txt_QuestName = Traverse.Create(slot).Field<TextMeshProUGUI>("txt_QuestName").Value;
-                txt_QuestName.text = text;
-                txt_QuestName.ForceMeshUpdate();
+                slot.txt_QuestName.text = text;
+                slot.txt_QuestName.ForceMeshUpdate();
+                slot.img_BgFrame.rectTransform.sizeDelta = new Vector2(slot.txt_QuestName.preferredWidth + 10f, slot.img_BgFrame.rectTransform.sizeDelta.y);
 
-                var img_BgFrame = Traverse.Create(slot).Field<Image>("img_BgFrame").Value;
-                img_BgFrame.rectTransform.sizeDelta = new Vector2(txt_QuestName.preferredWidth + 10f, img_BgFrame.rectTransform.sizeDelta.y);
+                slot.txt_QuestName.enabled = false;
+                slot.txt_QuestName.enabled = true;
 
-                txt_QuestName.enabled = false;
-                txt_QuestName.enabled = true;
+                float x = (slot.txt_QuestName.preferredWidth + 25f > 370f) ? 370f : (slot.txt_QuestName.preferredWidth + 25f);
+                slot.img_BgFrame.rectTransform.sizeDelta = new Vector2(x, slot.img_BgFrame.rectTransform.sizeDelta.y);
 
-                float x = ((txt_QuestName.preferredWidth + 25f > 370f) ? 370f : (txt_QuestName.preferredWidth + 25f));
-                img_BgFrame.rectTransform.sizeDelta = new Vector2(x, img_BgFrame.rectTransform.sizeDelta.y);
+                slot.txt_QuestProgress.text = "";
 
-                Traverse.Create(slot).Field<TextMeshProUGUI>("txt_QuestProgress").Value.text = "";
-
-                var img_Icon = Traverse.Create(slot).Field<Image>("img_Icon").Value;
-                img_Icon.sprite = (complete ? UISpriteDataManager.instance._floorQuestStateIcon[1] : UISpriteDataManager.instance._floorQuestStateIcon[0]);
-                img_Icon.enabled = true;
-                img_Icon.color = (complete ? UIColorManager.Manager._floorQuestSlotIconColor[1] : UIColorManager.Manager._floorQuestSlotIconColor[0]);
+                slot.img_Icon.sprite = (complete ? UISpriteDataManager.instance._floorQuestStateIcon[1] : UISpriteDataManager.instance._floorQuestStateIcon[0]);
+                slot.img_Icon.enabled = true;
+                slot.img_Icon.color = (complete ? UIColorManager.Manager._floorQuestSlotIconColor[1] : UIColorManager.Manager._floorQuestSlotIconColor[0]);
             };
 
-            setText(questSlotList[0], $"Abno Page: Unknown", false);
-            setText(questSlotList[1], $"EGO: Unknown", false);
-            setText(questSlotList[2], $"Librarian: Unknown", false);
-            questSlotList[3].SetActiveSlot(on: false);
+            setQuestText(questSlotList[0], $"Abno Page: Unknown", false);
+            setQuestText(questSlotList[1], $"EGO: Unknown", false);
+            setQuestText(questSlotList[2], $"Librarian: Unknown", false);
             if (floor.Sephirah == SephirahType.Keter)
-                setText(questSlotList[3], $"Black Silence: Unknown", false);
+                setQuestText(questSlotList[3], $"Black Silence: Unknown", false);
             if (floor.Sephirah == SephirahType.Binah)
-                setText(questSlotList[3], $"Binah: Unknown", false);
+                setQuestText(questSlotList[3], $"Binah: Unknown", false);
+            else
+                questSlotList[3].SetActiveSlot(on: false);
             questSlotList[4].SetActiveSlot(on: false);
 
             return false;
@@ -72,48 +74,38 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static void RemoveCombatPageExclusiveness(ItemXmlDataList __instance, ref List<DiceCardXmlInfo> list)
         {
-            List<DiceCardXmlInfo> res = new List<DiceCardXmlInfo>();
+            list.ForEach(c => c.optionList.Remove(CardOption.OnlyPage));
+        }
+    }
 
-            foreach (var card in list)
+    [HarmonyPatch(typeof(StageClearInfoListModel))]
+    internal class FakeClearCount
+    {
+        // Force game to think every reception was cleared once, so no tutorial and other useless stuff
+        [HarmonyPatch("GetClearCount", typeof(LorId))]
+        [HarmonyPrefix]
+        static bool FakeClear(StageClearInfoListModel __instance, LorId stageId, ref int __result)
+        {
+            if (stageId.id == 210005 || stageId.id == 210006 || stageId.id == 210007 || stageId.id == 210008 || stageId.id == 210009)
             {
-                //card.optionList.Remove(CardOption.Personal);
-                card.optionList.Remove(CardOption.OnlyPage);
-                res.Add(card);
+                return true;
             }
 
-            list = res;
+            __result = 1;
+
+            return false;
         }
     }
 
     [HarmonyPatch(typeof(LibraryModel))]
-    internal class TutorialAndUnlocks
+    internal class Unlocks
     {
-        // So that tutorial doesn't softlock the game
-        [HarmonyPatch(nameof(LibraryModel.IsClearRats))]
-        [HarmonyPrefix]
-        static bool RatsTutorial(LibraryModel __instance, ref bool __result)
-        {
-            __result = true;
-
-            return false;
-        }
-
-        [HarmonyPatch(nameof(LibraryModel.IsClearYuns))]
-        [HarmonyPrefix]
-        static bool YunTutorial(LibraryModel __instance, ref bool __result)
-        {
-            __result = true;
-
-            return false;
-        }
-
-
         // Self explainatory
         [HarmonyPatch(nameof(LibraryModel.IsBinahLockedInLibrary))]
         [HarmonyPrefix]
         static bool IsBinahLockedInLibraryPrefix(LibraryModel __instance, ref bool __result)
         {
-            __result = !APPlaythruManager.BinahUnlocked;
+            __result = !PlaythruManager.BinahUnlocked;
 
             return false;
         }
@@ -122,17 +114,16 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool IsBlackSilenceLockedInLibraryPrefix(LibraryModel __instance, ref bool __result)
         {
-            __result = !APPlaythruManager.BlackSilenceUnlocked;
+            __result = !PlaythruManager.BlackSilenceUnlocked;
 
             return false;
         }
 
-        // Self explainatory
         [HarmonyPatch(nameof(LibraryModel.IsBinahLockedInStage))]
         [HarmonyPrefix]
         static bool IsBinahLockedInStage(LibraryModel __instance, StageClassInfo stageInfo, ref bool __result)
         {
-            __result = !APPlaythruManager.BinahUnlocked;
+            __result = !PlaythruManager.BinahUnlocked;
 
             return false;
         }
@@ -141,7 +132,7 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool IsBlackSilenceLockedInStage(LibraryModel __instance, StageClassInfo stageInfo, ref bool __result)
         {
-            __result = !APPlaythruManager.BlackSilenceUnlocked;
+            __result = !PlaythruManager.BlackSilenceUnlocked;
 
             return false;
         }
@@ -150,17 +141,12 @@ namespace LORAP.Patches
     [HarmonyPatch(typeof(LibraryFloorModel))]
     internal class Something
     {
-        // Uhhh, i forgor :skull:
+        // Custom floor unit count
         [HarmonyPatch(nameof(LibraryFloorModel.UpdateOpenedCount), typeof(int))]
         [HarmonyPrefix]
         static bool UpdateOpenedCountPrefix(LibraryFloorModel __instance)
         {
-            int res = 1;
-            if (Traverse.Create(__instance).Field<int>("_opendUnitCount").Value != 0)
-            {
-                res = Traverse.Create(__instance).Field<int>("_opendUnitCount").Value;
-            }
-            Traverse.Create(__instance).Field<int>("_opendUnitCount").Value = res;
+            __instance._opendUnitCount = Math.Max(1, __instance._opendUnitCount);
 
             return false;
         }
@@ -184,10 +170,14 @@ namespace LORAP.Patches
                 case UIPhase.GachaResult:
                 case UIPhase.Invitation:
                 case UIPhase.Main_ItemList:
+                    if (APLog.isAtBottom)
+                        break;
                     APLog.Show();
                     APLog.SetLogAtBottom(true);
                     break;
                 case UIPhase.DUMMY:
+                    if (!APLog.isAtBottom)
+                        break;
                     APLog.Show();
                     APLog.SetLogAtBottom(false);
                     break;
@@ -208,18 +198,17 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool APProgressBar(UILibrarySliderPanel __instance)
         {
-            LibraryModel instance = LibraryModel.Instance;
-            int chapter = instance.GetChapter();
-            Traverse.Create(__instance).Field<Image>("img_CityIcon").Value.sprite = UISpriteDataManager.instance._bookGradeFilterIcon[chapter - 1].icon;
-            Traverse.Create(__instance).Field<Image>("img_CityIconGlow").Value.sprite = UISpriteDataManager.instance._bookGradeFilterIcon[chapter - 1].iconGlow;
+            int chapter = LibraryModel.Instance.GetChapter();
+            __instance.img_CityIcon.sprite = UISpriteDataManager.instance._bookGradeFilterIcon[chapter - 1].icon;
+            __instance.img_CityIconGlow.sprite = UISpriteDataManager.instance._bookGradeFilterIcon[chapter - 1].iconGlow;
 
-            float num = LORAP.Instance.GetFoundLocationAmount();
-            float num2 = LORAP.Instance.GetTotalLocationAmount();
-            float sliderLength = Traverse.Create(__instance).Field<float>("sliderLength").Value;
+            float num = ConnectionManager.FoundLocations;
+            float num2 = ConnectionManager.TotalLocations;
+            float sliderLength = __instance.sliderLength;
             float x = sliderLength * (num / num2);
 
-            var txt_leveltxt = Traverse.Create(__instance).Field<TextMeshProUGUI>("txt_leveltxt").Value;
-            var img_SliderMaskGauge = Traverse.Create(__instance).Field<Image>("img_SliderMaskGauge").Value;
+            var txt_leveltxt = __instance.txt_leveltxt;
+            var img_SliderMaskGauge = __instance.img_SliderMaskGauge;
 
             if (num >= num2)
             {
@@ -238,18 +227,18 @@ namespace LORAP.Patches
     [HarmonyPatch(typeof(UITitlePanel))]
     internal class APProgressPatch2
     {
-        // Replace library level with the AP Progress
+        // Replace library level text with the AP Progress
         [HarmonyPatch("SetMainTitle")]
-        [HarmonyPrefix]
-        static bool APProgressText(UITitlePanel __instance, string key)
+        [HarmonyTranspiler]
+        static IEnumerable<CodeInstruction> APProgressText(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
         {
-            Traverse.Create(__instance).Field<TextMeshProUGUI>("mainTitleText").Value.GetComponent<TextMeshProMaterialSetter>().underlayColor = new Color(0f, 0.89453125f, 0.46484375f);
-            Traverse.Create(__instance).Field<CanvasGroup>("mainTitle").Value.alpha = 1f;
-            Traverse.Create(__instance).Field<CanvasGroup>("subTitle").Value.alpha = 0f;
-            Traverse.Create(__instance).Field<TextMeshProUGUI>("mainTitleText").Value.text = "Archipelago Progress";
-            Traverse.Create(__instance).Field<UILibrarySliderPanel>("sliderPanel").Value.SetData();
+            var instr = instructions.ToList();
+            var pos = instr.FindIndex(i => i.opcode == OpCodes.Ldarg_1);
 
-            return false;
+            instr.RemoveRange(pos, 3);
+            instr.Insert(pos, new CodeInstruction(OpCodes.Ldstr, "Archipelago Progress"));
+
+            return instr;
         }
     }
 
@@ -261,103 +250,171 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool CustomMaxPassiveCost(DropBookXmlInfo __instance, ref int __result)
         {
-            __result = APPlaythruManager.MaxPassiveCost;
+            __result = PlaythruManager.MaxPassiveCost;
 
             return false;
         }
     }
 
-    [HarmonyPatch(typeof(SaveManager))]
+    [HarmonyPatch(typeof(GameSave.SaveManager))]
     internal class CustomSaveGame
     {
         // When game tries to save, instead save the game with custom save system
-        [HarmonyPatch(nameof(SaveManager.SavePlayData))]
+        [HarmonyPatch(nameof(GameSave.SaveManager.SavePlayData))]
         [HarmonyPrefix]
-        static bool SaveGame(SaveManager __instance)
+        static bool SaveGame(GameSave.SaveManager __instance)
         {
-            APSaveManager.SaveGame();
+            Gameplay.SaveManager.SaveGame();
 
             return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(UIBattleResultLeftPanel))]
+    internal class LostBooksRemovePatch
+    {
+        // Remove "Books Lost" UI because you lose literally nothing in this mod
+        [HarmonyPatch(nameof(UIBattleResultLeftPanel.SetData))]
+        [HarmonyTranspiler]
+        static IEnumerable<CodeInstruction> LostBooksRemove(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+        {
+            var instr = instructions.ToList();
+            var cur = instr.FindIndex(i => i.opcode == OpCodes.Stfld) + 1;
+
+            instr.RemoveRange(cur, 19);
+
+            return instr;
+        }
+    }
+
+    [HarmonyPatch(typeof(UI.UIController))]
+    internal class ForfeitFloorSelection
+    {
+        public static void ForfeitClick()
+        {
+            UIAlarmPopup.instance.SetAlarmText(UIAlarmType.ReturnToTitleWarn_NoPenalty, UIAlarmButtonType.YesNo, (bool yes) =>
+            {
+                if (!yes) return;
+
+                Singleton<StageController>.Instance.GameOver(iswin: false, isbackbutton: true);
+                GameSceneManager.Instance.ActivateUIController();
+                SingletonBehavior<UIBgScreenChangeAnim>.Instance.StartBg(UIScreenChangeType.BackInvitation);
+            });
+
+            UIAlarmPopup.instance.txt_alarm.text = "Are you sure you want to forfeit the battle?";
+        }
+
+        // Change "Forfeit" and "Return to Title" buttons' behaviour
+        [HarmonyPatch(nameof(UI.UIController.BackBattlePrepare))] // TODO: Also replace that text for endgame content thing
+        [HarmonyTranspiler]
+        static IEnumerable<CodeInstruction> ReplaceButton(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+        {
+            var instr = instructions.ToList();
+            var pos = instr.IndexOf(instr.Where(i => i.opcode == OpCodes.Ldc_I4_S).ElementAt(1)) - 1;
+
+            var l = instr[pos].labels.ElementAt(0);
+
+            instr.RemoveRange(pos, 15);
+
+            instr.Insert(pos, new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(ForfeitFloorSelection), nameof(ForfeitFloorSelection.ForfeitClick))).WithLabels(l));
+
+            return instr;
         }
     }
 
     [HarmonyPatch(typeof(UIEscPanel))]
-    internal class ToTitleAndEndBattle
+    internal class ToTitleAndForfeit
     {
-        // When you go back to title AP disconnects. And you can also end battle.
-        [HarmonyPatch(nameof(UIEscPanel.OnClickEvent))]
-        [HarmonyPrefix]
-        static bool EndBattleButton(UIEscPanel __instance, int idx)
-        {
-            if (idx == 1)
-            {   
-                if (StageController.Instance.Phase != StagePhase.ApplyLibrarianCardPhase && StageController.Instance.Phase != StagePhase.RoundStartPhase_System)
-                {
-                    UIAlarmPopup.instance.SetAlarmText("You can only end battle when in battle and selecting cards!");
-
-                    return false;
-                }
-                UIAlarmPopup.instance.SetAlarmText(UIAlarmType.ReturnToTitleWarn_NoPenalty, UIAlarmButtonType.YesNo, EndBattle);
-
-                return false;
-            }
-            else if (idx == 3)
-            {
-                UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Click);
-
-                if (Singleton<StageController>.Instance.battleState == StageController.BattleState.None)
-                {
-                    
-                    SingletonBehavior<UIBgScreenChangeAnim>.Instance.StartBg(UIScreenChangeType.ReturnTitle);
-                }
-                else
-                {
-                    UIAlarmPopup.instance.SetAlarmText(UIAlarmType.ReturnToTitleWarn_NoPenalty, UIAlarmButtonType.YesNo, __instance.ReturnToTitleAndBattleEnd);
-                    UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Click);
-                }
-
-                return false;
-            }
-
-            return true;
-        }
-
-        // Change "Manual" to "End Battle"
+        // Change "Manual" to "Forfeit"
         [HarmonyPatch(nameof(UIEscPanel.Open))]
         [HarmonyPostfix]
-        static void EndBattleButton1(UIEscPanel __instance)
+        static void EscMenuButtonRename(UIEscPanel __instance)
         {
-            __instance.transform.Find("[Rect]Layout/[Button]CustomSelectableGraphic (1)").gameObject.GetComponentInChildren<TextMeshProUGUI>().text = "End Battle";
+            __instance.buttons.ElementAt(1).GetComponentInChildren<TextMeshProUGUI>().text = "Forfeit";
         }
 
-        private static void EndBattle(bool yes)
+        // Make "Forfeit" button disabled if Esc menu is opened when not in battle
+        [HarmonyPatch(nameof(UIEscPanel.Open))]
+        [HarmonyPostfix]
+        static void EscMenuButtonDisable(UIEscPanel __instance)
         {
-            if (!yes) return;
-
-            UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Click);
-
-            LORAP.Instance.APDisconnect();
-
-            SingletonBehavior<UIPopupWindowManager>.Instance.CloseUI(UIPopupType.Esc);
-
-            StageController.Instance.GameOver(false);
-            Singleton<SaveManager>.Instance.SavePlayData(1);
-            GameSceneManager.Instance.ActivateUIController();
-            UI.UIController.Instance.CallUIPhase(UIPhase.BattleResult);
-            (UI.UIController.Instance.GetUIPanel(UIPanelType.BattleResult) as UIBattleResultPanel).SetData(new TestBattleResultData
+            if (StageController.Instance._state == StageState.None || (StageController.Instance.Phase != StagePhase.ApplyLibrarianCardPhase && StageController.Instance.Phase != StagePhase.RoundStartPhase_System))
             {
-                rewardbookdatas = StageController.Instance._droppedbookdatas,
-                iswin = true,
-                loseinvitationbooks = new List<LorId>(),
-                stagemodelInBattle = StageController.Instance.GetStageModel(),
-                sephirahOrder = new List<SephirahType>(Traverse.Create(StageController.Instance).Field<List<SephirahType>>("_usedFloorList").Value)
+                __instance.buttons.ElementAt(1).SetDisabled();
+                __instance.buttons.ElementAt(1).selectable.interactable = false;
+            }
+            else
+            {
+                __instance.buttons.ElementAt(1).SetDefault();
+                __instance.buttons.ElementAt(1).selectable.interactable = true;
+            }
+        }
+
+        public static void EndBattle()
+        {
+            UIAlarmPopup.instance.SetAlarmText(UIAlarmType.ReturnToTitleWarn_NoPenalty, UIAlarmButtonType.YesNo, (bool yes) =>
+            {
+                if (!yes) return;
+
+                UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Click);
+                SingletonBehavior<UIPopupWindowManager>.Instance.CloseUI(UIPopupType.Esc);
+                StageController.Instance.SetUnequipCardAll();
+
+                foreach (var floor in StageController.Instance._stageModel._floorList)
+                {
+                    floor.Defeat();
+                }
+
+                StageController.Instance.EndBattle();
             });
+
+            UIAlarmPopup.instance.txt_alarm.text = "Are you sure you want to forfeit the battle?";
+        }
+
+        // Change "Forfeit" and "Return to Title" buttons' behaviour
+        [HarmonyPatch(nameof(UIEscPanel.OnClickEvent))]
+        [HarmonyTranspiler]
+        static IEnumerable<CodeInstruction> EscapeMenuPatch(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+        {
+            var instr = instructions.ToList();
+            var cur = instr.FindIndex(i => i.opcode == OpCodes.Ldc_I4_2) - 1;
+
+            var l = instr[cur].labels.ElementAt(0);
+            instr.RemoveRange(cur, 3);
+            instr.Insert(cur, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ToTitleAndForfeit), nameof(ToTitleAndForfeit.EndBattle))).WithLabels(l));
+
+            cur = instr.FindIndex(i => i.opcode == OpCodes.Ldarg_0) - 3;
+
+            Label TitleWarnLabel = generator.DefineLabel();
+
+            instr.ElementAt(cur).WithLabels(TitleWarnLabel);
+
+            cur = instr.FindIndex(i => i.opcode == OpCodes.Brtrue);
+
+            instr.RemoveAt(cur);
+            instr.Insert(cur, new CodeInstruction(OpCodes.Brtrue_S, TitleWarnLabel));
+
+            return instr;
+        }
+    }
+
+    [HarmonyPatch(typeof(UIBgScreenChangeAnim))]
+    internal class ToTitleDisconnect
+    {
+        // Disconnect from AP when going to title
+        [HarmonyPatch(nameof(UIBgScreenChangeAnim.StartBg))]
+        [HarmonyPrefix]
+        static void ToTitleDisconnectAP(UIBgScreenChangeAnim __instance, UIScreenChangeType cType)
+        {
+            if (cType == UIScreenChangeType.ReturnTitle)
+                ConnectionManager.APDisconnect();
         }
     }
 
     [HarmonyPatch(typeof(PassiveModel))]
     internal class PassiveAttributionFix
     {
+        // Fix saving passive attribution because PM Code
         [HarmonyPatch(nameof(PassiveModel.LoadFromSaveData))]
         [HarmonyPrefix]
         static bool WhyDoesItEvenBreakBruh(PassiveModel __instance, SaveData data)
@@ -378,7 +435,7 @@ namespace LORAP.Patches
             __instance.originpassive = Singleton<PassiveXmlList>.Instance.GetData(id2);
             int @int = data.GetInt("receivebookinstanceid");
             int int2 = data.GetInt("givebookinstanceid");
-            __instance.originData = new PassiveModelSavedData(data4, @int, int2);
+            __instance.originData = new PassiveModel.PassiveModelSavedData(data4, @int, int2);
 
             return false;
         }
@@ -393,6 +450,67 @@ namespace LORAP.Patches
         static bool CheckOpenFloorPatch(UIFloorPanel __instance)
         {
             return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(GameSceneManager))]
+    internal class AddCustomContentPatch
+    {
+        // Add custom content when game starts
+        [HarmonyPatch(nameof(GameSceneManager.Start))]
+        [HarmonyPostfix]
+        static void AddCustomContent()
+        {
+            ContentManager.AddCustomContent();
+            APConnectWindow.Init();
+        }
+    }
+
+    [HarmonyPatch(typeof(PlatformManager))]
+    internal class NoAchievementsPatch
+    {
+        // Make game unable to grant steam achievements
+        [HarmonyPatch(nameof(PlatformManager.UnlockAchievement))]
+        [HarmonyPrefix]
+        static bool NoAchievements()
+        {
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(UIMainAutoTooltipManager))]
+    internal class NoTooltipsPatch
+    {
+        // Remove tutorial tooltips
+        [HarmonyPatch(nameof(UIMainAutoTooltipManager.OpenTooltip))]
+        [HarmonyPrefix]
+        static bool NoTooltips()
+        {
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(UIInvenFeedBookList))]
+    internal class NoFeedBookHighlightPatch
+    {
+        // Remove highlight of "none" book in feed book menu
+        [HarmonyPatch(nameof(UIInvenFeedBookList.OnOpen))]
+        [HarmonyPostfix]
+        static void NoFeedBookHighlight(UIInvenFeedBookList __instance)
+        {
+            (__instance.bookSlotList[0] as UIInvenFeedBookSlot).ob_tutorialHighlightFrame.SetActive(false);
+        }
+    }
+
+    [HarmonyPatch(typeof(VersionViewer))]
+    internal class VersionPatch
+    {
+        // Add "+LORAP" to version number because why not?
+        [HarmonyPatch(nameof(VersionViewer.Start))]
+        [HarmonyPostfix]
+        static void Version(VersionViewer __instance)
+        {
+            __instance.GetComponent<Text>().text += " + LORAP 0.3";
         }
     }
 }

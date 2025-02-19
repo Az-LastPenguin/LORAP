@@ -1,6 +1,5 @@
 ﻿using HarmonyLib;
 using StoryScene;
-using System.Collections.Generic;
 using UI;
 using UnityEngine;
 
@@ -39,7 +38,7 @@ namespace LORAP.Patches
         {
             if (__instance.TapState == UIMainMenuTap.Story)
             {
-                Traverse.Create(__instance).Field<Animator>("anim").Value.SetTrigger("Reveal");
+                __instance.anim.SetTrigger("Reveal");
                 return false;
             }
 
@@ -52,7 +51,7 @@ namespace LORAP.Patches
         {
             if (__instance.TapState == UIMainMenuTap.Story)
             {
-                Traverse.Create(__instance).Field<Animator>("anim").Value.SetTrigger("Hide");
+                __instance.anim.SetTrigger("Hide");
                 return false;
             }
 
@@ -68,12 +67,12 @@ namespace LORAP.Patches
         [HarmonyPostfix]
         static void CredenzaMenuItemBlock(UIControlButtonPanel __instance)
         {
-            var item = Traverse.Create(__instance).Field<List<UIMenuItem>>("menuItems").Value.Find(i => i.TapState == UIMainMenuTap.Story);
+            var item = __instance.menuItems.Find(i => i.TapState == UIMainMenuTap.Story);
 
             item.SetDisabled();
             item.SetTargetHide();
             item.SetActiveOrigin(false);
-            Traverse.Create(item).Field("isDisabled").SetValue(true);
+            item.isDisabled = true;
         }
     }
 
@@ -114,6 +113,18 @@ namespace LORAP.Patches
         static void RecallStoryButton(UIInvitationInfoPanel __instance)
         {
             __instance.transform.Find("[Script]EnemyStageInfoPanel/[Root]ShowStoryPanel").gameObject.SetActive(false);
+        }
+    }
+
+    [HarmonyPatch(typeof(UIAlarmPopup))]
+    internal class EndContentPatch
+    {
+        // Remove story from end content (Literally does not work??????)
+        [HarmonyPatch(nameof(UIAlarmPopup.StartEndContentsStage))]
+        [HarmonyPrefix]
+        static void EndContents(UIAlarmPopup __instance, EndContentsStageId id, ref bool showstory, bool save, bool inv, bool ignoreprepare)
+        {
+            showstory = false;
         }
     }
 }

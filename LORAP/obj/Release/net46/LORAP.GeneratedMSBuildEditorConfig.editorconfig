@@ -1,3 +1,5 @@
 is_global = true
 build_property.RootNamespace = LORAP
-build_property.ProjectDir = C:\Users\Az\source\repos\LoRAP\LORAP\
+build_property.ProjectDir = C:\Users\Az\Documents\GitHub\LORAP\LORAP\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 

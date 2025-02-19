@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace LORAP
+namespace LORAP.Utils
 {
     internal static class PrefabHelper
     {
@@ -14,7 +10,7 @@ namespace LORAP
         public static GameObject GetPrefab(string assetBundle, string prefab)
         {
             if (!AssetBundles.ContainsKey(assetBundle))
-                AssetBundles.Add(assetBundle, AssetBundle.LoadFromFile(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(LORAP.Instance.Info.Location), assetBundle)));
+                AssetBundles.Add(assetBundle, AssetBundle.LoadFromFile(System.IO.Path.Combine(LORAP.ModPath, assetBundle)));
 
             return AssetBundles[assetBundle].LoadAsset<GameObject>(prefab);
         }

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Az\\source\\repos\\LoRAP\\LORAP\\LORAP.csproj": {}
+    "C:\\Users\\Az\\Documents\\GitHub\\LORAP\\LORAP\\LORAP.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Az\\source\\repos\\LoRAP\\LORAP\\LORAP.csproj": {
+    "C:\\Users\\Az\\Documents\\GitHub\\LORAP\\LORAP\\LORAP.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Az\\source\\repos\\LoRAP\\LORAP\\LORAP.csproj",
+        "projectUniqueName": "C:\\Users\\Az\\Documents\\GitHub\\LORAP\\LORAP\\LORAP.csproj",
         "projectName": "LORAP",
-        "projectPath": "C:\\Users\\Az\\source\\repos\\LoRAP\\LORAP\\LORAP.csproj",
+        "projectPath": "C:\\Users\\Az\\Documents\\GitHub\\LORAP\\LORAP\\LORAP.csproj",
         "packagesPath": "C:\\Users\\Az\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Az\\source\\repos\\LoRAP\\LORAP\\obj\\",
+        "outputPath": "C:\\Users\\Az\\Documents\\GitHub\\LORAP\\LORAP\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Az\\AppData\\Roaming\\NuGet\\NuGet.Config",
@@ -22,8 +22,11 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {},
-          "https://nuget.bepinex.dev/v3/index.json": {}
+          "https://api.nuget.org/v3/index.json": {},
+          "https://nuget.bepinex.dev/v3/index.json": {},
+          "https://nuget.samboy.dev/v3/index.json": {}
         },
         "frameworks": {
           "net46": {
@@ -35,6 +38,11 @@
           "warnAsError": [
             "NU1605"
           ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
         }
       },
       "frameworks": {
@@ -45,23 +53,21 @@
               "target": "Package",
               "version": "[6.3.1, )"
             },
-            "BepInEx.Analyzers": {
+            "Krafs.Publicizer": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "suppressParent": "All",
               "target": "Package",
-              "version": "[1.*, )"
+              "version": "[2.2.1, )"
             },
-            "BepInEx.Core": {
+            "Lib.Harmony": {
               "target": "Package",
-              "version": "[5.*, )"
-            },
-            "BepInEx.PluginInfoProps": {
-              "target": "Package",
-              "version": "[1.*, )"
+              "version": "[2.3.3, )"
             },
             "Microsoft.NETFramework.ReferenceAssemblies": {
               "suppressParent": "All",
               "target": "Package",
-              "version": "[1.0.2, )"
+              "version": "[1.0.3, )",
+              "autoReferenced": true
             },
             "UnityEngine.Modules": {
               "include": "Compile",
@@ -69,7 +75,7 @@
               "version": "[2019.3.15, )"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.400\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.400\\RuntimeIdentifierGraph.json"
         }
       }
     }

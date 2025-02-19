@@ -1,13 +1,7 @@
-﻿using BepInEx.Logging;
-using BTAI;
-using System.Collections;
+﻿using LORAP.Utils;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
-using System.Threading;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Events;
-using UnityEngine.EventSystems;
 
 namespace LORAP.CustomUI
 {
@@ -17,16 +11,17 @@ namespace LORAP.CustomUI
 
         private static GameObject LogPrefab = PrefabHelper.GetPrefab("archipelagolog", "Log");
 
-        private static int LogCount;
+        internal static int LogCount { get; private set; }
 
-        private static bool isAtBottom = true;
+        internal static bool isAtBottom { get; private set; } = true;
 
         private static void Init()
         {
-            Panel = Object.Instantiate(PrefabHelper.GetPrefab("archipelagolog", "APActionsLog"));
-            //LogPrefab = PrefabHelper.GetPrefab("archipelagolog", "Log");
+            Panel = GameObject.Instantiate(PrefabHelper.GetPrefab("archipelagolog", "APActionsLog"));
 
             Panel.transform.Find("LogHolder").localPosition = new Vector3(-950, 0, 0);
+
+            LogPrefab.GetComponent<TextMeshProUGUI>().font = UIHelper.Font2;
 
             SetLogAtBottom(true);
             Panel.SetActive(false);
@@ -55,31 +50,26 @@ namespace LORAP.CustomUI
 
             var Holder = Panel.transform.Find("LogHolder");
 
-            foreach (var log in Holder.gameObject.GetComponentsInChildren<Transform>().Where(t => t != Holder))
-            {
-                log.position += isAtBottom ? new Vector3(0, 40, 0) : new Vector3(0, -40, 0);
-            }
-
             var Log = Object.Instantiate(LogPrefab, Holder);
             Log.name = $"Log{LogCount}";
             Log.GetComponent<TextMeshProUGUI>().text = message;
-            Log.transform.localPosition = isAtBottom ? new Vector3(0, -490, 0) : new Vector3(0, 400, 0);
+            var LogHeight = Log.GetComponent<TextMeshProUGUI>().preferredHeight + 10;
+            Log.transform.localPosition = isAtBottom ? new Vector3(0, -530 + LogHeight, 0) : new Vector3(0, 440 - LogHeight, 0);
             Log.GetComponent<TextMeshProUGUI>().alignment = isAtBottom ? TextAlignmentOptions.TopLeft : TextAlignmentOptions.Center;
+
+            foreach (var log in Holder.gameObject.GetComponentsInChildren<Transform>().Where(t => t != Holder & t != Log.transform))
+            {
+                log.position += isAtBottom ? new Vector3(0, LogHeight, 0) : new Vector3(0, -LogHeight, 0);
+            }
 
             LogCount++;
 
-            LORAP.Instance.StartCoroutine(RemoveInSeconds(3, Log));
-        }
+            Timing.After(3, () =>
+            {
+                Log.GetComponent<TextMeshProUGUI>().CrossFadeAlpha(0f, 3f, false);
 
-        private static IEnumerator RemoveInSeconds(int sec, GameObject obj)
-        {
-            yield return new WaitForSeconds(3);
-
-            obj.GetComponent<TextMeshProUGUI>().CrossFadeAlpha(0f, 3f, false);
-
-            yield return new WaitForSeconds(sec);
-
-            Object.Destroy(obj);
+                Timing.After(3, () => GameObject.Destroy(Log));
+            });
         }
 
         public static void SetLogAtBottom(bool atBottom)
@@ -90,14 +80,17 @@ namespace LORAP.CustomUI
 
             var List = Holder.gameObject.GetComponentsInChildren<RectTransform>().Where(t => t != Holder);
             if (isAtBottom)
-                List.Reverse();
+                List = List.Reverse();
 
-            var i = 0;
-            foreach (var log in List)
+            var curHeight = isAtBottom ? -530f : 440f;
+            for (int i = 0; i < List.Count(); i++)
             {
-                log.localPosition = isAtBottom ? new Vector3(0, -490 + 40 * i, 0) : new Vector3(0, 400 - 40 * i, 0);
-                log.gameObject.GetComponent<TextMeshProUGUI>().alignment = isAtBottom ? TextAlignmentOptions.TopLeft : TextAlignmentOptions.Center;
-                i++;
+                var Log = List.ElementAt(i);
+
+                var LogHeight = Log.GetComponent<TextMeshProUGUI>().preferredHeight + 10;
+                curHeight += isAtBottom ? LogHeight : -LogHeight;
+                Log.localPosition = isAtBottom ? new Vector3(0, curHeight, 0) : new Vector3(0, curHeight, 0);
+                Log.gameObject.GetComponent<TextMeshProUGUI>().alignment = isAtBottom ? TextAlignmentOptions.TopLeft : TextAlignmentOptions.Center;
             }
         }
     }
