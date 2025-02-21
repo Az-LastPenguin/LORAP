@@ -16,7 +16,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("Bruh")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6efeab5ffafe1782d12139dfccfebb1bdb04d0a3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+10b1a7ee98ff559370b4c90c923b92d90f7db01a")]
 [assembly: System.Reflection.AssemblyProductAttribute("LORAP")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LORAP")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

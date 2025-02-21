@@ -2,6 +2,6 @@
 <Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
     <Import Project="$(NuGetPackageRoot)microsoft.netframework.referenceassemblies.net46\1.0.3\build\Microsoft.NETFramework.ReferenceAssemblies.net46.targets" Condition="Exists('$(NuGetPackageRoot)microsoft.netframework.referenceassemblies.net46\1.0.3\build\Microsoft.NETFramework.ReferenceAssemblies.net46.targets')" />
-    <Import Project="$(NuGetPackageRoot)krafs.publicizer\2.2.1\build\Krafs.Publicizer.targets" Condition="Exists('$(NuGetPackageRoot)krafs.publicizer\2.2.1\build\Krafs.Publicizer.targets')" />
+    <Import Project="$(NuGetPackageRoot)krafs.publicizer\2.3.0\build\Krafs.Publicizer.targets" Condition="Exists('$(NuGetPackageRoot)krafs.publicizer\2.3.0\build\Krafs.Publicizer.targets')" />
   </ImportGroup>
 </Project>

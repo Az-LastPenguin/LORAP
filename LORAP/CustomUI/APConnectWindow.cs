@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 
-namespace LORAP.CustomUI
+namespace LORAP.CustomUI 
 {
     internal static class APConnectWindow
     {

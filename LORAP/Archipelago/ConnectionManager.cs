@@ -61,14 +61,14 @@ namespace LORAP.Archipelago
             // Create the session
             try
             {
-                session = ArchipelagoSessionFactory.CreateSession(IP);
+                session = ArchipelagoSessionFactory.CreateSession(IP);  
             }
             catch (Exception e)
             {
                 APConnectWindow.SetInfoText(e.Message);
                 return;
             }
-
+             
             // To Show AP server messages to client
             session.MessageLog.OnMessageReceived += OnMessageRecieved;
 

@@ -13,9 +13,9 @@
     <SourceRoot Include="C:\Users\Az\.nuget\packages\" />
   </ItemGroup>
   <ItemGroup Condition=" '$(Language)' == 'C#' AND '$(ExcludeRestorePackageImports)' != 'true' ">
-    <Compile Include="$(NuGetPackageRoot)krafs.publicizer\2.2.1\contentfiles\cs\any\Publicizer\IgnoresAccessChecksToAttribute.cs" Condition="Exists('$(NuGetPackageRoot)krafs.publicizer\2.2.1\contentfiles\cs\any\Publicizer\IgnoresAccessChecksToAttribute.cs')">
+    <Compile Include="$(NuGetPackageRoot)krafs.publicizer\2.3.0\contentfiles\cs\any\Publicizer\IgnoresAccessChecksToAttribute.cs" Condition="Exists('$(NuGetPackageRoot)krafs.publicizer\2.3.0\contentfiles\cs\any\Publicizer\IgnoresAccessChecksToAttribute.cs')">
       <NuGetPackageId>Krafs.Publicizer</NuGetPackageId>
-      <NuGetPackageVersion>2.2.1</NuGetPackageVersion>
+      <NuGetPackageVersion>2.3.0</NuGetPackageVersion>
       <NuGetItemType>Compile</NuGetItemType>
       <Pack>false</Pack>
       <Private>False</Private>
@@ -23,6 +23,6 @@
     </Compile>
   </ItemGroup>
   <ImportGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
-    <Import Project="$(NuGetPackageRoot)krafs.publicizer\2.2.1\build\Krafs.Publicizer.props" Condition="Exists('$(NuGetPackageRoot)krafs.publicizer\2.2.1\build\Krafs.Publicizer.props')" />
+    <Import Project="$(NuGetPackageRoot)krafs.publicizer\2.3.0\build\Krafs.Publicizer.props" Condition="Exists('$(NuGetPackageRoot)krafs.publicizer\2.3.0\build\Krafs.Publicizer.props')" />
   </ImportGroup>
 </Project>

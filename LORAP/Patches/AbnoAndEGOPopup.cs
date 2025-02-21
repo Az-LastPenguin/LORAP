@@ -7,7 +7,7 @@ namespace LORAP.Patches
     [HarmonyPatch(typeof(UIGetAbnormalityPanel))]
     internal class AbnoAndEGOPopup
     {
-        [HarmonyPatch("SetData")]
+        [HarmonyPatch(nameof(UIGetAbnormalityPanel.SetData))]
         [HarmonyPrefix]
         static bool CustomSetData(UIGetAbnormalityPanel __instance)
         {

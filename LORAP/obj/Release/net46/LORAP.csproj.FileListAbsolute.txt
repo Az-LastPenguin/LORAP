@@ -25,16 +25,6 @@ C:\Users\Az\Documents\GitHub\LORAP\LORAP\bin\Release\net46\LORAP.dll
 C:\Users\Az\Documents\GitHub\LORAP\LORAP\bin\Release\net46\LORAP.pdb
 C:\Users\Az\Documents\GitHub\LORAP\LORAP\bin\Release\net46\Archipelago.MultiClient.Net.dll
 C:\Users\Az\Documents\GitHub\LORAP\LORAP\bin\Release\net46\Newtonsoft.Json.dll
-C:\Users\Az\Documents\GitHub\LORAP\LORAP\bin\Release\net46\Assembly-CSharp.dll
-C:\Users\Az\Documents\GitHub\LORAP\LORAP\bin\Release\net46\Unity.TextMeshPro.dll
-C:\Users\Az\Documents\GitHub\LORAP\LORAP\bin\Release\net46\UnityEngine.UI.dll
-C:\Users\Az\Documents\GitHub\LORAP\LORAP\bin\Release\net46\spine-unity.dll
-C:\Users\Az\Documents\GitHub\LORAP\LORAP\bin\Release\net46\Facepunch.Steamworks.Win64.dll
-C:\Users\Az\Documents\GitHub\LORAP\LORAP\bin\Release\net46\XGamingRuntime.dll
-C:\Users\Az\Documents\GitHub\LORAP\LORAP\bin\Release\net46\Assembly-CSharp-firstpass.dll
-C:\Users\Az\Documents\GitHub\LORAP\LORAP\bin\Release\net46\Unity.Postprocessing.Runtime.dll
-C:\Users\Az\Documents\GitHub\LORAP\LORAP\bin\Release\net46\Ookii.Dialogs.dll
-C:\Users\Az\Documents\GitHub\LORAP\LORAP\bin\Release\net46\Unity.Mathematics.dll
 C:\Users\Az\Documents\GitHub\LORAP\LORAP\obj\Release\net46\LORAP.csproj.AssemblyReference.cache
 C:\Users\Az\Documents\GitHub\LORAP\LORAP\obj\Release\net46\LORAP.GeneratedMSBuildEditorConfig.editorconfig
 C:\Users\Az\Documents\GitHub\LORAP\LORAP\obj\Release\net46\LORAP.AssemblyInfoInputs.cache
