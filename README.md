@@ -28,8 +28,7 @@ You can send screenshots and descriptions of bugs you found in the aforementione
 ## CONTRIBUTING OR COMPILING
 If you wish to try and compile this beast (not in a good way) of a spaghetti monster:
 - I compile it with .NET 4.6
+- Harmony.Lib (The one in the BaseMod, for compatibility)
 - Packages:
   - Archipelago.MultiClient.Net (To connect to AP)
-  - Lib.Harmony (What makes it work)
-  - UnityEngine.Modules 2019.3.15 (Unity Stuff)
   - Krafs.Publicizer (For easier access to private fields)
