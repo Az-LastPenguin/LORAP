@@ -21,7 +21,7 @@ public class CustomSelectable : Selectable
 
     protected override void Awake()
     {
-        MouseClickEvent = new();
+        MouseClickEvent = new PointerEvent();
 
         input = gameObject.GetComponentInChildren<TextMeshProUGUI>();
         image = gameObject.transform.Find("[Image]buttonImage").gameObject.GetComponent<Image>();

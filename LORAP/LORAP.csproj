@@ -1,61 +1,145 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
-    <TargetFramework>net46</TargetFramework>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{8E3C9D67-96DC-41DA-A0AD-508C3353D71C}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Test</RootNamespace>
     <AssemblyName>LORAP</AssemblyName>
-    <Description>Bruh</Description>
-    <Version>1.0.0</Version>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <LangVersion>latest</LangVersion>
-	<RestoreAdditionalProjectSources>
-	  https://api.nuget.org/v3/index.json;
-	  https://nuget.bepinex.dev/v3/index.json;
-	  https://nuget.samboy.dev/v3/index.json
-	</RestoreAdditionalProjectSources>
-	<Configurations>Debug;Release;Test</Configurations>
+    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+    <TargetFrameworkProfile />
   </PropertyGroup>
-
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+  </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Archipelago.MultiClient.Net" Version="6.5.0" />
-    <PackageReference Include="Krafs.Publicizer" Version="2.3.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Lib.Harmony" Version="2.3.5" />
-	<PackageReference Include="UnityEngine.Modules" Version="2019.3.15" IncludeAssets="compile" />
-	
-	<Publicize Include="Assembly-CSharp" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <Reference Include="0Harmony, Version=2.3.5.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\1256670\2603522001\Assemblies\0Harmony.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Unity.TextMeshPro">
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="Unity.TextMeshPro, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\Unity.TextMeshPro.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEngine.UI">
+    <Reference Include="UnityEngine">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AnimationModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.AssetBundleModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.UI.dll</HintPath>
       <Private>False</Private>
     </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Update="System.Runtime.Serialization">
-      <Private>True</Private>
+    <Reference Include="UnityEngine.UIModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
   </ItemGroup>
-
   <ItemGroup>
-    <Reference Update="System.Numerics">
-      <Private>True</Private>
-    </Reference>
+    <Compile Include="Archipelago\CheckManager.cs" />
+    <Compile Include="Archipelago\ConnectionManager.cs" />
+    <Compile Include="CustomUI\APConnectWindow.cs" />
+    <Compile Include="CustomUI\APLog.cs" />
+    <Compile Include="CustomUI\CustomSelectable.cs" />
+    <Compile Include="CustomUI\MessagePopup.cs" />
+    <Compile Include="Gameplay\ContentManager.cs" />
+    <Compile Include="Gameplay\Mechanics\Drops\BaseDropSystem.cs" />
+    <Compile Include="Gameplay\Mechanics\Drops\BookOfEverything.cs" />
+    <Compile Include="Gameplay\Mechanics\Drops\BookOfEverythingBalanced.cs" />
+    <Compile Include="Gameplay\Mechanics\Drops\DropsManager.cs" />
+    <Compile Include="Gameplay\Mechanics\Goals\BaseGoal.cs" />
+    <Compile Include="Gameplay\Mechanics\Goals\ClearGoal.cs" />
+    <Compile Include="Gameplay\Mechanics\Goals\GoalsManager.cs" />
+    <Compile Include="Gameplay\PlaythruManager.cs" />
+    <Compile Include="Gameplay\SaveManager.cs" />
+    <Compile Include="LORAP.cs" />
+    <Compile Include="Patches\AbnoAndEGOPopup.cs" />
+    <Compile Include="Patches\AbnoPagesAndEGORandom.cs" />
+    <Compile Include="Patches\AbnoSuppression.cs" />
+    <Compile Include="Patches\BookDropLimit.cs" />
+    <Compile Include="Patches\EndGoal.cs" />
+    <Compile Include="Patches\GachaAndCustomBooks.cs" />
+    <Compile Include="Patches\Other.cs" />
+    <Compile Include="Patches\Receptions.cs" />
+    <Compile Include="Patches\RemoveInvitationBookReq.cs" />
+    <Compile Include="Patches\RemoveStory.cs" />
+    <Compile Include="Patches\Title.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Utils\PrefabHelper.cs" />
+    <Compile Include="Utils\Utils.cs" />
   </ItemGroup>
-
   <ItemGroup>
-    <Reference Update="System">
-      <Private>True</Private>
-    </Reference>
+    <PackageReference Include="Archipelago.MultiClient.Net">
+      <Version>6.5.0</Version>
+    </PackageReference>
+    <PackageReference Include="Krafs.Publicizer">
+      <Version>2.3.0</Version>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <Publicize Include="Assembly-CSharp" />
   </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

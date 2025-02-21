@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using LORAP.Playthru;
+using LORAP.Utils;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
@@ -34,44 +35,34 @@ namespace LORAP.Patches
         static IEnumerable<CodeInstruction> AnotherEnemyBookDropLimit(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
         {
             // Replace BattleUnitModel.OnDie mechanism of giving books on enemy death with a custom one. Gives only one book from the pool of every book that should drop from enemy
-            var instr = instructions.ToList();
-            var pos = instr.IndexOf(instr.Where(i => i.opcode == OpCodes.Brtrue).ElementAt(4)) + 1;
-            //var pos = instr.FindIndex(i => i.opcode == OpCodes.Brtrue) + 1;
+            CIWriter Writer = new CIWriter(instructions, generator);
 
-            Label skip = generator.DefineLabel();
+            Writer.ToPattern(OpCodes.Ldarg_0, OpCodes.Call, OpCodes.Callvirt, OpCodes.Stloc_S);
 
-            instr.RemoveRange(pos, 47);
+            Writer.Remove(47);
 
-            // Add custom label to exit the loop
-            instr[pos].labels.Add(skip);
+            Label skip = Writer.AddLabel();
 
-            // Get random book
-            instr.Insert(pos, new CodeInstruction(OpCodes.Ldarg_0)); // load BattleUnitModel from args
-            instr.Insert(pos + 1, new CodeInstruction(OpCodes.Call, AccessTools.PropertyGetter(typeof(BattleUnitModel), nameof(BattleUnitModel.UnitData)))); // get UnitBattleDataModel from BattleUnitModel
-            instr.Insert(pos + 2, new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(UnitBattleDataModel), nameof(UnitBattleDataModel.unitData)))); // get UnitDataModel from UnitBattleDataModel
-            instr.Insert(pos + 3, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CustomBookDrops), nameof(CustomBookDrops.GetRandomBookFromUnit)))); // call GetRandomBookFromUnit (returns DropBookDataForAddedReward)
-            instr.Insert(pos + 4, new CodeInstruction(OpCodes.Stloc_S, 10)); // save book to local
+            Writer.Add(new CodeInstruction(OpCodes.Ldarg_0));
+            Writer.Add(new CodeInstruction(OpCodes.Call, AccessTools.PropertyGetter(typeof(BattleUnitModel), nameof(BattleUnitModel.UnitData))));
+            Writer.Add(new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(UnitBattleDataModel), nameof(UnitBattleDataModel.unitData))));
+            Writer.Add(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CustomBookDrops), nameof(CustomBookDrops.GetRandomBookFromUnit))));
+            Writer.Add(new CodeInstruction(OpCodes.Stloc_S, 10));
 
-            // Check if book is null
-            instr.Insert(pos + 5, new CodeInstruction(OpCodes.Ldloc_S, 10)); // book to stack from local
-            instr.Insert(pos + 6, new CodeInstruction(OpCodes.Brfalse_S, skip)); // skip if book is null
+            Writer.Add(new CodeInstruction(OpCodes.Ldloc_S, 10));
+            Writer.Add(new CodeInstruction(OpCodes.Brfalse_S, skip));
 
-            // StageController.Instance.OnEnemyDropBookForAdded(book);
-            instr.Insert(pos + 7, new CodeInstruction(OpCodes.Call, AccessTools.PropertyGetter(typeof(StageController), nameof(StageController.Instance)))); // get StageController Instance
-            instr.Insert(pos + 8, new CodeInstruction(OpCodes.Ldloc_S, 10)); // book to stack from local
-            instr.Insert(pos + 9, new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(StageController), nameof(StageController.OnEnemyDropBookForAdded)))); // call StageController.OnEnemyDropBookForAdded
+            Writer.Add(new CodeInstruction(OpCodes.Call, AccessTools.PropertyGetter(typeof(StageController), nameof(StageController.Instance))));
+            Writer.Add(new CodeInstruction(OpCodes.Ldloc_S, 10));
+            Writer.Add(new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(StageController), nameof(StageController.OnEnemyDropBookForAdded))));
 
-            // BattleUnitModel.view.OnEnemyDropBook(book.GetLorId());
-            instr.Insert(pos + 10, new CodeInstruction(OpCodes.Ldarg_0)); // load BattleUnitModel from args
-            instr.Insert(pos + 11, new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(BattleUnitModel), nameof(BattleUnitModel.view)))); // get BattleUnitView from BattleUnitModel
-            instr.Insert(pos + 12, new CodeInstruction(OpCodes.Ldloc_S, 10)); // book to stack from local
-            instr.Insert(pos + 13, new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(DropBookDataForAddedReward), nameof(DropBookDataForAddedReward.GetLorId)))); // get LorId from book
-            instr.Insert(pos + 14, new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(BattleUnitView), nameof(BattleUnitView.OnEnemyDropBook)))); // call BattleUnitView.OnEnemyDropBook
+            Writer.Add(new CodeInstruction(OpCodes.Ldarg_0));
+            Writer.Add(new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(BattleUnitModel), nameof(BattleUnitModel.view))));
+            Writer.Add(new CodeInstruction(OpCodes.Ldloc_S, 10));
+            Writer.Add(new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(DropBookDataForAddedReward), nameof(DropBookDataForAddedReward.GetLorId))));
+            Writer.Add(new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(BattleUnitView), nameof(BattleUnitView.OnEnemyDropBook))));
 
-            // Nop instruction to skip in case book is null (aka all books already dropped)
-            //instr.Insert(pos + 15, new CodeInstruction(OpCodes.Nop).WithLabels(skip));
-
-            return instr;
+            return Writer.Instructions;
         }
     }
 

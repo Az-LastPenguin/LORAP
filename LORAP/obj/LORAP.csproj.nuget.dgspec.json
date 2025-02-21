@@ -13,6 +13,7 @@
         "packagesPath": "C:\\Users\\Az\\.nuget\\packages\\",
         "outputPath": "C:\\Users\\Az\\Documents\\GitHub\\LORAP\\LORAP\\obj\\",
         "projectStyle": "PackageReference",
+        "skipContentFileWrite": true,
         "configFilePaths": [
           "C:\\Users\\Az\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
@@ -22,22 +23,12 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
-          "https://api.nuget.org/v3/index.json": {},
-          "https://api.nuget.org/v3/index.json": {},
-          "https://nuget.bepinex.dev/v3/index.json": {},
-          "https://nuget.samboy.dev/v3/index.json": {}
+          "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net46": {
-            "targetAlias": "net46",
             "projectReferences": {}
           }
-        },
-        "warningProperties": {
-          "warnAsError": [
-            "NU1605"
-          ]
         },
         "restoreAuditProperties": {
           "enableAudit": "true",
@@ -47,7 +38,6 @@
       },
       "frameworks": {
         "net46": {
-          "targetAlias": "net46",
           "dependencies": {
             "Archipelago.MultiClient.Net": {
               "target": "Package",
@@ -58,24 +48,22 @@
               "suppressParent": "All",
               "target": "Package",
               "version": "[2.3.0, )"
-            },
-            "Lib.Harmony": {
-              "target": "Package",
-              "version": "[2.3.5, )"
-            },
-            "Microsoft.NETFramework.ReferenceAssemblies": {
-              "suppressParent": "All",
-              "target": "Package",
-              "version": "[1.0.3, )",
-              "autoReferenced": true
-            },
-            "UnityEngine.Modules": {
-              "include": "Compile",
-              "target": "Package",
-              "version": "[2019.3.15, )"
             }
-          },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.400\\RuntimeIdentifierGraph.json"
+          }
+        }
+      },
+      "runtimes": {
+        "win": {
+          "#import": []
+        },
+        "win-arm64": {
+          "#import": []
+        },
+        "win-x64": {
+          "#import": []
+        },
+        "win-x86": {
+          "#import": []
         }
       }
     }

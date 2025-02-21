@@ -41,7 +41,7 @@ namespace LORAP.Archipelago
         {
             session.Locations.CompleteLocationChecks(id);
         }
-
+        
         // Idk it just doesnt work.
         /*internal static void Checks(long[] id) 
         {
@@ -61,19 +61,43 @@ namespace LORAP.Archipelago
             // Create the session
             try
             {
-                session = ArchipelagoSessionFactory.CreateSession(IP);  
+                session = ArchipelagoSessionFactory.CreateSession(IP);
             }
             catch (Exception e)
             {
                 APConnectWindow.SetInfoText(e.Message);
                 return;
             }
-             
+
             // To Show AP server messages to client
             session.MessageLog.OnMessageReceived += OnMessageRecieved;
 
+            /*void Err(Exception e, string message)
+            {
+                Debug.Log($"{e}; {message}");
+            }
+
+            session.Socket.ErrorReceived += Err;
+
+            void test(ArchipelagoPacketBase packet)
+            {
+                Debug.Log($"Packet: {packet.PacketType}");
+            }
+
+            session.Socket.PacketReceived += test;
+
+            var t = session.ConnectAsync();
+            t.Wait(5000);
+            Debug.Log($"AA {(t.IsCompleted ? "Connected" : "Not Connected")} {t.Status} {t.Exception}");
+            
+            var con = session.LoginAsync("Library of Ruina", SlotName, ItemsHandlingFlags.AllItems, password: Password, version: new Version(0, 5, 1));
+            con.Wait(4000);
+            Debug.Log($"BB {(con.IsCompleted ? "Logged-in" : "Not Logged-in")}");
+
+            var result = con.Result;*/
+
             // Connect to AP
-            var result = session.TryConnectAndLogin("Library of Ruina", SlotName, ItemsHandlingFlags.AllItems, password: Password, version: new Version(0, 5, 0));
+            var result = session.TryConnectAndLogin("Library of Ruina", SlotName, ItemsHandlingFlags.AllItems, password: Password, version: new Version(0, 5, 1));
 
             // If not successful, show error
             if (!result.Successful)

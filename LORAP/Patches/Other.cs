@@ -5,12 +5,11 @@ using LORAP.Archipelago;
 using LORAP.CustomUI;
 using LORAP.Gameplay;
 using LORAP.Playthru;
+using LORAP.Utils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Emit;
-using System.Runtime.ConstrainedExecution;
 using TMPro;
 using UI;
 using UnityEngine;
@@ -29,7 +28,7 @@ namespace LORAP.Patches
         {
             var questSlotList = __instance.questSlotList;
 
-            var setQuestText = (UIFloorQuestSlot slot, string text, bool complete) =>
+            void setQuestText(UIFloorQuestSlot slot, string text, bool complete)
             {
                 slot.SetActiveSlot(on: true);
                 slot.SetColor(complete ? UIColorManager.Manager.GetUIColor(UIColor.Disabled) : UIColorManager.Manager.GetUIColor(UIColor.Default));
@@ -49,7 +48,7 @@ namespace LORAP.Patches
                 slot.img_Icon.sprite = (complete ? UISpriteDataManager.instance._floorQuestStateIcon[1] : UISpriteDataManager.instance._floorQuestStateIcon[0]);
                 slot.img_Icon.enabled = true;
                 slot.img_Icon.color = (complete ? UIColorManager.Manager._floorQuestSlotIconColor[1] : UIColorManager.Manager._floorQuestSlotIconColor[0]);
-            };
+            }
 
             setQuestText(questSlotList[0], $"Abno Page: Unknown", false);
             setQuestText(questSlotList[1], $"EGO: Unknown", false);
@@ -371,30 +370,29 @@ namespace LORAP.Patches
             UIAlarmPopup.instance.txt_alarm.text = "Are you sure you want to forfeit the battle?";
         }
 
-        // Change "Forfeit" and "Return to Title" buttons' behaviour
         [HarmonyPatch(nameof(UIEscPanel.OnClickEvent))]
         [HarmonyTranspiler]
         static IEnumerable<CodeInstruction> EscapeMenuPatch(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
         {
-            var instr = instructions.ToList();
-            var cur = instr.FindIndex(i => i.opcode == OpCodes.Ldc_I4_2) - 1;
+            // Change "Forfeit" and "Return to Title" buttons' behaviour
+            CIWriter Writer = new CIWriter(instructions, generator);
 
-            var l = instr[cur].labels.ElementAt(0);
-            instr.RemoveRange(cur, 3);
-            instr.Insert(cur, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ToTitleAndForfeit), nameof(ToTitleAndForfeit.EndBattle))).WithLabels(l));
+            Writer.ToPattern(OpCodes.Call, OpCodes.Ldc_I4_2, OpCodes.Callvirt);
 
-            cur = instr.FindIndex(i => i.opcode == OpCodes.Ldarg_0) - 3;
+            Writer.Nop(); // Save a label
+            Writer.Remove(2);
 
-            Label TitleWarnLabel = generator.DefineLabel();
+            Writer.ToPattern(OpCodes.Call, OpCodes.Ldc_I4_S, OpCodes.Ldc_I4_1, OpCodes.Ldarg_0);
 
-            instr.ElementAt(cur).WithLabels(TitleWarnLabel);
+            Label TitleWarnLabel = Writer.AddLabel();
 
-            cur = instr.FindIndex(i => i.opcode == OpCodes.Brtrue);
+            Writer.ToPattern(OpCodes.Brtrue);
 
-            instr.RemoveAt(cur);
-            instr.Insert(cur, new CodeInstruction(OpCodes.Brtrue_S, TitleWarnLabel));
+            Writer.Remove();
 
-            return instr;
+            Writer.Insert(new CodeInstruction(OpCodes.Brtrue_S, TitleWarnLabel));
+
+            return Writer.Instructions;
         }
     }
 
@@ -505,12 +503,12 @@ namespace LORAP.Patches
     [HarmonyPatch(typeof(VersionViewer))]
     internal class VersionPatch
     {
-        // Add "+LORAP" to version number because why not?
+        // Add "LORAP vX.X" to version number because why not?
         [HarmonyPatch(nameof(VersionViewer.Start))]
         [HarmonyPostfix]
         static void Version(VersionViewer __instance)
         {
-            __instance.GetComponent<Text>().text += " + LORAP 0.3";
+            __instance.GetComponent<Text>().text += $"\nLORAP {LORAP.ModVersion}";
         }
     }
 }

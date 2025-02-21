@@ -5,7 +5,7 @@ namespace LORAP.Utils
 {
     internal static class PrefabHelper
     {
-        private static Dictionary<string, AssetBundle> AssetBundles = new();
+        private static Dictionary<string, AssetBundle> AssetBundles = new Dictionary<string, AssetBundle>();
 
         public static GameObject GetPrefab(string assetBundle, string prefab)
         {
