@@ -6,11 +6,11 @@ Library of Ruina Archipelago (LORAP for short) is a Harmony mod for Library of R
 If you do not know what Archipelago is, visit [their Website](https://archipelago.gg) to learn more.
 
 ## INSTALLATION
-You can either download this mod from this github page, or download it in the [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3430626765).
+Download the mod from [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3430626765).
+The mod also requires [BaseMod](https://steamcommunity.com/workshop/filedetails/?id=2603522001) (Enable Priority Loader, please)
 
-If you wish to install this mod manually, you have to download the mod and drop it into Library Of Ruina/LibraryOfRuina_Data/Mods folder. (v0.3 or newer, older ones use BepInEx, don't use them.)
-
-**THE MOD IS STANDALONE**
+If you wish to install this mod manually, you have to download the mod from the release page and drop it into Library Of Ruina/LibraryOfRuina_Data/Mods folder. (v0.3 or newer, older ones use BepInEx, don't use them.)
+I don't know where to find BaseMod not in workshop, so i can't provide a link for it, sorry.
 
 ## OTHER MODS
 The mod is supposed to be installed without any other **gameplay** mod. You can still install visual mods, most of which shouldn't break anything. But gameplay altering mods might and **WILL** break stuff.
