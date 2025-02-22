@@ -6,6 +6,7 @@ Library of Ruina Archipelago (LORAP for short) is a Harmony mod for Library of R
 If you do not know what Archipelago is, visit [their Website](https://archipelago.gg) to learn more.
 
 ## INSTALLATION
+Get the apworld from either [latest release](https://github.com/Az-LastPenguin/LORAP/releases) or from [this Repository](https://github.com/Az-LastPenguin/LoR-APWorld).
 Download the mod from [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3430626765).
 The mod also requires [BaseMod](https://steamcommunity.com/workshop/filedetails/?id=2603522001) (Enable Priority Loader, please)
 
