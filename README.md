@@ -19,7 +19,7 @@ The mod is supposed to be installed without any other **gameplay** mod. You can 
 You can check progress for the mod, things that are completed, will be done, or still just an idea in [this project](https://github.com/users/Az-LastPenguin/projects/1/views/1?layout=board).
 
 ## IDEAS AND CONTACT
-Visit [AfterDark Archipelago server](https://discord.gg/Sbhy4ykUKn) and [this channel](https://ptb.discord.com/channels/1085716850370957462/1137643745051955200) where me and the testers reside. You can discuss the mod, ideas for it, or anything relevant there. I'm always checking the chat.
+Visit [AfterDark Archipelago server](https://discord.gg/Sbhy4ykUKn) and [this channel](https://ptb.discord.com/channels/1085716850370957462/1137643745051955200) where me and the testers reside. You can discuss the mod, ideas for it, or anything relevant there. I'm always checking the chat. Another good way to let me know about your ideas is to [create an issue](https://github.com/Az-LastPenguin/LORAP/issues/new) with your idea, i will tag it appropriately.
 You can also contact me on Discord directly: last_penguin
 
 ## BUG REPORTS
