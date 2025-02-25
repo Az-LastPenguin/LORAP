@@ -3,6 +3,7 @@ The mod is in a semi-playable state, meaning you can play it from beginning to e
 
 ## WHAT IS?
 Library of Ruina Archipelago (LORAP for short) is a Harmony mod for Library of Ruina to make it work with Archipelago.
+
 [Archipelago](https://archipelago.gg) is a cross-game modification system which randomizes different games, then uses the result to build a single unified multi-player game. Items from one game may be present in another, and you will need your fellow players to find items you need in their games to help you complete your own.
 
 ## INSTALLATION
