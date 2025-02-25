@@ -2,10 +2,12 @@
 The mod is in a semi-playable state, meaning you can play it from beginning to end, but may and **WILL** experience bugs. I myself would not recemmend doing actual serious runs with it, as it may brick sometimes. (There is no logic yet)
 
 ## WHAT IS?
-Library of Ruina Archipelago (LORAP for short) is a Harmony mod for Library of Ruina, that makes it work with Archipelago Multi-World.
-If you do not know what Archipelago is, visit [their Website](https://archipelago.gg) to learn more.
+Library of Ruina Archipelago (LORAP for short) is a Harmony mod for Library of Ruina to make it work with Archipelago.
+[Archipelago](https://archipelago.gg) is a cross-game modification system which randomizes different games, then uses the result to build a single unified multi-player game. Items from one game may be present in another, and you will need your fellow players to find items you need in their games to help you complete your own.
 
 ## INSTALLATION
+If you're entirely new to Archipelago and GitHub, consider using [this Guide](https://az-lastpenguin.github.io/guide).
+
 Download the mod from [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3430626765).
 The mod also requires [BaseMod](https://steamcommunity.com/workshop/filedetails/?id=2603522001) (Enable Priority Loader, please)
 
