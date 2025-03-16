@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "zB+or6Z8L9s=",
+  "dgSpecHash": "CTxpfaArNFc=",
   "success": true,
   "projectFilePath": "C:\\Users\\Az\\Documents\\GitHub\\LORAP\\LORAP\\LORAP.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\Az\\.nuget\\packages\\archipelago.multiclient.net\\6.5.0\\archipelago.multiclient.net.6.5.0.nupkg.sha512",
+    "C:\\Users\\Az\\.nuget\\packages\\archipelago.multiclient.net\\6.6.0\\archipelago.multiclient.net.6.6.0.nupkg.sha512",
     "C:\\Users\\Az\\.nuget\\packages\\krafs.publicizer\\2.3.0\\krafs.publicizer.2.3.0.nupkg.sha512"
   ],
   "logs": []

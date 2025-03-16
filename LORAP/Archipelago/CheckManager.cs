@@ -350,10 +350,10 @@ namespace LORAP.Archipelago
 
         internal static void AbnoChecks(SephirahType seph)
         {
-            int progress = PlaythruManager.Floors[seph].CurrentAbno;
+            int progress = seph.FloorModel().GetCurrentAbnoStage();
             int num = seph == SephirahType.Binah || seph == SephirahType.Hokma ? progress < 4 ? AbnoRewardNum : AbnoRewardNum * 2 + RealizationRewardNum : progress < 5 ? AbnoRewardNum : AbnoRewardNum + RealizationRewardNum;
 
-            int baseid = LocationAbnoOffset + (AbnoRewardNum * 5 + RealizationRewardNum) * ((int)seph - 1) + AbnoRewardNum * (progress - 1);
+            int baseid = LocationAbnoOffset + (AbnoRewardNum * 5 + RealizationRewardNum) * ((int)seph - 1) + AbnoRewardNum * (progress - 2);
 
             List<long> ids = new List<long>();
             for (int i = 0; i < num; i++)

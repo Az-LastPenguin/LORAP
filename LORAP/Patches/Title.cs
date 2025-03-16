@@ -7,14 +7,80 @@ using TMPro;
 using UI;
 using UI.Title;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace LORAP.Patches
 {
-    [HarmonyPatch(typeof(UITitleController))]
     internal class TitlePatches
     {
+        // UITitleController patches. This game is so ass i had to split the code into two patches. //
+        [HarmonyPatch(typeof(UITitleController),  nameof(UITitleController.OnSelectButton))]
+        [HarmonyPostfix]
+        static void TitleButtonsPatch(UITitleController __instance, TitleActionType type)
+        {
+            // I... fuck it. I don't even know.
+            if (__instance.TitleButtons != null && __instance.TitleButtons.Count() > 1 && __instance.TitleButtons[1] != null && __instance.TitleButtons[1].gameObject != null && __instance.TitleButtons[1].gameObject.GetComponentInChildren<TextMeshProUGUI>() != null)
+                __instance.TitleButtons[1].gameObject.GetComponentInChildren<TextMeshProUGUI>().text = "Archipelago Connect";
+        }
+
+        // Override OnSelectButton because the code is so ass patches break for some reason...
+        [HarmonyPatch(typeof(UITitleController), nameof(UITitleController.OnSelectButton))]
+        [HarmonyPrefix]
+        static bool SelectButtonPatch(UITitleController __instance, TitleActionType type)
+        {
+            UISoundManager.instance.PlayEffectSound(UISoundType.Card_Over);
+            __instance._currentSelectedActionType = type;
+
+            if (__instance.isRuinTitle)
+            {
+                foreach (var Button in __instance.Ruin_TitleButtons)
+                {
+                    if (Button.type == type)
+                        Button.SetState(ButtonState.Selected);
+                    else if (Button.type == TitleActionType.New_Game || Button.type == TitleActionType.Credit)
+                        Button.SetState(ButtonState.Disabled);
+                    else
+                        Button.SetState(ButtonState.Normal);
+                }
+            }
+            else
+            {
+                foreach (var Button in __instance.TitleButtons)
+                {
+                    if (Button.type == type)
+                        Button.SetState(ButtonState.Selected);
+                    else if (Button.type == TitleActionType.New_Game || Button.type == TitleActionType.Credit)
+                        Button.SetState(ButtonState.Disabled);
+                    else
+                        Button.SetState(ButtonState.Normal);
+                }
+            }
+
+            if (!__instance.isRuinTitle)
+                return false;
+
+
+            __instance.ruin_selectedButtonTextAnim.ResetTrigger("Hide");
+            __instance.ruin_selectedButtonTextAnim.SetTrigger("Reveal");
+
+            switch (type)
+            {
+                case TitleActionType.Continue:
+                    __instance.ruin_selectedButtonText.text = "Archipelago Connect";
+                    break;
+                case TitleActionType.Setting:
+                    __instance.ruin_selectedButtonText.text = TextDataModel.GetText("ui_title_setting");
+                    break;
+                case TitleActionType.Exit:
+                    __instance.ruin_selectedButtonText.text = TextDataModel.GetText("ui_title_exit");
+                    break;
+            }
+
+            return false;
+        }
+
         // To Load the save and connect to AP
-        [HarmonyPatch(nameof(UITitleController.Continue))]
+        [HarmonyPatch(typeof(UITitleController), nameof(UITitleController.Continue))]
         [HarmonyPrefix]
         static bool ContinuePatch(UITitleController __instance)
         {
@@ -23,23 +89,8 @@ namespace LORAP.Patches
             return false;
         }
 
-        // Change Title Buttons
-        [HarmonyPatch(nameof(UITitleController.OnSelectButton))]
-        [HarmonyPostfix]
-        static void TitleButtonsPatch(UITitleController __instance, TitleActionType type)
-        {
-            if (type == TitleActionType.Continue)
-                __instance.ruin_selectedButtonText.text = "Archipelago Connect";
-
-            __instance.TitleButtons[0].SetState(ButtonState.Disabled);
-            __instance.TitleButtons[1].gameObject.GetComponentInChildren<TextMeshProUGUI>().text = "Archipelago Connect";
-
-            __instance.Ruin_TitleButtons[0].SetState(ButtonState.Disabled);
-            __instance.Ruin_TitleButtons[4].SetState(ButtonState.Disabled);
-        }
-
         // Ruin Title
-        [HarmonyPatch(nameof(UITitleController.CheckRuinTitle))]
+        [HarmonyPatch(typeof(UITitleController), nameof(UITitleController.CheckRuinTitle))]
         [HarmonyPrefix]
         static bool RuinTitlePatch(UITitleController __instance)
         {
@@ -50,11 +101,10 @@ namespace LORAP.Patches
 
             return false;
         }
-    }
 
-    [HarmonyPatch(typeof(EntryScene))]
-    internal class LoadingScreenRandomCG
-    {
+
+
+        // EntryScene patch. Display custom CG when loading into the game. //
         public static LatestDataModel GenerateRandomLatestData()
         {
             var AllCGs = new List<Tuple<int, int, int>>() { };
@@ -84,7 +134,7 @@ namespace LORAP.Patches
             return DataModel;
         }
 
-        [HarmonyPatch(nameof(EntryScene.SetCG))]
+        [HarmonyPatch(typeof(EntryScene), nameof(EntryScene.SetCG))]
         [HarmonyPrefix]
         static bool SelectCGPatch(EntryScene __instance)
         {

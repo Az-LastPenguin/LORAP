@@ -37,7 +37,7 @@ namespace LORAP.Gameplay.Mechanics.Goals
             },
         };
 
-        internal static void Setup(SlotDataStruct SlotData) // TODO: Expand this class or make a similar one for checks (to make receptions give checks instead of books)
+        internal static void Setup(SlotDataStruct SlotData)
         {
             Goals.ForEach(g => g.Active = false);
 
@@ -48,7 +48,7 @@ namespace LORAP.Gameplay.Mechanics.Goals
 
         internal static bool GoalsAchieved()
         {
-            return Goals.Where(g => g.Completed).Count() == Goals.Where(g => g.Active).Count();
+            return Goals.Where(g => g.Active).All(g => g.Completed);
         }
     }
 }

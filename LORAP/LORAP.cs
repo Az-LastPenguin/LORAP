@@ -1,7 +1,6 @@
 ﻿using HarmonyLib;
-using LORAP.Gameplay;
+using LORAP.Patches;
 using LORAP.Utils;
-using Opening;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
@@ -11,13 +10,13 @@ namespace LORAP
 {
     public class LORAP : ModInitializer
     {
-        internal static Harmony harmony;
+        internal static Harmony Harmony = null;
 
         internal static LORAP Instance { get; private set; }
 
         internal static string ModPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
-        internal static string ModVersion = "v0.3a";
+        internal static string ModVersion = "v0.3.1";
 
         public override void OnInitializeMod()
         {
@@ -25,9 +24,14 @@ namespace LORAP
 
             Instance = this;
 
-            harmony = new Harmony($"LORAP-Harmony");
+            Harmony = new Harmony("LORAP");
 
-            harmony.PatchAll();
+            Harmony.PatchAll(typeof(AbnoAndEGOPages));
+            Harmony.PatchAll(typeof(GachaPatches));
+            Harmony.PatchAll(typeof(OtherPatches));
+            Harmony.PatchAll(typeof(RemoveStory));
+            Harmony.PatchAll(typeof(SuppressionsAndReceptions));
+            Harmony.PatchAll(typeof(TitlePatches));
 
             SceneManager.sceneLoaded += OnSceneLoad;
 
@@ -43,7 +47,7 @@ namespace LORAP
                 gameObject.AddComponent<Timing>();
                 Timing.Setup(gameObject);
 
-                GameOpeningController.Instance.SetOnPlayEndMethod(ContentManager.AddCustomContent);
+                //GameOpeningController.Instance.SetOnPlayEndMethod(ContentManager.AddCustomContent);
             }
         }
     }

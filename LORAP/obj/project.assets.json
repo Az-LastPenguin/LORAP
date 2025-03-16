@@ -2,7 +2,7 @@
   "version": 3,
   "targets": {
     ".NETFramework,Version=v4.6": {
-      "Archipelago.MultiClient.Net/6.5.0": {
+      "Archipelago.MultiClient.Net/6.6.0": {
         "type": "package",
         "compile": {
           "lib/net45/Archipelago.MultiClient.Net.dll": {
@@ -33,7 +33,7 @@
       }
     },
     ".NETFramework,Version=v4.6/win": {
-      "Archipelago.MultiClient.Net/6.5.0": {
+      "Archipelago.MultiClient.Net/6.6.0": {
         "type": "package",
         "compile": {
           "lib/net45/Archipelago.MultiClient.Net.dll": {
@@ -64,7 +64,7 @@
       }
     },
     ".NETFramework,Version=v4.6/win-arm64": {
-      "Archipelago.MultiClient.Net/6.5.0": {
+      "Archipelago.MultiClient.Net/6.6.0": {
         "type": "package",
         "compile": {
           "lib/net45/Archipelago.MultiClient.Net.dll": {
@@ -95,7 +95,7 @@
       }
     },
     ".NETFramework,Version=v4.6/win-x64": {
-      "Archipelago.MultiClient.Net/6.5.0": {
+      "Archipelago.MultiClient.Net/6.6.0": {
         "type": "package",
         "compile": {
           "lib/net45/Archipelago.MultiClient.Net.dll": {
@@ -126,7 +126,7 @@
       }
     },
     ".NETFramework,Version=v4.6/win-x86": {
-      "Archipelago.MultiClient.Net/6.5.0": {
+      "Archipelago.MultiClient.Net/6.6.0": {
         "type": "package",
         "compile": {
           "lib/net45/Archipelago.MultiClient.Net.dll": {
@@ -158,15 +158,15 @@
     }
   },
   "libraries": {
-    "Archipelago.MultiClient.Net/6.5.0": {
-      "sha512": "cWz5UDo7/oIA0OVmOPN70UcwzTteQ2V0/v5n2LgMk0AW+HIYFACL7t4OlLBts/lp6LzNHMyOFxc7Fn7C45di4w==",
+    "Archipelago.MultiClient.Net/6.6.0": {
+      "sha512": "ZUNmgZg1zsMwoRaTFz0rqm9UwpUcqCkAsW6GAgLwE749dRmonPLimhYU/AryA4BagTGblL5ce9euwWU4Oj1YSw==",
       "type": "package",
-      "path": "archipelago.multiclient.net/6.5.0",
+      "path": "archipelago.multiclient.net/6.6.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "README.md",
-        "archipelago.multiclient.net.6.5.0.nupkg.sha512",
+        "archipelago.multiclient.net.6.6.0.nupkg.sha512",
         "archipelago.multiclient.net.nuspec",
         "blue-icon.png",
         "lib/net35/Archipelago.MultiClient.Net.dll",
@@ -214,7 +214,7 @@
   },
   "projectFileDependencyGroups": {
     ".NETFramework,Version=v4.6": [
-      "Archipelago.MultiClient.Net >= 6.5.0",
+      "Archipelago.MultiClient.Net >= 6.6.0",
       "Krafs.Publicizer >= 2.3.0"
     ]
   },
@@ -258,7 +258,7 @@
         "dependencies": {
           "Archipelago.MultiClient.Net": {
             "target": "Package",
-            "version": "[6.5.0, )"
+            "version": "[6.6.0, )"
           },
           "Krafs.Publicizer": {
             "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",

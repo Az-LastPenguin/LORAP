@@ -54,7 +54,7 @@ namespace LORAP.Utils
 
     // Custom class made by me to make Transpilers creation easier
     // Basically a bunch of macros
-    internal class CIWriter
+    /*internal class CIWriter
     {
         public List<CodeInstruction> Instructions { get; private set; }
         public ILGenerator Generator { get; private set; }
@@ -178,5 +178,5 @@ namespace LORAP.Utils
             Instructions.ForEach(i => UnityEngine.Debug.Log($"{i.ToString()}"));
             UnityEngine.Debug.Log("\n------------------------------");
         }
-    }
+    }*/
 }

@@ -31,6 +31,9 @@ namespace LORAP.CustomUI
             Panel.transform.Find("Popup/Buttons/Layout/Skip").gameObject.AddComponent<CustomSelectable>().MouseClickEvent.AddListener(SkipClick);
             Panel.transform.Find("Popup/PopupText").gameObject.GetComponent<TextMeshProUGUI>().font = UIHelper.Font1;
 
+            Panel.GetComponent<CanvasGroup>().blocksRaycasts = true;
+            Panel.transform.Find("Background").gameObject.GetComponent<Image>().raycastTarget = true;
+
             Panel.SetActive(false);
         }
 
@@ -307,13 +310,13 @@ namespace LORAP.CustomUI
         private static void ConfirmClick(PointerEventData eventData)
         {
             UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Click);
-            if (currentMessage+1 >= messages.Count)
+            if (currentMessage + 1 >= messages.Count)
             {
                 messages.Clear();
                 currentMessage = 0;
                 Close();
 
-                if (pageMessages.Count > 0)
+                if (pageMessages.Count > 0 && !UIGetAbnormalityPanel.instance.IsOpened())
                     PagesPopup();
 
                 return;
@@ -333,7 +336,7 @@ namespace LORAP.CustomUI
             currentMessage = 0;
             Close();
 
-            if (pageMessages.Count > 0)
+            if (pageMessages.Count > 0 && !UIGetAbnormalityPanel.instance.IsOpened())
                 PagesPopup();
         }
     }
