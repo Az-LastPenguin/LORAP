@@ -12,7 +12,6 @@
 *.DotSettings
 discarded_ideas
 LORAP/bin
-LORAP/obj
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -366,5 +365,3 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-.vs/LORAP/v17/.suo
-/.vs
