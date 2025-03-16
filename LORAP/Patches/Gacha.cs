@@ -1,50 +1,42 @@
 ﻿using HarmonyLib;
 using LORAP.Gameplay.Mechanics.Drops;
-using LORAP.Utils;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection.Emit;   
 using UI;
 using UnityEngine;
 
+using static HarmonyLib.Code;
+
 namespace LORAP.Patches
 {
-    [HarmonyPatch(typeof(UIBookPanel))]
-    internal class DropsGeneration
+    internal class GachaPatches
     {
-        // Generate Gacha Drops and Send AP Checks on Book Burn
-        [HarmonyPatch("FeedBookTargetSephirah")]
+        // UIBattleResultPanel patch. Generate Gacha Drops and Send AP Checks when burning a book. //
+        [HarmonyPatch(typeof(UIBookPanel), nameof(UIBookPanel.FeedBookTargetSephirah))]
         [HarmonyTranspiler]
         static IEnumerable<CodeInstruction> GenerateDropsSendChecks(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
         {
-            // Get drops from custom books
-            CIWriter Writer = new CIWriter(instructions, generator);
+            var codeMatcher = new CodeMatcher(instructions, generator);
 
-            // Remove _ = floor.Exp;
-            Writer.ToPattern(OpCodes.Ldloc_0, OpCodes.Callvirt, OpCodes.Pop);
-            Writer.Remove(3);
+            codeMatcher.MatchStartForward(Ldloc_0, Callvirt, Pop)
+                .RemoveInstructions(3)
+                .MatchStartForward(Ldloc_1, Ldloc_0, Call, Ldloc_3)
+                .RemoveInstructions(7)
+                .InsertAndAdvance(new CodeInstruction(OpCodes.Ldloc_1))
+                .InsertAndAdvance(new CodeInstruction(OpCodes.Ldloc_3))
+                .InsertAndAdvance(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(DropsManager), nameof(DropsManager.GenerateDrops))))
+                .MatchStartForward(Ldloc_0, Callvirt, Pop, Ldloc_0, Callvirt)
+                .SetAndAdvance(Nop.opcode, null)
+                .RemoveInstructions(8);
 
-            // Change FeedBook to GenerateDrops
-            Writer.ToPattern(OpCodes.Ldloc_1, OpCodes.Ldloc_0, OpCodes.Call, OpCodes.Ldloc_3);
-            Writer.Remove(7);
-            Writer.Add(new CodeInstruction(OpCodes.Ldloc_1));
-            Writer.Add(new CodeInstruction(OpCodes.Ldloc_3));
-            Writer.Add(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(DropsManager), nameof(DropsManager.GenerateDrops))));
-
-            // Remove _ = floor.Exp; _ = floor.Level; floor.GetMaxExp();
-            Writer.ToPattern(OpCodes.Ldloc_0, OpCodes.Callvirt, OpCodes.Pop, OpCodes.Ldloc_0, OpCodes.Callvirt);
-            Writer.Nop(); // Save loop exit label
-            Writer.Remove(8);
-
-            return Writer.Instructions;
+            return codeMatcher.Instructions();
         }
-    }
 
-    [HarmonyPatch(typeof(UIShowUsingBookInfoPanel))]
-    internal class FakeBookDropsPatch
-    {
-        // Hide every book's drops and make "Burn and see;)" text visible
-        [HarmonyPatch(nameof(UIShowUsingBookInfoPanel.ShowBookInfoData))]
+
+
+        // UIShowUsingBookInfoPanel patches. Add "Burn and see ;)" text to book burning menu. //
+        // Hide every book's drops and make "Burn and see ;)" text visible
+        [HarmonyPatch(typeof(UIShowUsingBookInfoPanel), nameof(UIShowUsingBookInfoPanel.ShowBookInfoData))]
         [HarmonyPrefix]
         static bool BurnAndSee(UIShowUsingBookInfoPanel __instance, DropBookXmlInfo dropBookInfo)
         {
@@ -68,12 +60,12 @@ namespace LORAP.Patches
 
             // Make "Burn and see;)" text visible
             __instance.gameObject.transform.Find("BurnAndSee").gameObject.SetActive(true);
-            
+
             return false;
         }
 
         // Hide "Burn and see;)" text
-        [HarmonyPatch(nameof(UIShowUsingBookInfoPanel.SetEmptyInfo))]
+        [HarmonyPatch(typeof(UIShowUsingBookInfoPanel), nameof(UIShowUsingBookInfoPanel.SetEmptyInfo))]
         [HarmonyPrefix]
         static bool HideBurnAndSee(UIShowUsingBookInfoPanel __instance)
         {

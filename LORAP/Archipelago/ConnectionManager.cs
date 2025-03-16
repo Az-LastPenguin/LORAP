@@ -72,30 +72,6 @@ namespace LORAP.Archipelago
             // To Show AP server messages to client
             session.MessageLog.OnMessageReceived += OnMessageRecieved;
 
-            /*void Err(Exception e, string message)
-            {
-                Debug.Log($"{e}; {message}");
-            }
-
-            session.Socket.ErrorReceived += Err;
-
-            void test(ArchipelagoPacketBase packet)
-            {
-                Debug.Log($"Packet: {packet.PacketType}");
-            }
-
-            session.Socket.PacketReceived += test;
-
-            var t = session.ConnectAsync();
-            t.Wait(5000);
-            Debug.Log($"AA {(t.IsCompleted ? "Connected" : "Not Connected")} {t.Status} {t.Exception}");
-            
-            var con = session.LoginAsync("Library of Ruina", SlotName, ItemsHandlingFlags.AllItems, password: Password, version: new Version(0, 5, 1));
-            con.Wait(4000);
-            Debug.Log($"BB {(con.IsCompleted ? "Logged-in" : "Not Logged-in")}");
-
-            var result = con.Result;*/
-
             // Connect to AP
             var result = session.TryConnectAndLogin("Library of Ruina", SlotName, ItemsHandlingFlags.AllItems, password: Password, version: new Version(0, 5, 1));
 

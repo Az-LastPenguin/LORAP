@@ -48,7 +48,7 @@ namespace LORAP.Playthru
         public bool Open = true;
         public int AbnoPages = 0;
         public int EGO = 0;
-        public int CurrentAbno = 1;
+        public int AbnoStage = 1;
     }
 
     internal struct SlotDataStruct
@@ -133,7 +133,7 @@ namespace LORAP.Playthru
         // Current Run State
         internal static int ItemsReceived = 0;
 
-        internal static int Seed = 143;
+        internal static int Seed = 42;
 
 
         // Gameplay stuff
@@ -153,6 +153,19 @@ namespace LORAP.Playthru
 
         internal static void SetupRun(Dictionary<string, object> slotData, string seed)
         {
+            // Reset everything
+            ItemsReceived = 0;
+            ReceptionsCompleted.Clear();
+            OpenedReceptions = new List<int>() {
+                2, 3, 4, 5, 6, 7, 10001, 10002, 10003, 100001, 100002, 100003, 70001, 70002, 70003, 70004, 70005, 70006, 70007, 70008, 70009, 70010, 60003, 60004
+            };
+            FoundBooks.Clear();
+            Floors = Enum.GetValues(typeof(SephirahType)).Cast<SephirahType>().ToDictionary(k => k, v => new FloorInfo());
+            BinahUnlocked = false;
+            BlackSilenceUnlocked = false;
+            MaxPassiveCost = 8;
+
+            // Get slot data
             SlotDataStruct SlotData = new SlotDataStruct(slotData);
 
             // Set Run's Seed and Settings
@@ -179,6 +192,7 @@ namespace LORAP.Playthru
         internal static void LoadFromSaveData(SaveData saveData)
         {
             ItemsReceived = saveData.GetData("itemsReceived").GetIntSelf();
+            //Debug.Log($"COMPL L:{saveData.GetData("receptionsCompleted")._list.Count}");
             ReceptionsCompleted = saveData.GetData("receptionsCompleted")._list.Select(d => d.GetIntSelf()).ToList();
             OpenedReceptions = saveData.GetData("openedReceptions")._list.Select(d => d.GetIntSelf()).ToList();
             FoundBooks = saveData.GetData("foundBooks")._list.Select(d => d.GetIntSelf()).ToList();
@@ -192,7 +206,7 @@ namespace LORAP.Playthru
                 pair.Value.Open = data.GetInt("Open") == 1;
                 pair.Value.AbnoPages = data.GetInt("AbnoPages");
                 pair.Value.EGO = data.GetInt("EGO");
-                pair.Value.CurrentAbno = data.GetInt("CurrentAbno");
+                pair.Value.AbnoStage = data.GetInt("CurrentAbno");
             }
 
             BinahUnlocked = saveData.GetData("binahUnlocked").GetIntSelf() == 1;
@@ -200,29 +214,14 @@ namespace LORAP.Playthru
             MaxPassiveCost = saveData.GetData("maxPassiveCost").GetIntSelf();
 
             DropsManager.LoadSaveData(saveData.GetData("dropSystem"));
-
-            //string dropData = saveData.GetString("dropWeights");
-            //dropData.Split('|').Do(d => {var i = d.Split(';'); DropWeights[Convert.ToInt32(i[0])] = Convert.ToInt32(i[1]); });
-
-            /*num = 0;
-            foreach (var d in saveData.GetData("rarityDrops"))
-            {
-                RarityDrops[RarityDrops.Keys.ElementAt(num)].packsUsed = d.GetInt("packsUsed");
-                foreach (var dt in d.GetData("notFoundItems"))
-                {
-                    RarityDrops[RarityDrops.Keys.ElementAt(num)].notFoundItems.Add(dt.GetIntSelf());
-                }
-
-                num++;
-            }*/
         }
 
         internal static SaveData GetSaveData()
         {
             SaveData saveData = new SaveData();
-
-            saveData.AddData("receptionsCompleted", new SaveData(ReceptionsCompleted));
             saveData.AddData("itemsReceived", new SaveData(ItemsReceived));
+            saveData.AddData("receptionsCompleted", new SaveData(ReceptionsCompleted));
+            //Debug.Log($"COMPL S:{saveData.GetData("receptionsCompleted")._list.Count}");
             saveData.AddData("openedReceptions", new SaveData(OpenedReceptions));
             saveData.AddData("foundBooks", new SaveData(FoundBooks));
 
@@ -233,7 +232,7 @@ namespace LORAP.Playthru
                 floorData.AddData("Open", new SaveData(info.Open ? 1 : 0));
                 floorData.AddData("AbnoPages", new SaveData(info.AbnoPages));
                 floorData.AddData("EGO", new SaveData(info.EGO));
-                floorData.AddData("CurrentAbno", new SaveData(info.CurrentAbno));
+                floorData.AddData("CurrentAbno", new SaveData(info.AbnoStage));
                 floors.AddToList(floorData);
             }
             saveData.AddData("floors", floors);
@@ -270,15 +269,13 @@ namespace LORAP.Playthru
 
         internal static bool IsReceptionOpened(int id)
         {
-            return OpenedReceptions.Contains(id) || GoalsManager.Goals.SelectMany(g => g.Active ? (g as ClearGoal).Stages : new List<int>()).Contains(id);
+            return OpenedReceptions.Contains(id);
         }
 
         // Progression
-        internal static void ProgressAbno(SephirahType seph)
+        internal static void ProgressSuppression(SephirahType seph)
         {
-            if (Floors[seph].CurrentAbno > 5) return;
-
-            Floors[seph].CurrentAbno++;
+            Floors[seph].AbnoStage++;
         }
 
         internal static void OpenReception(int id)
@@ -364,9 +361,9 @@ namespace LORAP.Playthru
 
     internal static class LORClassExtensions
     {
-        internal static int GetCurrentAbno(this LibraryFloorModel floor)
+        internal static int GetCurrentAbnoStage(this LibraryFloorModel floor)
         {
-            return PlaythruManager.Floors[floor.Sephirah].CurrentAbno;
+            return PlaythruManager.Floors[floor.Sephirah].AbnoStage;
         }
 
         internal static int GetEGOAmount(this LibraryFloorModel floor)

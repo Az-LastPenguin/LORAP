@@ -125,36 +125,32 @@ namespace LORAP.Archipelago
 
             [BaseOffset + 71] = new Reception() { ids = new List<int>() { 60001, 60002 } },
 
-            [BaseOffset + 72] = new Reception() { ids = new List<int>() { 100001 } },
-            [BaseOffset + 73] = new Reception() { ids = new List<int>() { 100002 } },
-            [BaseOffset + 74] = new Reception() { ids = new List<int>() { 100003 } },
-
-            [BaseOffset + 75] = new Reception() { ids = new List<int>() { 100004 } },
-            [BaseOffset + 76] = new Reception() { ids = new List<int>() { 100005 } },
-            [BaseOffset + 77] = new Reception() { ids = new List<int>() { 100006 } },
-            [BaseOffset + 78] = new Reception() { ids = new List<int>() { 100007 } },
-            [BaseOffset + 79] = new Reception() { ids = new List<int>() { 100008 } },
+            [BaseOffset + 72] = new Reception() { ids = new List<int>() { 100004 } },
+            [BaseOffset + 73] = new Reception() { ids = new List<int>() { 100005 } },
+            [BaseOffset + 74] = new Reception() { ids = new List<int>() { 100006 } },
+            [BaseOffset + 75] = new Reception() { ids = new List<int>() { 100007 } },
+            [BaseOffset + 76] = new Reception() { ids = new List<int>() { 100008 } },
  
-            [BaseOffset + 80] = new Reception() { ids = new List<int>() { 100009 } },
-            [BaseOffset + 81] = new Reception() { ids = new List<int>() { 100010 } },
-            [BaseOffset + 82] = new Reception() { ids = new List<int>() { 100014 } },
+            [BaseOffset + 77] = new Reception() { ids = new List<int>() { 100009 } },
+            [BaseOffset + 78] = new Reception() { ids = new List<int>() { 100010 } },
+            [BaseOffset + 79] = new Reception() { ids = new List<int>() { 100014 } },
 
-            [BaseOffset + 83] = new Reception() { ids = new List<int>() { 100011 } },
-            [BaseOffset + 84] = new Reception() { ids = new List<int>() { 100012 } },
+            [BaseOffset + 80] = new Reception() { ids = new List<int>() { 100011 } },
+            [BaseOffset + 81] = new Reception() { ids = new List<int>() { 100012 } },
 
-            [BaseOffset + 85] = new Reception() { ids = new List<int>() { 100013 } },
-            [BaseOffset + 86] = new Reception() { ids = new List<int>() { 100015 } },
-            [BaseOffset + 87] = new Reception() { ids = new List<int>() { 100016 } },
-            [BaseOffset + 88] = new Reception() { ids = new List<int>() { 100017 } },
-            [BaseOffset + 89] = new Reception() { ids = new List<int>() { 100018 } },
-            [BaseOffset + 90] = new Reception() { ids = new List<int>()  { 100019 } },
+            [BaseOffset + 82] = new Reception() { ids = new List<int>() { 100013 } },
+            [BaseOffset + 83] = new Reception() { ids = new List<int>() { 100015 } },
+            [BaseOffset + 84] = new Reception() { ids = new List<int>() { 100016 } },
+            [BaseOffset + 85] = new Reception() { ids = new List<int>() { 100017 } },
+            [BaseOffset + 86] = new Reception() { ids = new List<int>() { 100018 } },
+            [BaseOffset + 87] = new Reception() { ids = new List<int>()  { 100019 } },
 
-            [BaseOffset + 91] = new APItem() { category = ItemType.PassivePoint },
+            [BaseOffset + 88] = new APItem() { category = ItemType.PassivePoint },
 
-            [BaseOffset + 92] = new APItem() { category = ItemType.BookOfEverything },
+            [BaseOffset + 89] = new APItem() { category = ItemType.BookOfEverything },
 
-            [BaseOffset + 93] = new APItem() { category = ItemType.Binah },
-            [BaseOffset + 94] = new APItem() { category = ItemType.BlackSilence },
+            [BaseOffset + 90] = new APItem() { category = ItemType.Binah },
+            [BaseOffset + 91] = new APItem() { category = ItemType.BlackSilence },
         };
 
 
@@ -350,10 +346,10 @@ namespace LORAP.Archipelago
 
         internal static void AbnoChecks(SephirahType seph)
         {
-            int progress = PlaythruManager.Floors[seph].CurrentAbno;
+            int progress = seph.FloorModel().GetCurrentAbnoStage();
             int num = seph == SephirahType.Binah || seph == SephirahType.Hokma ? progress < 4 ? AbnoRewardNum : AbnoRewardNum * 2 + RealizationRewardNum : progress < 5 ? AbnoRewardNum : AbnoRewardNum + RealizationRewardNum;
 
-            int baseid = LocationAbnoOffset + (AbnoRewardNum * 5 + RealizationRewardNum) * ((int)seph - 1) + AbnoRewardNum * (progress - 1);
+            int baseid = LocationAbnoOffset + (AbnoRewardNum * 5 + RealizationRewardNum) * ((int)seph - 1) + AbnoRewardNum * (progress - 2);
 
             List<long> ids = new List<long>();
             for (int i = 0; i < num; i++)

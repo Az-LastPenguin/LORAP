@@ -5,11 +5,10 @@ using UnityEngine;
 
 namespace LORAP.Patches
 {
-    [HarmonyPatch(typeof(StageController))]
-    internal class BattleStoryPatches
+    internal class RemoveStory
     {
-        // Those are self explainatory
-        [HarmonyPatch("CheckStoryAfterBattle")]
+        // StageController patches. Don't show story before or after the battle. //
+        [HarmonyPatch(typeof(StageController), nameof(StageController.CheckStoryAfterBattle))]
         [HarmonyPrefix]
         static bool RemoveAfterBattleStory(StageController __instance)
         {
@@ -18,7 +17,7 @@ namespace LORAP.Patches
             return false;
         }
 
-        [HarmonyPatch("CheckStoryBeforeBattle")]
+        [HarmonyPatch(typeof(StageController), nameof(StageController.CheckStoryBeforeBattle))]
         [HarmonyPrefix]
         static bool RemovePreBattleStory(StageController __instance, ref bool __result)
         {
@@ -26,13 +25,12 @@ namespace LORAP.Patches
 
             return false;
         }
-    }
 
-    [HarmonyPatch(typeof(UIMenuItem))]
-    internal class CredenzaPatches1
-    {
+
+
+        // UIMenuItem patches. Disable access to credenza. //
         // Disable access to Credenza
-        [HarmonyPatch(nameof(UIMenuItem.SetTargetReveal))]
+        [HarmonyPatch(typeof(UIMenuItem), nameof(UIMenuItem.SetTargetReveal))]
         [HarmonyPrefix]
         static bool CredenzaMenuItemReveal(UIMenuItem __instance)
         {
@@ -45,7 +43,7 @@ namespace LORAP.Patches
             return true;
         }
 
-        [HarmonyPatch(nameof(UIMenuItem.SetTargetHide))]
+        [HarmonyPatch(typeof(UIMenuItem), nameof(UIMenuItem.SetTargetHide))]
         [HarmonyPrefix]
         static bool CredenzaMenuItemHide(UIMenuItem __instance)
         {
@@ -57,13 +55,11 @@ namespace LORAP.Patches
 
             return true;
         }
-    }
 
-    [HarmonyPatch(typeof(UIControlButtonPanel))]
-    internal class CredenzaPatches2
-    {
-        // Disable access to Credenza
-        [HarmonyPatch(nameof(UIControlButtonPanel.UpdateButtons))]
+
+
+        // UIControlButtonPanel patch. Also disable access to credenza. //
+        [HarmonyPatch(typeof(UIControlButtonPanel), nameof(UIControlButtonPanel.UpdateButtons))]
         [HarmonyPostfix]
         static void CredenzaMenuItemBlock(UIControlButtonPanel __instance)
         {
@@ -74,13 +70,11 @@ namespace LORAP.Patches
             item.SetActiveOrigin(false);
             item.isDisabled = true;
         }
-    }
 
-    [HarmonyPatch(typeof(LibraryModel))]
-    internal class SmallTalkPatches 
-    {
-        // Additional patch so that game does not try to load some story cutscenes related to small talk in the library
-        [HarmonyPatch(nameof(LibraryModel.GetEpNumberTalkStory))]
+
+
+        // LibraryModel patch. Don't load small story episodes. //
+        [HarmonyPatch(typeof(LibraryModel), nameof(LibraryModel.GetEpNumberTalkStory))]
         [HarmonyPrefix]
         static bool TalkStoryEpisodePatch(LibraryModel __instance, ref int __result)
         {
@@ -88,13 +82,11 @@ namespace LORAP.Patches
 
             return false;
         }
-    }
 
-    [HarmonyPatch(typeof(UI.UIController))]
-    internal class ForceStoryEndPatch
-    {
-        // Skip Story if it should ever appear and has an end func
-        [HarmonyPatch("OpenStory", typeof(StageStoryInfo), typeof(StoryRoot.OnEndStoryFunc), typeof(bool), typeof(bool), typeof(bool))]
+
+
+        // UIController patch. If a story is SOMEHOW tryin to load, skip it immediately. //
+        [HarmonyPatch(typeof(UI.UIController), nameof(UI.UIController.OpenStory), typeof(StageStoryInfo), typeof(StoryRoot.OnEndStoryFunc), typeof(bool), typeof(bool), typeof(bool))]
         [HarmonyPrefix]
         static bool OpenStoryPatch(UI.UIController __instance, StoryRoot.OnEndStoryFunc endFunc)
         {
@@ -102,25 +94,21 @@ namespace LORAP.Patches
 
             return false;
         }
-    }
 
-    [HarmonyPatch(typeof(UIInvitationInfoPanel))]
-    internal class StoryRecallPatch
-    {
-        // Hide Recall Story Button in the invitation screen
-        [HarmonyPatch("Initialized")]
+
+
+        // UIInvitationInfoPanel patch. Hide show story button in reception description. //
+        [HarmonyPatch(typeof(UIInvitationInfoPanel), nameof(UIInvitationInfoPanel.Initialized))]
         [HarmonyPostfix]
         static void RecallStoryButton(UIInvitationInfoPanel __instance)
         {
             __instance.transform.Find("[Script]EnemyStageInfoPanel/[Root]ShowStoryPanel").gameObject.SetActive(false);
         }
-    }
 
-    [HarmonyPatch(typeof(UIAlarmPopup))]
-    internal class EndContentPatch
-    {
-        // Remove story from end content (Literally does not work??????)
-        [HarmonyPatch(nameof(UIAlarmPopup.StartEndContentsStage))]
+
+
+        // UIAlarmPopup patch. Remove story from end content (Literally does not work??????). //
+        [HarmonyPatch(typeof(UIAlarmPopup), nameof(UIAlarmPopup.StartEndContentsStage))]
         [HarmonyPrefix]
         static void EndContents(UIAlarmPopup __instance, EndContentsStageId id, ref bool showstory, bool save, bool inv, bool ignoreprepare)
         {

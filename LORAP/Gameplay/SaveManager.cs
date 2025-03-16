@@ -236,7 +236,7 @@ namespace LORAP.Gameplay
                     SaveData pkg = d.GetData("pkg");
 
                     LorId bookId = new LorId(pkg.GetStringSelf(), id.GetIntSelf());
-                    Debug.Log($"Loading book: {bookId}");
+                    //Debug.Log($"Loading book: {bookId}");
 
                     int num = d.GetInt("num");
                     DropBookInventoryModel.Instance.AddBook(bookId, num);
@@ -287,11 +287,6 @@ namespace LORAP.Gameplay
                 floor._level = 6;
             }
 
-            PlaythruManager.OpenedReceptions = new List<int>()
-            {
-                2, 3, 4, 5, 6, 7, 10001, 10002, 10003, 100001, 100002, 100003
-            };
-
             PlaythruManager.FoundBooks = new List<int>();
 
             PlaythruManager.Floors = Enum.GetValues(typeof(SephirahType)).Cast<SephirahType>().ToDictionary(k => k, v => new FloorInfo());
@@ -309,7 +304,7 @@ namespace LORAP.Gameplay
             SaveData saveData2 = new SaveData();
             foreach (OwnDropBookModel book in DropBookInventoryModel.Instance._bookList)
             {
-                Debug.Log($"Saving book: {book.XmlInfo.id}");
+                //Debug.Log($"Saving book: {book.XmlInfo.id}");
                 SaveData saveData3 = new SaveData();
                 saveData3.AddData("id", new SaveData(book.XmlInfo.id.id));
                 saveData3.AddData("pkg", new SaveData(book.XmlInfo.id.packageId));

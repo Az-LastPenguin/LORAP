@@ -55,7 +55,7 @@ namespace LORAP.CustomUI
             Timing.After(3f, () =>
             {
                 // Change font
-                var TitleText = Panel.transform.Find("APJoinPanel/Window/ApJoin/[Layout]PanelLayout/[Rect]Center_Title/[Text]Title_TextMesh").gameObject.GetComponent<TextMeshProUGUI>();
+                var TitleText = Panel.transform.Find("APJoinPanel/Window/ApJoin/[Layout]PanelLayout/CenterPanel/[Rect]Center_Title/[Text]Title_TextMesh").gameObject.GetComponent<TextMeshProUGUI>();
                 var IPFieldText = Panel.transform.Find("APJoinPanel/Window/ApJoin/[Layout]PanelLayout/Texts/IPPortText").gameObject.GetComponent<TextMeshProUGUI>();
                 var SlotFieldText = Panel.transform.Find("APJoinPanel/Window/ApJoin/[Layout]PanelLayout/Texts/NicknameText").gameObject.GetComponent<TextMeshProUGUI>();
                 var PassFieldText = Panel.transform.Find("APJoinPanel/Window/ApJoin/[Layout]PanelLayout/Texts/PasswordText").gameObject.GetComponent<TextMeshProUGUI>();
@@ -81,7 +81,7 @@ namespace LORAP.CustomUI
             var LastData = SaveManager.LoadLastSessionData();
             if (LastData != null)
             {
-                Debug.Log($"{LastData.IP} {LastData.SlotName} {LastData.Progress}");
+                //Debug.Log($"{LastData.IP} {LastData.SlotName} {LastData.Progress}");
                 Panel.transform.Find("APJoinPanel/Window/ApJoin/[Layout]PanelLayout/CenterPanel/IPPortInput").gameObject.GetComponent<TMP_InputField>().text = LastData.IP ?? "";
                 Panel.transform.Find("APJoinPanel/Window/ApJoin/[Layout]PanelLayout/CenterPanel/NicknameInput").gameObject.GetComponent<TMP_InputField>().text = LastData.SlotName ?? "";
                 Panel.transform.Find("APJoinPanel/Window/ApJoin/[Layout]PanelLayout/CenterPanel/Texts/InfoText").gameObject.GetComponent<TextMeshProUGUI>().text = $"Last run progress: {LastData.Progress.ToString("P1") ?? "Unknown"}";

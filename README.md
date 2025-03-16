@@ -2,17 +2,17 @@
 The mod is in a semi-playable state, meaning you can play it from beginning to end, but may and **WILL** experience bugs. I myself would not recemmend doing actual serious runs with it, as it may brick sometimes. (There is no logic yet)
 
 ## WHAT IS?
-Library of Ruina Archipelago (LORAP for short) is a Harmony mod for Library of Ruina, that makes it work with Archipelago Multi-World.
+Library of Ruina Archipelago (LORAP for short) is a Harmony mod for Library of Ruina to make it work with Archipelago.
 
-If you do not know what Archipelago is, visit [their Website](https://archipelago.gg) to learn more.
+[Archipelago](https://archipelago.gg) is a cross-game modification system which randomizes different games, then uses the result to build a single unified multi-player game. Items from one game may be present in another, and you will need your fellow players to find items you need in their games to help you complete your own.
 
 ## INSTALLATION
-- Get the apworld from either [latest release](https://github.com/Az-LastPenguin/LORAP/releases) or from [this Repository](https://github.com/Az-LastPenguin/LoR-APWorld).
-- Download the mod from [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3430626765).
-- The mod also requires [BaseMod](https://steamcommunity.com/workshop/filedetails/?id=2603522001) (Enable Priority Loader, please)
+If you're entirely new to Archipelago and GitHub, consider using [this Guide](https://az-lastpenguin.github.io/guide).
+
+Download the mod from [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3430626765).
+The mod also requires [BaseMod](https://steamcommunity.com/workshop/filedetails/?id=2603522001) (Enable Priority Loader, please)
 
 If you wish to install this mod manually, you have to download the mod from the release page and drop it into Library Of Ruina/LibraryOfRuina_Data/Mods folder.
-
 I don't know where to find BaseMod not in workshop, so i can't provide a link for it, sorry.
 
 ## OTHER MODS
@@ -23,7 +23,6 @@ You can check progress for the mod, things that are completed, will be done, or 
 
 ## IDEAS AND CONTACT
 Visit [AfterDark Archipelago server](https://discord.gg/Sbhy4ykUKn) and [this channel](https://ptb.discord.com/channels/1085716850370957462/1137643745051955200) where me and the testers reside. You can discuss the mod, ideas for it, or anything relevant there. I'm always checking the chat. Another good way to let me know about your ideas is to [create an issue](https://github.com/Az-LastPenguin/LORAP/issues/new) with your idea, i will tag it appropriately.
-
 You can also contact me on Discord directly: last_penguin
 
 ## BUG REPORTS
@@ -31,8 +30,8 @@ You can send screenshots and descriptions of bugs you found in the aforementione
 
 ## CONTRIBUTING OR COMPILING
 If you wish to try and compile this beast (not in a good way) of a spaghetti monster:
-- I compile it with .NET 4.6
-- Harmony.Lib (The one in the BaseMod, for compatibility)
+- .NET 4.6
+- HarmonyX 2.10.0.0
 - Packages:
   - Archipelago.MultiClient.Net (To connect to AP)
   - Krafs.Publicizer (For easier access to private fields)

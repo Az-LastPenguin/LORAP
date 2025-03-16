@@ -107,7 +107,8 @@ namespace LORAP.Gameplay
                     card.Sephirah = (SephirahType)seph;
                     card.Level = lv;
                     card.EmotionLevel = ELV;
-                    card.State = Random.Next(1, 3) == 1 ? MentalState.Positive : MentalState.Negative;
+                    card.State = Random.Next(2) == 1 ? MentalState.Positive : MentalState.Negative;
+                    card.EmotionRate = Random.Next(4) * (card.State == MentalState.Positive ? 1 : -1);
                     shuffledAbno.Add(card);
                 }
             }
@@ -145,9 +146,17 @@ namespace LORAP.Gameplay
             // Move the Abno and EGO page receive window to other canvas, also center EGO page display
             UIGetAbnormalityPanel.instance.gameObject.transform.SetParent(GameObject.Find("[Canvas][Script]PopupCanvas").transform);
             GameObject.Find("[Canvas][Script]PopupCanvas").GetComponent<Canvas>().sortingOrder = 90;
+            UIGetAbnormalityPanel.instance.transform.localScale = Vector3.one;
             UIGetAbnormalityPanel.instance.EgoCardsRoot.transform.Find("[Prefab]DetailEgoCardSlot").gameObject.GetComponent<Canvas>().sortingOrder = 90;
             UIGetAbnormalityPanel.instance.EgoCardsRoot.transform.Find("[Layout]CardViewList").localPosition = new Vector3(-90, 17.7f, 0);
             UIGetAbnormalityPanel.instance.EgoCardsRoot.transform.Find("[Layout]CardViewList").gameObject.GetComponent<GridLayoutGroup>().childAlignment = TextAnchor.UpperCenter;
+
+            // Add Keter Realization stages to FloorLevelXmlList
+            FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 5, stageId = 210005, sephirahType = SephirahType.Keter });
+            FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 6, stageId = 210006, sephirahType = SephirahType.Keter });
+            FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 7, stageId = 210007, sephirahType = SephirahType.Keter });
+            FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 8, stageId = 210008, sephirahType = SephirahType.Keter });
+            FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 9, stageId = 210009, sephirahType = SephirahType.Keter });
 
             // Make map bigger
             UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
