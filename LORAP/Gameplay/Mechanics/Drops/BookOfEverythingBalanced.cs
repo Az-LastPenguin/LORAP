@@ -342,7 +342,10 @@ namespace LORAP.Gameplay.Systems.Drops
                 var Pool = KeyPage ? KeyPages.Where(d => BookInventoryModel.Instance.GetBookCount(d.Key.id) < (BookXmlList.Instance.GetData(d.Key.id).Rarity == Rarity.Unique ? 1 : 5 - (int)BookXmlList.Instance.GetData(d.Key.id).Rarity)) : CombatPages;
 
                 if (KeyPage && Pool.Count() == 0)
+                {
                     Pool = CombatPages;
+                    KeyPage = false;
+                }
 
                 var Selected = Pool.ElementAt(Random.Next(Pool.Count()));
                 BookDropResult Drop = new BookDropResult();

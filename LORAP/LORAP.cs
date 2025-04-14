@@ -2,6 +2,7 @@
 using LORAP.Patches;
 using LORAP.Utils;
 using System.IO;
+using System.Numerics;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -16,15 +17,18 @@ namespace LORAP
 
         internal static string ModPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
-        internal static string ModVersion = "v0.3.1a";
+        internal static string ModVersion = "v0.3.1c";
 
         public override void OnInitializeMod()
         {
             base.OnInitializeMod();
 
             Instance = this;
-
             Harmony = new Harmony("LORAP");
+
+            //BigInteger a = 17317615431167351631;
+            //var b = (a >> 38);
+            //var c = ((int)(b >> 24));
 
             Harmony.PatchAll(typeof(AbnoAndEGOPages));
             Harmony.PatchAll(typeof(GachaPatches));

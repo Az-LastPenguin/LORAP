@@ -79,6 +79,10 @@ namespace LORAP.CustomUI
             var Holder = Panel.transform.Find("LogHolder");
 
             var List = Holder.gameObject.GetComponentsInChildren<RectTransform>().Where(t => t != Holder);
+
+            if (List != null && List.Count() > 0)
+                return;
+
             if (isAtBottom)
                 List = List.Reverse();
 
@@ -86,11 +90,16 @@ namespace LORAP.CustomUI
             for (int i = 0; i < List.Count(); i++)
             {
                 var Log = List.ElementAt(i);
+                //Debug.Log(Log);
+                if (!Log.gameObject.scene.IsValid())
+                    continue;
 
                 var LogHeight = Log.GetComponent<TextMeshProUGUI>().preferredHeight + 10;
                 curHeight += isAtBottom ? LogHeight : -LogHeight;
                 Log.localPosition = isAtBottom ? new Vector3(0, curHeight, 0) : new Vector3(0, curHeight, 0);
+                //Debug.Log("C");
                 Log.gameObject.GetComponent<TextMeshProUGUI>().alignment = isAtBottom ? TextAlignmentOptions.TopLeft : TextAlignmentOptions.Center;
+                //Debug.Log("D");
             }
         }
     }
