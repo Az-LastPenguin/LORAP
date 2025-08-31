@@ -11,8 +11,6 @@ using TMPro;
 using UnityEngine.UI;
 using static StageController;
 
-using static HarmonyLib.Code;
-
 namespace LORAP.Patches
 {
     internal class SuppressionsAndReceptions
@@ -272,7 +270,7 @@ namespace LORAP.Patches
         {
             CodeMatcher codeMatcher = new CodeMatcher(instructions, generator);
 
-            codeMatcher.MatchStartForward(Ldarg_0, Ldfld)
+            codeMatcher.MatchStartForward(OpCodes.Ldarg_0, OpCodes.Ldfld)
                 .RemoveInstructions(19);
 
             return codeMatcher.Instructions();
@@ -287,8 +285,8 @@ namespace LORAP.Patches
         {
             var codeMatcher = new CodeMatcher(instructions, generator);
 
-            codeMatcher.MatchStartForward(Call, Callvirt, Stloc_S, Ldloc_S)
-                .RemoveInstructions(46)
+            codeMatcher.MatchStartForward(OpCodes.Call, OpCodes.Callvirt, OpCodes.Stloc_S, OpCodes.Ldloc_S)
+                .RemoveInstructions(47)
                 .Insert(Transpilers.EmitDelegate<Action<BattleUnitModel>>((unit) => {
                     var drops = unit.UnitData.unitData.DropTable.Select(d => d.Value).SelectMany(t => t.Ids).Where(id => !PlaythruManager.FoundBooks.Contains(id.id)).Distinct().ToList();
 
@@ -304,6 +302,11 @@ namespace LORAP.Patches
                     }
                 }));
             
+            foreach (var i in codeMatcher.Instructions())
+            {
+                Debug.Log(i);
+            }
+
             return codeMatcher.Instructions();
         }
 
@@ -316,11 +319,11 @@ namespace LORAP.Patches
         {
             var codeMatcher = new CodeMatcher(instructions, generator);
 
-            codeMatcher.MatchStartForward(Ldloc_0, Stloc_S)
+            codeMatcher.MatchStartForward(OpCodes.Ldloc_0, OpCodes.Stloc_S)
                 .RemoveInstructions(168)
-                .InsertAndAdvance(new CodeInstruction(Ldloc_1)) // Load current i into stack
-                .InsertAndAdvance(new CodeInstruction(Ldarg_0)) // Load self into stack
-                .InsertAndAdvance(new CodeInstruction(Ldarg_1)) // Load unit into stack
+                .InsertAndAdvance(new CodeInstruction(OpCodes.Ldloc_1)) // Load current i into stack
+                .InsertAndAdvance(new CodeInstruction(OpCodes.Ldarg_0)) // Load self into stack
+                .InsertAndAdvance(new CodeInstruction(OpCodes.Ldarg_1)) // Load unit into stack
                 .Insert(Transpilers.EmitDelegate<Action<int, BattleEmotionRewardSlotUI, UnitBattleDataModel>>((i, slot, unit) =>
                 {
                     var drops = unit.unitData.DropTable.Select(d => d.Value).SelectMany(t => t.Ids).Where(id => !PlaythruManager.FoundBooks.Contains(id.id)).Distinct().ToList();
@@ -335,10 +338,10 @@ namespace LORAP.Patches
                         slot.SetSizeByText(slot.rewardtexts[i]);
                     }
                 }))
-                .InsertAndAdvance(new CodeInstruction(Ldloc_1)) // Load current i into stack
-                .InsertAndAdvance(new CodeInstruction(Ldc_I4_1)) // Load 1 into stack
-                .InsertAndAdvance(new CodeInstruction(Add)) // Add 1 to i
-                .InsertAndAdvance(new CodeInstruction(Stloc_1)); // Save i from stack
+                .InsertAndAdvance(new CodeInstruction(OpCodes.Ldloc_1)) // Load current i into stack
+                .InsertAndAdvance(new CodeInstruction(OpCodes.Ldc_I4_1)) // Load 1 into stack
+                .InsertAndAdvance(new CodeInstruction(OpCodes.Add)) // Add 1 to i
+                .InsertAndAdvance(new CodeInstruction(OpCodes.Stloc_1)); // Save i from stack
 
             return codeMatcher.Instructions();
         }
@@ -352,8 +355,8 @@ namespace LORAP.Patches
         {
             var codeMatcher = new CodeMatcher(instructions, generator);
 
-            codeMatcher.MatchStartForward(Ldarg_1, Callvirt, Callvirt, Stloc_0)
-                .SetAndAdvance(Nop.opcode, null)
+            codeMatcher.MatchStartForward(OpCodes.Ldarg_1, OpCodes.Callvirt, OpCodes.Callvirt, OpCodes.Stloc_0)
+                .SetAndAdvance(OpCodes.Nop, null)
                 .RemoveInstructions(41);
 
             return codeMatcher.Instructions();
@@ -375,7 +378,7 @@ namespace LORAP.Patches
         {
             var codeMatcher = new CodeMatcher(instructions, generator);
 
-            codeMatcher.MatchStartForward(Callvirt, Callvirt, Call)
+            codeMatcher.MatchStartForward(OpCodes.Callvirt, OpCodes.Callvirt, OpCodes.Call)
                 .ThrowIfInvalid("Couldn't find Instrcutions.")
                 .Advance(4)
                 .RemoveInstructions(4);
@@ -392,8 +395,8 @@ namespace LORAP.Patches
         {
             var codeMatcher = new CodeMatcher(instructions, generator);
 
-            codeMatcher.MatchStartForward(Call, Callvirt, Ldc_I4_3, Bne_Un)
-                .SetAndAdvance(Nop.opcode, null)
+            codeMatcher.MatchStartForward(OpCodes.Call, OpCodes.Callvirt, OpCodes.Ldc_I4_3, OpCodes.Bne_Un)
+                .SetAndAdvance(OpCodes.Nop, null)
                 .RemoveInstructions(2)
                 .InsertAndAdvance(Transpilers.EmitDelegate<Func<bool>>(() => {
                     int id = StageController.Instance.GetStageModel().ClassInfo.id.id;
@@ -615,7 +618,7 @@ namespace LORAP.Patches
         {
             var codeMatcher = new CodeMatcher(instructions, generator);
 
-            codeMatcher.MatchStartForward(Callvirt, Stloc_0, Call, Ldarg_1)
+            codeMatcher.MatchStartForward(OpCodes.Callvirt, OpCodes.Stloc_0, OpCodes.Call, OpCodes.Ldarg_1)
                 .SetInstruction(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(LORClassExtensions), nameof(LORClassExtensions.GetCurrentAbnoStage))));
 
             return codeMatcher.Instructions();
@@ -675,9 +678,9 @@ namespace LORAP.Patches
         {
             var codeMatcher = new CodeMatcher(instructions, generator);
 
-            codeMatcher.MatchStartForward(Call, Ldc_I4_2, Callvirt)
+            codeMatcher.MatchStartForward(OpCodes.Call, OpCodes.Ldc_I4_2, OpCodes.Callvirt)
                 .ThrowIfInvalid("Couldn't find Instrcutions.")
-                .SetAndAdvance(Nop.opcode, null)
+                .SetAndAdvance(OpCodes.Nop, null)
                 .RemoveInstructions(2)
                 .Insert(Transpilers.EmitDelegate<Action>(() => {
                     UIAlarmPopup.instance.SetAlarmText(UIAlarmType.ReturnToTitleWarn_NoPenalty, UIAlarmButtonType.YesNo, (bool yes) =>
@@ -696,10 +699,10 @@ namespace LORAP.Patches
 
                     UIAlarmPopup.instance.txt_alarm.text = "Are you sure you want to forfeit the battle?";
                 }))
-                .Start().MatchStartForward(Call, Ldc_I4_S, Ldc_I4_1, Ldarg_0)
+                .Start().MatchStartForward(OpCodes.Call, OpCodes.Ldc_I4_S, OpCodes.Ldc_I4_1, OpCodes.Ldarg_0)
                 .ThrowIfInvalid("Couldn't find Instrcutions. (2)")
                 .CreateLabel(out Label noPenalty)
-                .Start().MatchStartForward(Brtrue)
+                .Start().MatchStartForward(OpCodes.Brtrue)
                 .ThrowIfInvalid("Couldn't find Instrcutions. (3)")
                 .SetOperandAndAdvance(noPenalty);
 

@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35312.102
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LORAP", "LORAP.csproj", "{B22BD1B2-DC2D-4642-A81F-2FAA338376B6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B22BD1B2-DC2D-4642-A81F-2FAA338376B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B22BD1B2-DC2D-4642-A81F-2FAA338376B6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8D334F6A-EF7C-4E89-9A08-1C9401E05205}
+	EndGlobalSection
+EndGlobal
