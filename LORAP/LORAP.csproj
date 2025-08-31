@@ -34,18 +34,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-<<<<<<< HEAD
-    <Reference Include="0Harmony, Version=2.14.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\DLLs\0Harmony.dll</HintPath>
-    </Reference>
-    <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\Assembly-CSharp.dll</HintPath>
-=======
     <Reference Include="0Harmony, Version=2.9.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\HarmonyX.2.9.0\lib\net45\0Harmony.dll</HintPath>
       <Private>False</Private>
->>>>>>> dev
     </Reference>
     <Reference Include="Archipelago.MultiClient.Net, Version=6.6.1.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\Archipelago.MultiClient.Net.6.6.1\lib\net45\Archipelago.MultiClient.Net.dll</HintPath>

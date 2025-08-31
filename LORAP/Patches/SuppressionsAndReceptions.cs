@@ -301,11 +301,6 @@ namespace LORAP.Patches
                         unit.view.OnEnemyDropBook(drop.GetLorId());
                     }
                 }));
-            
-            foreach (var i in codeMatcher.Instructions())
-            {
-                Debug.Log(i);
-            }
 
             return codeMatcher.Instructions();
         }
