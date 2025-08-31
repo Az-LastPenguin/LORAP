@@ -3,23 +3,20 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35312.102
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LORAP", "LORAP\LORAP.csproj", "{8E3C9D67-96DC-41DA-A0AD-508C3353D71C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LORAP", "LORAP.csproj", "{B22BD1B2-DC2D-4642-A81F-2FAA338376B6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{8E3C9D67-96DC-41DA-A0AD-508C3353D71C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8E3C9D67-96DC-41DA-A0AD-508C3353D71C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8E3C9D67-96DC-41DA-A0AD-508C3353D71C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8E3C9D67-96DC-41DA-A0AD-508C3353D71C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B22BD1B2-DC2D-4642-A81F-2FAA338376B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B22BD1B2-DC2D-4642-A81F-2FAA338376B6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {1DC0C5F1-A354-4C4B-BCBC-DCFF8EEBE19C}
+		SolutionGuid = {8D334F6A-EF7C-4E89-9A08-1C9401E05205}
 	EndGlobalSection
 EndGlobal

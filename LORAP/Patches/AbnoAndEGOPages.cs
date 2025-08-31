@@ -7,8 +7,6 @@ using LORAP.Playthru;
 using UI;
 using UnityEngine;
 
-using static HarmonyLib.Code;
-
 namespace LORAP.Patches
 {
     internal class AbnoAndEGOPages

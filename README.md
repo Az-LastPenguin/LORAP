@@ -30,8 +30,8 @@ You can send screenshots and descriptions of bugs you found in the aforementione
 
 ## CONTRIBUTING OR COMPILING
 If you wish to try and compile this beast (not in a good way) of a spaghetti monster:
-- .NET 4.6
-- HarmonyX 2.10.0.0
+- .NET 4.7.2
+- HarmonyX 2.9.0
 - Packages:
   - Archipelago.MultiClient.Net (To connect to AP)
   - Krafs.Publicizer (For easier access to private fields)

@@ -5,8 +5,6 @@ using System.Reflection.Emit;
 using UI;
 using UnityEngine;
 
-using static HarmonyLib.Code;
-
 namespace LORAP.Patches
 {
     internal class GachaPatches
@@ -18,15 +16,15 @@ namespace LORAP.Patches
         {
             var codeMatcher = new CodeMatcher(instructions, generator);
 
-            codeMatcher.MatchStartForward(Ldloc_0, Callvirt, Pop)
+            codeMatcher.MatchStartForward(OpCodes.Ldloc_0, OpCodes.Callvirt, OpCodes.Pop)
                 .RemoveInstructions(3)
-                .MatchStartForward(Ldloc_1, Ldloc_0, Call, Ldloc_3)
+                .MatchStartForward(OpCodes.Ldloc_1, OpCodes.Ldloc_0, OpCodes.Call, OpCodes.Ldloc_3)
                 .RemoveInstructions(7)
                 .InsertAndAdvance(new CodeInstruction(OpCodes.Ldloc_1))
                 .InsertAndAdvance(new CodeInstruction(OpCodes.Ldloc_3))
                 .InsertAndAdvance(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(DropsManager), nameof(DropsManager.GenerateDrops))))
-                .MatchStartForward(Ldloc_0, Callvirt, Pop, Ldloc_0, Callvirt)
-                .SetAndAdvance(Nop.opcode, null)
+                .MatchStartForward(OpCodes.Ldloc_0, OpCodes.Callvirt, OpCodes.Pop, OpCodes.Ldloc_0, OpCodes.Callvirt)
+                .SetAndAdvance(OpCodes.Nop, null)
                 .RemoveInstructions(8);
 
             return codeMatcher.Instructions();

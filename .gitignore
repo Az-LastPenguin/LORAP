@@ -10,10 +10,11 @@
 *.userosscache
 *.sln.docstates
 *.DotSettings
-.vs
 discarded_ideas
 LORAP/bin
 LORAP/obj
+LORAP/.vs/
+LORAP/packages
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

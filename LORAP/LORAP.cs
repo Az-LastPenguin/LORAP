@@ -17,7 +17,11 @@ namespace LORAP
 
         internal static string ModPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
+<<<<<<< HEAD
         internal static string ModVersion = "v0.3.1c";
+=======
+        internal static string ModVersion = "v0.3.1d";
+>>>>>>> dev
 
         public override void OnInitializeMod()
         {
