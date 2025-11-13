@@ -25,7 +25,7 @@ Planned and existing features, not in any particular order:
 - [X] Randomized abnormality suppression order
 - [X] Randomized book requirements
 - [X] Randomized book pages
-- [ ] Randomized floor Abno/EGO Pages
+- [X] Randomized floor Abno/EGO Pages 
 - [ ] Randomized combat/key pages
 - [ ] Randomized enemies
 - [ ] Filler/Trap items
