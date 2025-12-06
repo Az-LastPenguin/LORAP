@@ -68,7 +68,7 @@ You can also contact me on Discord directly: last_penguin
 You can send screenshots and descriptions of bugs you found in the aforementioned channel. But i would **REALLY** appreciate if you could [create an issue](https://github.com/Az-LastPenguin/LORAP/issues/new), just so i could keep track of things more easily.
 
 ## Versioning
-I'm using [SemVer 2.0.0]() as a guideline:
+I'm using [SemVer 2.0.0](https://semver.org) as a guideline:
 X.Y.Z-W where
 - X is major version which is only incremented when something really big is added/changed which breaks everything.
 - Y is the minor version which is only incremented when something not that big is added/changed which doesn't break anything.
@@ -76,11 +76,14 @@ X.Y.Z-W where
 - W is the testing version before full release, denoted by a greek alphabet letter. Next letter is picked from the alphabet for each update to the testing version.
 
 ## Compiling and Contributing
-Visual Studio is recommended.
-Just clone the repository, get everything needed (most DLLs are in a folder i repo)
-If you wish to try and compile this beast (not in a good way) of a spaghetti monster:
-- .NET 4.7.2
-- HarmonyX 2.9.0
-- Packages:
-  - Archipelago.MultiClient.Net (To connect to AP)
-  - Krafs.Publicizer (For easier access to private fields)
+If you wish to try and build this beast (not in a good way) of a spaghetti monster:
+
+0. Install Visual Studio Community. You'll also need the ".NET app development" workload installed.
+1. Clone the repository
+2. Open the project and reference every DLL from DLLs folder to the project (right click references > Add Reference > Browse)
+3. Install NuGet Packages:
+  - Archipelago.MultiClient.Net
+  - Krafs.Publicizer (Should publicize Assembly-CSharp.dll on it's own, if not, follow [this tutorial from PMCH](https://imgur.com/a/FxTU1nD))
+  - HarmonyX 2.9.0 (SPECIFICALLY 2.9.0, it's the same BaseMod Uses)
+4. You can build it now. Click Build > Build Solution. After that, right click the project > Open Folder in File Explorer. Compiled mod should be in LORAP/bin/Release.
+5. To play it, copy mod files from the cloned repo ("Mod" folder), to the game's "Mods" folder, then from compiled mod folder copy LORAP.dll, Archipelago.MultiClient.Net.dll and Newtonsoft.Json.dll to Mod/Assemblies folder. Now you should be able to play.
