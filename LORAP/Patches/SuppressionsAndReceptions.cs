@@ -8,16 +8,19 @@ using LORAP.Archipelago;
 using System;
 using UnityEngine;
 using TMPro;
-using UnityEngine.UI;
 using static StageController;
+using Archipelago.MultiClient.Net.Enums;
+using Archipelago.MultiClient.Net.Models;
+using LORAP.Gameplay;
+using LORAP.Utils;
+using LORAP.CustomUI;
 
 namespace LORAP.Patches
 {
     internal class SuppressionsAndReceptions
     {
-        // StageController patches. Give checks and do other stuff when ending a reception/suppression. //
         // On Abno Suppression or Floor Realization end, send the checks & progress current abno fight #
-        // Fully overriden because too many patches with changes needed to get desired result.
+        // Entire method is overriden because it's easier that way.
         [HarmonyPatch(typeof(StageController), nameof(StageController.EndBattlePhase_creature))]
         [HarmonyPrefix]
         static bool SuppressionEnd(StageController __instance)
@@ -93,8 +96,8 @@ namespace LORAP.Patches
                         case 210009:
                         // Every other Suppression/Realization
                         default:
-                            CheckManager.ClearCheck(stageId);
-                            CheckManager.AbnoChecks(currentFloor.Sephirah); // Remove in v0.4
+                            //CheckManager.ClearCheck(stageId);
+                            //CheckManager.AbnoChecks(currentFloor.Sephirah); // Remove in v0.4
                             PlaythruManager.ReceptionsCompleted.Add(stageId); // Update in v0.4 (?)
 
                             PlaythruManager.CheckEndConditions();
@@ -130,7 +133,7 @@ namespace LORAP.Patches
                 }
                 if (currentFloor.IsUnavailable())
                 {
-                    controller.GameOver(iswin: false);
+                    controller.GameOver(false);
                     UI.UIController.Instance.CallUIPhase(UIPhase.Sephirah);
                 }
             }
@@ -138,8 +141,10 @@ namespace LORAP.Patches
             return false;
         }
 
+
+
         // Remove giving of bonus pages when ending certain receptions
-        // Fully overriden because too many patches with changes needed to get desired result.
+        // Entire method is overriden because it's easier that way.
         [HarmonyPatch(typeof(StageController), nameof(StageController.EndBattlePhase_invitation))]
         [HarmonyPrefix]
         static bool ReceptionEnd(StageController __instance)
@@ -192,9 +197,10 @@ namespace LORAP.Patches
                     // Clear check here
                     PlaythruManager.ReceptionsCompleted.Add(stageModel.ClassInfo._id);
 
-                    CheckManager.ClearCheck(stageModel.ClassInfo._id);
+                    if (!SlotDataManager.EnemiesTurnIntoChecks)
+                        LocationManager.SendReceptionChecks(stageModel.ClassInfo._id);
 
-                    PlaythruManager.CheckEndConditions();
+                    //PlaythruManager.CheckEndConditions();
                 }
 
                 switch (stageModel.ClassInfo._id)
@@ -204,7 +210,7 @@ namespace LORAP.Patches
                         GameSceneManager.Instance.ActivateUIController();
                         UI.UIController.Instance.CallUIPhase(UIPhase.Sephirah);
 
-                        Gameplay.SaveManager.SaveGame();
+                        SaveManager.SaveGame();
                         break;
                     default:
                         GameSceneManager.Instance.ActivateUIController();
@@ -220,7 +226,11 @@ namespace LORAP.Patches
                             sephirahOrder = new List<SephirahType>(controller._usedFloorList)
                         });
 
-                        Gameplay.SaveManager.SaveGame();
+                        // Just in case there were any messages while in battle
+                        MessagePopup.Open();
+                        AbnoEgoPagePopup.Open();
+
+                        SaveManager.SaveGame();
                         break;
                 }
             }
@@ -256,17 +266,19 @@ namespace LORAP.Patches
             return false;
         }
 
-        // Remove giving book of distortion and book of LC, since they're not used anyway
+
+
+        // Disable giving Book of Distortion, Book of LC, Searing Sword and Feather Shield
         [HarmonyPatch(typeof(StageController), nameof(StageController.BonusRewardWithPopup))]
         [HarmonyPrefix]
         static bool ResolveableRewardsPatch() => false;
 
 
 
-        // UIBattleResultLeftPanel patch. Remove "Books Lost" UI because you lose literally nothing in this mod. //
+        // Remove "Books Lost" UI because you lose literally nothing in this mod. (only your time)
         [HarmonyPatch(typeof(UIBattleResultLeftPanel), nameof(UIBattleResultLeftPanel.SetData))]
         [HarmonyTranspiler]
-        static IEnumerable<CodeInstruction> LostBooksRemove(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+        static IEnumerable<CodeInstruction> NoLostBooks(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
         {
             CodeMatcher codeMatcher = new CodeMatcher(instructions, generator);
 
@@ -277,28 +289,36 @@ namespace LORAP.Patches
         }
 
 
+        // Don't remove books on not winning gameover
+        [HarmonyPatch(typeof(StageController), nameof(StageController.GameOver))]
+        [HarmonyTranspiler]
+        static IEnumerable<CodeInstruction> DontRemoveBooksOnGameOver(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+        {
+            CodeMatcher codeMatcher = new CodeMatcher(instructions, generator);
 
-        // BattleUnitModel patch. Replace BattleUnitModel.OnDie mechanism of giving books on enemy death with a custom one. Gives only one book from the pool of every book that should drop from enemy //
+            codeMatcher.MatchStartForward(OpCodes.Ldarg_1)
+                .RemoveInstructions(2);
+
+            return codeMatcher.Instructions();
+        }
+
+
+
+        // Replace vanilla book drops with checks if EnemiesTurnIntoChecks is true.
         [HarmonyPatch(typeof(BattleUnitModel), nameof(BattleUnitModel.OnDie))]
         [HarmonyTranspiler]
-        static IEnumerable<CodeInstruction> EnemyBookDropLimit(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+        static IEnumerable<CodeInstruction> EnemyTurnIntoCheck(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
         {
             var codeMatcher = new CodeMatcher(instructions, generator);
 
             codeMatcher.MatchStartForward(OpCodes.Call, OpCodes.Callvirt, OpCodes.Stloc_S, OpCodes.Ldloc_S)
                 .RemoveInstructions(47)
                 .Insert(Transpilers.EmitDelegate<Action<BattleUnitModel>>((unit) => {
-                    var drops = unit.UnitData.unitData.DropTable.Select(d => d.Value).SelectMany(t => t.Ids).Where(id => !PlaythruManager.FoundBooks.Contains(id.id)).Distinct().ToList();
-
-                    if (drops.Count > 0)
+                    if (SlotDataManager.EnemiesTurnIntoChecks && StageController.Instance.stageType == StageType.Invitation)
                     {
-                        DropBookDataForAddedReward drop = new DropBookDataForAddedReward(drops.ElementAt(new System.Random().Next(drops.Count)));
-
-                        // Also mark the book as found
-                        PlaythruManager.FoundBooks.Add(drop.id.id);
-
-                        StageController.Instance.OnEnemyDropBookForAdded(drop);
-                        unit.view.OnEnemyDropBook(drop.GetLorId());
+                        string res = LocationManager.SendRandomReceptionCheck(StageController.Instance._stageModel.ClassInfo.id.id);
+                        if (res != "")
+                            unit.view._dropBookTexts.Add(res);
                     }
                 }));
 
@@ -307,43 +327,75 @@ namespace LORAP.Patches
 
 
 
-        // BattleEmotionRewardSlotUI patch. Show what books enemies still didn't drop. //
-        [HarmonyPatch(typeof(BattleEmotionRewardSlotUI), nameof(BattleEmotionRewardSlotUI.SetData))]
-        [HarmonyTranspiler]
-        static IEnumerable<CodeInstruction> BookDropInfo(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+        // Show what checks can still be acquired from the reception.
+        // Entire method is overriden because it's easier that way.
+        [HarmonyPatch(typeof(BattleEmotionRewardInfoUI), nameof(BattleEmotionRewardInfoUI.SetData))]
+        [HarmonyPrefix]
+        static bool EnemiesInfoShowChecks(BattleEmotionRewardInfoUI __instance, List<UnitBattleDataModel> units, Faction faction)
         {
-            var codeMatcher = new CodeMatcher(instructions, generator);
+            if (faction == Faction.Player)
+                return true;
 
-            codeMatcher.MatchStartForward(OpCodes.Ldloc_0, OpCodes.Stloc_S)
-                .RemoveInstructions(168)
-                .InsertAndAdvance(new CodeInstruction(OpCodes.Ldloc_1)) // Load current i into stack
-                .InsertAndAdvance(new CodeInstruction(OpCodes.Ldarg_0)) // Load self into stack
-                .InsertAndAdvance(new CodeInstruction(OpCodes.Ldarg_1)) // Load unit into stack
-                .Insert(Transpilers.EmitDelegate<Action<int, BattleEmotionRewardSlotUI, UnitBattleDataModel>>((i, slot, unit) =>
+            foreach (BattleEmotionRewardSlotUI s in __instance.slots)
+            {
+                s.gameObject.SetActive(false);
+            }
+            __instance.slots[0].gameObject.SetActive(true);
+
+            int stageId = StageController.Instance._stageModel.ClassInfo.id.id;
+
+            List<long> locations = LocationManager.GetUncheckedReceptionLocations(stageId);
+
+            BattleEmotionRewardSlotUI slot = __instance.slots.First();
+
+            slot.txt_Name.text = locations.Count > 0 ? $"Checks remaining: {locations.Count}" : "All checks collected!";
+            slot.img_emotionlevel.sprite = UISpriteDataManager.instance.EmotionLevelIcon[locations.Count < 6 ? locations.Count : 5];
+
+            // Set texts
+            for (int i = 0; i < slot.rewardtexts.Count; i++) // TODO: Increase number of reward texts to 10 (vanilla is 4)
+            {
+                if (i >= locations.Count)
                 {
-                    var drops = unit.unitData.DropTable.Select(d => d.Value).SelectMany(t => t.Ids).Where(id => !PlaythruManager.FoundBooks.Contains(id.id)).Distinct().ToList();
+                    slot.rewardtexts[i].gameObject.SetActive(false);
+                    continue;
+                }
 
-                    for (int k = 0; k < drops.Count; k++)
-                    {
-                        if (slot.rewardtexts.Count <= i)
-                            break;
+                slot.rewardtexts[i].gameObject.SetActive(true);
 
-                        slot.rewardtexts[i].text = $"{Singleton<DropBookXmlList>.Instance.GetData(drops[k]).Name} - 1 Copy";
-                        slot.rewardtexts[i].gameObject.SetActive(true);
-                        slot.SetSizeByText(slot.rewardtexts[i]);
-                    }
-                }))
-                .InsertAndAdvance(new CodeInstruction(OpCodes.Ldloc_1)) // Load current i into stack
-                .InsertAndAdvance(new CodeInstruction(OpCodes.Ldc_I4_1)) // Load 1 into stack
-                .InsertAndAdvance(new CodeInstruction(OpCodes.Add)) // Add 1 to i
-                .InsertAndAdvance(new CodeInstruction(OpCodes.Stloc_1)); // Save i from stack
+                ItemLocationPair pair = LocationManager.GetLocationPair(locations[i]);
 
-            return codeMatcher.Instructions();
+                TextMeshProUGUI text = slot.rewardtexts[i];
+                text.text = LocationManager.FormatPairItem(pair);
+                text.gameObject.SetActive(true);
+                slot.SetSizeByText(text);
+            }
+
+            // Resize UI
+            float num7 = 0f;
+            foreach (TextMeshProUGUI rewardtext in slot.rewardtexts)
+            {
+                if (rewardtext.isActiveAndEnabled)
+                {
+                    num7 += rewardtext.rectTransform.sizeDelta.y;
+                }
+            }
+            num7 += 40f;
+            Vector2 sizeDelta = slot.rect.sizeDelta;
+            sizeDelta.y = num7;
+            slot.rect.sizeDelta = sizeDelta;
+            Vector2 sizeDelta2 = slot.rect_frame.sizeDelta;
+            sizeDelta2.y = num7 + 5f;
+            slot.rect_frame.sizeDelta = sizeDelta2;
+            Vector2 sizeDelta3 = slot.rect_bg.sizeDelta;
+            sizeDelta3.y = num7 + 25f;
+            slot.rect_bg.sizeDelta = sizeDelta3;
+
+            return false;
         }
 
 
 
-        // EmotionCardAbility_freischutz1 patch. Patch Request abno page to not give bonus books. //
+        // Patch Request abno page to not give bonus books.
         [HarmonyPatch(typeof(EmotionCardAbility_freischutz1), nameof(EmotionCardAbility_freischutz1.OnKill))]
         [HarmonyTranspiler]
         static IEnumerable<CodeInstruction> RequestNoBonusBooks(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
@@ -359,14 +411,14 @@ namespace LORAP.Patches
 
 
 
-        // EmotionCardAbility_whitenight2 patch. Patch Sentinel abno page to not give bonus books. //
+        // Patch Sentinel abno page to not give bonus books. I HATE free stuff.
         [HarmonyPatch(typeof(EmotionCardAbility_whitenight2), nameof(EmotionCardAbility_whitenight2.OnBattleEnd_alive))]
         [HarmonyPrefix]
         static bool SentinelNoBonusBooks() => false;
 
 
 
-        // StageLibraryFloorModel patch. Make Angela replace any Patron Librarian for Keter Realization. //
+        // Make Angela replace any Patron Librarian for Keter Realization.
         [HarmonyPatch(typeof(StageLibraryFloorModel), nameof(StageLibraryFloorModel.InitUnitList))]
         [HarmonyTranspiler]
         static IEnumerable<CodeInstruction> AngelaReplace(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
@@ -383,7 +435,7 @@ namespace LORAP.Patches
 
 
 
-        // UIBattleSettingPanel patch. Return Angela her light in the battle prepare screen. //
+        // Return Angela her light in the battle prepare screen.
         [HarmonyPatch(typeof(UIBattleSettingPanel), nameof(UIBattleSettingPanel.OnUIPhaseEnter))]
         [HarmonyTranspiler]
         static IEnumerable<CodeInstruction> ReturnLight(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
@@ -405,7 +457,7 @@ namespace LORAP.Patches
 
 
 
-        // UIMainPanel patch. Check what abno is next when clicking on !. //
+        // Check what abno is next when clicking on !.
         // Fully overriden because too many patches with changes needed to get desired result.
         [HarmonyPatch(typeof(UIMainPanel), nameof(UIMainPanel.OnClickLevelUp))]
         [HarmonyPrefix]
@@ -546,12 +598,12 @@ namespace LORAP.Patches
 
 
 
-        // EnemyTeamStageManager_TheCrying patch. Limit books given from crying children reception. //
+        // Limit books given from crying children reception. TODO Change?
         [HarmonyPatch(typeof(EnemyTeamStageManager_TheCrying), nameof(EnemyTeamStageManager_TheCrying.OnStageClear))]
         [HarmonyPrefix]
         static bool CryingChildrenBooks(EnemyTeamStageManager_TheCrying __instance)
         {
-            if (PlaythruManager.FoundBooks.Contains(240023))
+            /*if (PlaythruManager.FoundBooks.Contains(240023))
                 return false;
 
             DropBookDataForAddedReward drop = new DropBookDataForAddedReward(240023);
@@ -560,26 +612,13 @@ namespace LORAP.Patches
             PlaythruManager.FoundBooks.Add(drop.id.id);
 
             StageController.Instance.OnEnemyDropBookForAdded(drop);
-
+            */
             return false;
         }
 
 
 
-        // UIRewardDropBookList patch. Hide already found books from reception description. //
-        [HarmonyPatch(typeof(UIRewardDropBookList), nameof(UIRewardDropBookList.SetData))]
-        [HarmonyPrefix]
-        static bool ResolveableRewardsPatch(UIRewardDropBookList __instance, ref List<LorId> bookids)
-        {
-            bookids = bookids.Where(id => !PlaythruManager.FoundBooks.Contains(id.id)).ToList();
-
-            return true;
-        }
-
-
-
-        // LibraryModel patches. Check if there is an available abno fight or a realization. //
-        // Check if player should be doing a realization
+        // Check if there is an available abno fight or a realization.
         [HarmonyPatch(typeof(LibraryModel), nameof(LibraryModel.CheckCreatureBossBattle))]
         [HarmonyPrefix]
         static bool CheckRealization(LibraryModel __instance, LibraryFloorModel floor, ref bool __result)
@@ -588,6 +627,8 @@ namespace LORAP.Patches
 
             return false;
         }
+
+
 
         // Check what abno player should fight
         [HarmonyPatch(typeof(LibraryModel), nameof(LibraryModel.CanLevelUpSephirah))]
@@ -606,7 +647,7 @@ namespace LORAP.Patches
 
 
 
-        // UIController patch. Make UI show what abno/realization is to fight. //
+        // Make UI show what abno/realization is to fight.
         [HarmonyPatch(typeof(UI.UIController), nameof(UI.UIController.OnClickStartCreatureStage))]
         [HarmonyTranspiler]
         static IEnumerable<CodeInstruction> UIAbnoOrRealizationPatch(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
@@ -614,15 +655,17 @@ namespace LORAP.Patches
             var codeMatcher = new CodeMatcher(instructions, generator);
 
             codeMatcher.MatchStartForward(OpCodes.Callvirt, OpCodes.Stloc_0, OpCodes.Call, OpCodes.Ldarg_1)
-                .SetInstruction(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(LORClassExtensions), nameof(LORClassExtensions.GetCurrentAbnoStage))));
+                .SetInstruction(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ClassExtensions), nameof(ClassExtensions.GetCurrentAbnoStage))));
 
             return codeMatcher.Instructions();
         }
 
+
+
         // Change "Leave" button on floor selection when reception starts
         [HarmonyPatch(typeof(UI.UIController), nameof(UI.UIController.BackBattlePrepare))]
         [HarmonyPrefix]
-        static bool ReplaceButton()
+        static bool ReplaceLeaveButton()
         {
             UIAlarmPopup.instance.SetAlarmText(UIAlarmType.ReturnToTitleWarn_NoPenalty, UIAlarmButtonType.YesNo, (bool yes) =>
             {
@@ -633,15 +676,14 @@ namespace LORAP.Patches
                 UIBgScreenChangeAnim.Instance.StartBg(UIScreenChangeType.BackInvitation);
             });
 
-            UIAlarmPopup.instance.txt_alarm.text = "Are you sure you want to forfeit the battle?";
+            UIAlarmPopup.instance.txt_alarm.text = "Are you sure you want to leave?";
 
             return false;
         }
 
 
 
-        // UIEscPanel patch. Add "Forfeit" and change "Return to Title" behaviour. //
-        // Change "Manual" to "Forfeit"
+        // Change "Manual" button text to "Forfeit"
         [HarmonyPatch(typeof(UIEscPanel), nameof(UIEscPanel.Open))]
         [HarmonyPostfix]
         static void EscMenuButtonRename(UIEscPanel __instance)
@@ -649,10 +691,12 @@ namespace LORAP.Patches
             __instance.buttons.ElementAt(1).GetComponentInChildren<TextMeshProUGUI>().text = "Forfeit";
         }
 
-        // Make "Forfeit" button disabled if Esc menu is opened when not in battle
+
+
+        // Make "Forfeit" button disabled if Esc menu is opened when not in battle or when combat pages are being resolved
         [HarmonyPatch(typeof(UIEscPanel), nameof(UIEscPanel.Open))]
         [HarmonyPostfix]
-        static void EscMenuButtonDisable(UIEscPanel __instance)
+        static void EscMenuButtonState(UIEscPanel __instance)
         {
             if (StageController.Instance._state == StageState.None || (StageController.Instance.Phase != StagePhase.ApplyLibrarianCardPhase && StageController.Instance.Phase != StagePhase.RoundStartPhase_System))
             {
@@ -666,7 +710,9 @@ namespace LORAP.Patches
             }
         }
 
-        // Make clicking on "Forfeit" ask if you really want to forfet the battle. Also when leaving asking if sure for leaving to title
+
+
+        // Make clicking on "Forfeit" ask if you really want to forfet the battle. Also when leaving to title notify that battle will be lost
         [HarmonyPatch(typeof(UIEscPanel), nameof(UIEscPanel.OnClickEvent))]
         [HarmonyTranspiler]
         static IEnumerable<CodeInstruction> EscapeMenuPatch(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
@@ -674,7 +720,6 @@ namespace LORAP.Patches
             var codeMatcher = new CodeMatcher(instructions, generator);
 
             codeMatcher.MatchStartForward(OpCodes.Call, OpCodes.Ldc_I4_2, OpCodes.Callvirt)
-                .ThrowIfInvalid("Couldn't find Instrcutions.")
                 .SetAndAdvance(OpCodes.Nop, null)
                 .RemoveInstructions(2)
                 .Insert(Transpilers.EmitDelegate<Action>(() => {
@@ -695,10 +740,8 @@ namespace LORAP.Patches
                     UIAlarmPopup.instance.txt_alarm.text = "Are you sure you want to forfeit the battle?";
                 }))
                 .Start().MatchStartForward(OpCodes.Call, OpCodes.Ldc_I4_S, OpCodes.Ldc_I4_1, OpCodes.Ldarg_0)
-                .ThrowIfInvalid("Couldn't find Instrcutions. (2)")
                 .CreateLabel(out Label noPenalty)
                 .Start().MatchStartForward(OpCodes.Brtrue)
-                .ThrowIfInvalid("Couldn't find Instrcutions. (3)")
                 .SetOperandAndAdvance(noPenalty);
 
             return codeMatcher.Instructions();
@@ -706,14 +749,28 @@ namespace LORAP.Patches
 
 
 
-        // StageClassInfo patch. Check if player is able to access a reception. //
+        // Set receptions availability/state based on what receptions were completed
         [HarmonyPatch(typeof(StageClassInfo), nameof(StageClassInfo.currentState), MethodType.Getter)]
         [HarmonyPrefix]
-        static bool CheckReceptionAvailability(StageClassInfo __instance, ref StoryState __result)
+        static bool GetReceptionAvailability(StageClassInfo __instance, ref StoryState __result)
         {
             __result = StoryState.Close;
 
-            if (PlaythruManager.IsReceptionOpened(__instance.id.id))
+            // If receptions are not progressive, show it
+            if (SlotDataManager.ReceptionsProgression == ReceptionsProgression.Unlocked || SlotDataManager.ReceptionsProgression == ReceptionsProgression.Books)
+            {
+                __result = StoryState.Clear;
+                return false;
+            }
+
+            // If there is any hint for this location, show it
+            if (LocationManager.KnownHints.Any(h => LocationManager.GetReceptionIdFromLocationId(h.LocationId) == __instance.id.id))
+                __result = StoryState.Clear;
+
+            // If any of the previous locations was cleared, show it
+            List<ReceptionNode> prev = SlotDataManager.ReceptionTree.GetPrevNodes(__instance.id.id);
+
+            if (prev.Count == 0 || prev.Any(n => PlaythruManager.ReceptionsCompleted.Contains(n.id)))
                 __result = StoryState.Clear;
 
             return false;
@@ -726,42 +783,65 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool MapUpdate(UIStoryProgressPanel __instance)
         {
+            // TODO:
+            // Hide chapter lines if either randomizing tree or no reception of chapter yet gotten to
             __instance.currentSlot = null;
-            StoryTotal.instance.SetData(); // What's it for?
-            __instance.chapterList.ForEach(c => c.SetActive(true)); // Show all chapters and receptions
+            StoryTotal.instance.SetData(); // Get all the recipes and receptions
             __instance.blockChapterList.ForEach(b => b.root.gameObject.SetActive(false)); // Hide all chapter block things
+            __instance.chapterList.ForEach(c => c.SetActive(true)); // Show all chapters (groups of receptions)
 
-            List<int> ensembleIds = new List<int>() { 70001, 70002, 70003, 70004, 70005, 70006, 70007, 70008, 70009, 70010 };
-            List<int> hideIDs = new List<int>() { 610000, 60007 };
+            if (SlotDataManager.RandomizeReceptionTree || SlotDataManager.ReceptionsProgression == ReceptionsProgression.Progressive || SlotDataManager.ReceptionsProgression == ReceptionsProgression.ProgressiveBooks) // For randomized reception tree or Unlocked/Books progression
+            {
+                // Hide all chapter lines
+                foreach (var chapter in __instance.chapterIconList)
+                {
+                    chapter.gameObject.SetActive(false);
+                }
+            }
+
+            List<int> hideIDs = new List<int>() { 60007 };
             foreach (var icon in __instance.iconList) // Set all receptions info and icons
             {
-                List<StageClassInfo> storyData = StoryTotal.instance._lineList.Find((StoryLineData x) => x.currentstory == icon.currentStory)?.stageList ?? icon.storyData;
+                List<StageClassInfo> storyData = SlotDataManager.RandomizeReceptionTree ? icon.storyData : StoryTotal.instance._lineList.Find((StoryLineData x) => x.currentstory == icon.currentStory)?.stageList ?? icon.storyData;
+
                 icon.SetSlotData(storyData);
 
-                if (hideIDs.Contains(storyData[0]._id)) // Hide some receptions
-                    icon.SetActiveStory(false);
-                else
-                    icon.SetActiveStory(true);
+                // Hide some receptions
+                icon.SetActiveStory(!hideIDs.Contains(storyData[0]._id));
 
-                if (ensembleIds.Contains(storyData[0]._id)) // Set custom ensemble icons
+                /*if (SlotDataManager.RandomizeReceptionTree) // For randomized reception tree
                 {
-                    if (storyData[0].currentState == StoryState.Clear)
-                        icon.SetIcon(UISpriteDataManager.instance._floorIconSet[storyData[0]._id - 70000]);
-                    else
-                        icon.SetIcon(UISpriteDataManager.instance._questionicon[1]);
+                    icon.SetSlotData(icon.storyData);
+                    icon.SetActiveStory(true);
                 }
+                else // For Vanilla reception tree
+                {
+                    icon.SetSlotData(storyData);
 
+                    // Hide some receptions
+                    icon.SetActiveStory(hideIDs.Contains(storyData[0]._id));
+                }*/
 
-                // Show checkmark for the completed receptions that have every book collected
+                // Show checkmark for completed receptions
                 if (icon.transform.Find("Checkmark") == null)
                     continue;
 
-                var notFound = storyData.SelectMany(s => s.waveList).SelectMany(w => w.enemyUnitIdList).SelectMany(u => EnemyUnitClassInfoList.Instance.GetData(u).dropTableList).SelectMany(t => t.dropItemList).Where(i => !PlaythruManager.FoundBooks.Contains(i.bookId)).Count();
+                if (storyData.All(d => PlaythruManager.ReceptionsCompleted.Contains(d._id)))
+                  icon.transform.Find("Checkmark").gameObject.SetActive(true);
 
-                if (PlaythruManager.ReceptionsCompleted.Contains(storyData[0]._id) && notFound == 0)
-                    icon.transform.Find("Checkmark").gameObject.SetActive(true);
+
+                // Show checkmark for the completed receptions that have every book collected
+                //if (icon.transform.Find("Checkmark") == null)
+                //    continue;
+
+                //var notFound = storyData.SelectMany(s => s.waveList).SelectMany(w => w.enemyUnitIdList).SelectMany(u => EnemyUnitClassInfoList.Instance.GetData(u).dropTableList).SelectMany(t => t.dropItemList).Where(i => !PlaythruManager.FoundBooks.Contains(i.bookId)).Count();
+
+                //if (PlaythruManager.ReceptionsCompleted.Contains(storyData[0]._id) && notFound == 0)
+                //  icon.transform.Find("Checkmark").gameObject.SetActive(true);
             }
 
+
+            // TODO: Find a better way
             foreach (UIStoryProgressIconSlot chapterIcon in __instance.chapterIconList) // Make chapter buttons not interactable (and some other default stuff)
             {
                 chapterIcon.SetChapterStoryIcon();
@@ -776,138 +856,84 @@ namespace LORAP.Patches
 
 
 
-        // UIStoryProgressIconSlot patches. //
-        // Change Ensemble receptions icons highlights
-        [HarmonyPatch(typeof(UIStoryProgressIconSlot), nameof(UIStoryProgressIconSlot.SetHighlighted))]
-        [HarmonyPrefix]
-        static bool EnsembleIcons(UIStoryProgressIconSlot __instance, bool on)
+        // UIInvitationStageInfoPanel patch. Show AP items in "Resolvable Rewards"
+        [HarmonyPatch(typeof(UIInvitationStageInfoPanel), nameof(UIInvitationStageInfoPanel.SetData))]
+        [HarmonyPostfix]
+        static void OnSelectStage(UIInvitationStageInfoPanel __instance, StageClassInfo stage, UIStoryLine story = UIStoryLine.None)
         {
-            Dictionary<UIStoryLine, Color> CustomDefaultColors = new Dictionary<UIStoryLine, Color>()
+            List<long> receptionLocations = LocationManager.GetUncheckedReceptionLocations(stage._id);
+            List<long> locationsWithHints = receptionLocations.Where(l => LocationManager.KnownHints.Any(h => !h.Found && h.LocationId == l)).ToList();
+
+            // Scout all unchecked locations (they're already known, but this time we scout for hints.)
+            // If this recepion is visible because of a hint, don't scout.
+            if (locationsWithHints.Count == 0)
+                SessionManager.Locations.ScoutLocationsAsync(HintCreationPolicy.CreateAndAnnounceOnce, receptionLocations.ToArray());
+
+            // Fill the item list
+            for (int i = 0; i < 8; i++)
             {
-                [(UIStoryLine)151] = new Color(0.8f, 0.8f, 0.8f, 1),
-                [(UIStoryLine)152] = new Color(0.8f, 0.8f, 0.8f, 1),
-                [(UIStoryLine)153] = new Color(0.8f, 0.8f, 0.8f, 1),
-                [(UIStoryLine)154] = new Color(0.8f, 0.8f, 0.8f, 1),
-                [(UIStoryLine)155] = new Color(0.8f, 0.8f, 0.8f, 1),
-                [(UIStoryLine)156] = new Color(0.8f, 0.8f, 0.8f, 1),
-                [(UIStoryLine)157] = new Color(0.8f, 0.8f, 0.8f, 1),
-                [(UIStoryLine)158] = new Color(0.8f, 0.8f, 0.8f, 1),
-                [(UIStoryLine)159] = new Color(0.8f, 0.8f, 0.8f, 1),
-                [(UIStoryLine)160] = new Color(0.8f, 0.8f, 0.8f, 1),
-            };
+                UIBookSlot slot = __instance.rewardBookList.bookSlotList[i];
+                if (i >= receptionLocations.Count)
+                {
+                    slot.SetActivatedSlot(false);
+                    continue;
+                }
 
-            Dictionary<UIStoryLine, Color> CustomHighlightColors = new Dictionary<UIStoryLine, Color>()
-            {
-                [(UIStoryLine)151] = new Color(1, 1, 1, 1),
-                [(UIStoryLine)152] = new Color(1, 1, 1, 1),
-                [(UIStoryLine)153] = new Color(1, 1, 1, 1),
-                [(UIStoryLine)154] = new Color(1, 1, 1, 1),
-                [(UIStoryLine)155] = new Color(1, 1, 1, 1),
-                [(UIStoryLine)156] = new Color(1, 1, 1, 1),
-                [(UIStoryLine)157] = new Color(1, 1, 1, 1),
-                [(UIStoryLine)158] = new Color(1, 1, 1, 1),
-                [(UIStoryLine)159] = new Color(1, 1, 1, 1),
-                [(UIStoryLine)160] = new Color(1, 1, 1, 1),
-            };
+                slot.SetActivatedSlot(true);
+                slot.gameObject.SetActive(true);
+                slot.isDisabled = false;
 
-            if (!CustomHighlightColors.ContainsKey(__instance.currentStory)) return true;
+                if (i == 7 && receptionLocations.Count > 8)
+                {
+                    slot.BookName.text = $"+{receptionLocations.Count - 7} more items!";
+                }
+                else
+                {
+                    if (locationsWithHints.Count == 0 || locationsWithHints.Contains(receptionLocations[i]))
+                    {
+                        ItemLocationPair pair = LocationManager.GetLocationPair(receptionLocations[i]);
+                        slot.BookName.text = LocationManager.FormatPairItem(pair);
 
-            var isChapterIcon = __instance.isChapterIcon;
-            var originalcolor = __instance.originalcolor;
+                        if (pair.Item.Flags.HasFlag(ItemFlags.Advancement))
+                            slot.Icon.sprite = UIUtils.ProgSprite;
+                        else if (pair.Item.Flags.HasFlag(ItemFlags.NeverExclude))
+                            slot.Icon.sprite = UIUtils.UsefulSprite;
+                        else
+                            slot.Icon.sprite = UIUtils.FillerSprite;
+                    }
+                    else
+                    {
+                        slot.BookName.text = "???";
+                        slot.Icon.sprite = UIUtils.FillerSprite;
+                    }
+                }
 
-            var highlightColor = CustomHighlightColors[__instance.currentStory];
-            var defaultColor = CustomDefaultColors[__instance.currentStory];
-
-
-            Color color = ((!isChapterIcon) ? originalcolor : (on ? highlightColor : defaultColor));
-            Color color2 = (on ? highlightColor : UIColorManager.Manager.DefaultGlowColor);
-
-            __instance.transform.Find("[Rect]Close/[Rect]Icon/[Image]Icon_content").gameObject.GetComponent<Image>().color = color;
-            __instance.transform.Find("[Rect]Close/[Rect]Icon/[Image]Icon_bg").gameObject.GetComponent<Image>().color = color2;
-            __instance.transform.Find("[Rect]Close/[Rect]Icon/[Image]Icon_Frame").gameObject.GetComponent<Image>().color = color2;
-
-            __instance.transform.Find("[Rect]Open/[Rect]OpenIcon/[Image]Icon_content").gameObject.GetComponent<Image>().color = (isChapterIcon ? defaultColor : originalcolor);
-            __instance.transform.Find("[Rect]Open/[Rect]OpenIcon/[Image]Icon_bg").gameObject.GetComponent<Image>().color = UIColorManager.Manager.DefaultGlowColor;
-
-            return false;
+                slot.IconGlow.enabled = false;
+                slot.SetHighlighted(false);
+                slot.originSiblingIdx = slot.transform.GetSiblingIndex();
+            }
         }
 
 
 
-        // UIInvitationRightMainPanel patches. Make receptions not require books. //
-        // Hide "Workshop" checkbox (Can't set custom recipes anyway)
+        // Hide "Workshop" checkbox
         [HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.OpenInit))]
         [HarmonyPostfix]
-        static void NoWorkshop(UIInvitationRightMainPanel __instance)
+        static void NoWorkshopReceptions(UIInvitationRightMainPanel __instance)
         {
             __instance.ob_customMode.gameObject.SetActive(false);
-        }
-
-        // Set the UI Red as if all the needed books are selected, also make books unable to be selected
-        [HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.SetInvBookApplyState))]
-        [HarmonyPrefix]
-        static bool FakeSelectedBooks(UIInvitationRightMainPanel __instance, ref InvitationApply_State state)
-        {
-            if (state == InvitationApply_State.Normal || state == InvitationApply_State.Fixed)
-            {
-                __instance.currentinvState = state;
-                __instance.SetActiveEndEffect(on: false);
-                __instance.invitationbookSlots.ForEach(s => s.SetDisabledSlot());
-                __instance.SetUpdatePanel();
-
-                return false;
-            }
-
-            return true;
-        }
-
-        // Make "Send Invitation" button clickable. Next Patch is related
-        [HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.SetSendButton))]
-        [HarmonyPrefix]
-        static bool SendInvitationClickable(UIInvitationRightMainPanel __instance)
-        {
-            __instance.button_SendButton.gameObject.SetActive(value: true);
-            __instance.confirmAreaRoot.SetActive(value: false);
-
-            __instance.ispossibleSend = __instance.invPanel.CurrentStage != null && __instance.invPanel.CurrentApplyState != InvitationApply_State.Normal;
-            __instance.ButtonFrameHighlight.enabled = __instance.ispossibleSend;
-            __instance.button_SendButton.interactable = __instance.ispossibleSend;
-            __instance.SetColorAllFrames(__instance.ispossibleSend ? __instance.Color_Selectedcolor : UIColorManager.Manager.GetUIColor(UIColor.Default));
-            __instance.SetColorInvitationSlots(__instance.ispossibleSend ? __instance.Color_Selectedcolor : UIColorManager.Manager.GetUIColor(UIColor.Default));
-
-            return false;
-        }
-
-        [HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.SendInvitation))]
-        [HarmonyPrefix]
-        static bool SendButtonClickable(UIInvitationRightMainPanel __instance)
-        {
-            if (__instance.GetBookRecipe() != null)
-                __instance.confirmAreaRoot.SetActive(value: true);
-
-            return false;
+            __instance._workshopInvitationToggle.isOn = false;
         }
 
 
-        // Make game think player has selected all the needed books. Next Patch is related, it's for general receptions
-        [HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.GetAppliedBookModel))]
-        [HarmonyPrefix]
-        static bool FakeMoreBooks(UIInvitationRightMainPanel __instance, ref List<DropBookXmlInfo> __result)
-        {
-            if (__instance.invPanel.CurrentStage == null || __instance.invPanel.CurrentApplyState == InvitationApply_State.Normal)
-                return true;
 
-            __result = __instance.invPanel.CurrentStage.invitationInfo.needsBooks.Select(id => DropBookXmlList.Instance.GetData(id)).ToList();
-
-            return false;
-        }
-
+        // Make receptions without book requirements be able to be started  // TODO: Disallow starting reception without completing atleast one of previous receptions
         [HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.GetBookRecipe))]
         [HarmonyPrefix]
-        static bool FakeEvenMoreBooks(UIInvitationRightMainPanel __instance, ref StageClassInfo __result)
+        static bool FakeBooks(UIInvitationRightMainPanel __instance, ref StageClassInfo __result)
         {
             var cur = __instance.invPanel.CurrentStage;
-            if (cur != null)
+            if (cur != null && __instance.invPanel.currentSelectedStorySlot != null && cur == __instance.invPanel.currentSelectedStorySlot.storyData[__instance.invPanel.currentStoryidx] && cur.invitationInfo.needsBooks.Count == 0)
             {
                 __result = cur;
 

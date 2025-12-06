@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<NormalInvitation xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Version>0.3.1d</Version>
+  <Workshop>
+    <ID>lorap</ID>
+    <Title>Library of Ruina Archipelago</Title>
+    <Description>LibraryOfRuinaArchipelago (LORAP for short) is a Harmony mod for Library of Ruina, that makes it work with Archipelago Multi-World.</Description>
+    <Tag />
+    <PreviewImage />
+  </Workshop>
+  <InvitationFile>
+    <Stage Exist="false"/>
+    <EnemyUnit Exist="false"/>
+    <EquipPage_Enemy Exist="false"/>
+    <EquipPage_Librarian Exist="false"/>
+    <DropBook Exist="false"/>
+    <CardDropTable Exist="false"/>
+    <CardInfo Exist="false"/>
+    <Deck Exist="false"/>
+    <Dialog Exist="false"/>
+    <BookDesc Exist="false"/>
+    <Passive Exist="false"/>
+  </InvitationFile>
+</NormalInvitation>

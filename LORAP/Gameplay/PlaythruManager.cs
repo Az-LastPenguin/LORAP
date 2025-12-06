@@ -1,344 +1,285 @@
 ﻿using GameSave;
-using HarmonyLib;
 using LORAP.Archipelago;
 using LORAP.CustomUI;
 using LORAP.Gameplay;
-using LORAP.Gameplay.Mechanics.Drops;
-using LORAP.Gameplay.Mechanics.Goals;
-using LORAP.Gameplay.Systems.Goals;
+using LORAP.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using UI;
-using UnityEngine;
 
 namespace LORAP.Playthru
 {
-    // Settings enums and other
-    internal enum AbnoPagesBalance
-    {
-        Unbalanced,
-        Balanced,
-        Vanilla
-    }
-
-    internal enum TrapsDifficulty
-    {
-        Easy,
-        Medium,
-        Hard
-    }
-
-    internal enum DropSystem
-    {
-        BookOfEverything,
-        BookOfEverythingBalanced
-    }
-
-    internal enum PageRandomization
-    {
-        None,
-        Basic,
-        More,
-        Havoc
-    }
-
     internal class FloorInfo
     {
-        public bool Open = true;
-        public int AbnoPages = 0;
-        public int EGO = 0;
-        public int AbnoStage = 1;
-    }
-
-    internal struct SlotDataStruct
-    {
-        // Seed
-        public int Seed;
-
-        // Settings
-        public int Fillers; // NOT IMPLEMENTED
-
-        public int Traps; // NOT IMPLEMENTED
-
-        public TrapsDifficulty TrapsDifficulty; // NOT IMPLEMENTED
-
-        public bool LockedFloors; // NOT IMPLEMENTED
-
-        public bool RandomFirstFloor; // NOT IMPLEMENTED
-
-        public List<string> EndGoals;
-
-        public int EnsembleBattles;
-
-        public AbnoPagesBalance AbnoPagesBalance;
-
-        public DropSystem DropSystem;
-
-        public PageRandomization PageRandomization; // NOT IMPLEMENTED
-
-        // Data
-        public int TotalBooksOfEverything;
-
-
-        public SlotDataStruct(Dictionary<string, object> slotData)
-        {
-            // Seed
-            Seed = Convert.ToInt32(slotData["seed"]);
-
-            // Settings
-            Fillers = Convert.ToInt32(slotData["fillers"]);
-
-            Traps = Convert.ToInt32(slotData["traps"]);
-
-            TrapsDifficulty = (TrapsDifficulty)Convert.ToInt32(slotData["traps_difficulty"]); 
-
-            LockedFloors = Convert.ToBoolean(slotData["locked_floors"]);
-
-            RandomFirstFloor = Convert.ToBoolean(slotData["random_first_floor"]);
-
-            EndGoals = slotData["end_goals"].ToString().Split(',').ToList();
-
-            EnsembleBattles = Convert.ToInt32(slotData["ensemble_battles"]);
-
-            AbnoPagesBalance = (AbnoPagesBalance)Convert.ToInt32(slotData["abno_page_balance"]);
-
-            DropSystem = (DropSystem)Convert.ToInt32(slotData["drop_system"]);
-
-            PageRandomization = (PageRandomization)Convert.ToInt32(slotData["randomize_pages"]);
-
-            // Data
-            TotalBooksOfEverything = Convert.ToInt32(slotData["books_of_everything"]);
-        }
+        public bool Open = false; // Gotten from items on load
+        public int AbnoPages = 0; // Gotten from items on load
+        public int EGO = 0; // Gotten from items on load
+        public int Librarians = 1; // Gotten from items on load
+        public int AbnoStage = 1; // Saved in SaveData
     }
 
     internal static class PlaythruManager
     {
-        // Current Run Settings
-        internal static int Fillers = 10; // NOT IMPLEMENTED
-
-        internal static int Traps = 10; // NOT IMPLEMENTED
-
-        internal static TrapsDifficulty TrapsDifficulty = TrapsDifficulty.Hard; // NOT IMPLEMENTED
-
-        internal static bool LockedFloors = false; // NOT IMPLEMENTED
-
-        internal static bool RandomFirstFloor = true; // NOT IMPLEMENTED
-
-        internal static AbnoPagesBalance AbnoPageBalance = AbnoPagesBalance.Balanced;
-
-        internal static PageRandomization PageRandomization = PageRandomization.None; // NOT IMPLEMENTED
-
-
-        // Current Run State
-        internal static int ItemsReceived = 0;
-
-        internal static int Seed = 42;
-
-
         // Gameplay stuff
+        internal static Dictionary<SephirahType, FloorInfo> Floors = Enum.GetValues(typeof(SephirahType)).Cast<SephirahType>().ToDictionary(k => k, v => new FloorInfo());
         internal static List<int> ReceptionsCompleted = new List<int>();
 
-        internal static List<int> OpenedReceptions = new List<int>();
+        internal static bool CanAttributePassives = false;
+        internal static int MaxAttributionPoints = 0;
+        internal static int MaxPassives = 0;
 
-        internal static List<int> FoundBooks = new List<int>();
-
-        internal static Dictionary<SephirahType, FloorInfo> Floors = Enum.GetValues(typeof(SephirahType)).Cast<SephirahType>().ToDictionary(k => k, v => new FloorInfo());
+        internal static int MaxEmotionLevel = 0;
 
         internal static bool BinahUnlocked = false;
-
         internal static bool BlackSilenceUnlocked = false;
 
-        internal static int MaxPassiveCost = 8;
-
-        internal static void SetupRun(Dictionary<string, object> slotData, string seed)
+        internal static void StartGame()
         {
-            // Reset everything
-            ItemsReceived = 0;
-            ReceptionsCompleted.Clear();
-            OpenedReceptions = new List<int>() {
-                2, 3, 4, 5, 6, 7, 10001, 10002, 10003, 100001, 100002, 100003, 70001, 70002, 70003, 70004, 70005, 70006, 70007, 70008, 70009, 70010, 60003, 60004
-            };
-            FoundBooks.Clear();
+            // Create list of floor infos to keep track of every floors state by our own
             Floors = Enum.GetValues(typeof(SephirahType)).Cast<SephirahType>().ToDictionary(k => k, v => new FloorInfo());
-            BinahUnlocked = false;
-            BlackSilenceUnlocked = false;
-            MaxPassiveCost = 8;
 
-            // Get slot data
-            SlotDataStruct SlotData = new SlotDataStruct(slotData);
+            // Init AP Managers
+            ItemManager.Init();
+            LocationManager.Init();
 
-            // Set Run's Seed and Settings
-            Seed = SlotData.Seed;
+            // Start Game
+            //-- GlobalGameManager.ContinueGame
+            GlobalGameManager.Instance._gamePlayInitialized = false;
+            if (!GlobalGameManager.Instance._initialized && UIAlarmPopup.instance != null)
+            {
+                throw new Exception("The game is not initialized. Cannot start game.");
+            }
 
-            Fillers = SlotData.Fillers;
-            Traps = SlotData.Traps;
-            AbnoPageBalance = SlotData.AbnoPagesBalance;
+            if (PlatformManager.Instance.IsProccessing)
+                throw new Exception("Couldn't start game.");
 
+            AssetBundleManagerRemake.Instance.Init();
+            //--
 
-            // Randomize Content
-            ContentManager.RandomizeContent();
+            // Init floors & Set all floors levels to max internally, makes life easier
+            LibraryModel.Instance.Init();
+            LibraryModel.Instance._floorList.ForEach(f => f._level = 6); // TODO: Make it a patch
 
-            // Setup stuff
-            GoalsManager.Setup(SlotData);
+            // Setup run content
+            ContentManager.SetupRunContent();
 
-            DropsManager.Setup(SlotData, Seed);
+            // Load Save
+            Gameplay.SaveManager.LoadGame();
 
-            // Load Save / Create new Save
-            Gameplay.SaveManager.LoadGame(seed);
+            // Set some flags so that game doesn't spam tutorial and shit
+            PlayHistoryModel model = LibraryModel.Instance._playHistory;
+            model.prologueOpenInvtationManual = 1;
+            model.tutorial_keterOpenbyratsClear = 1;
+            model.tutorialInteractUI_HighlightedInvitaionButton = 1;
+            model.tutorial_SelectOneBook = 1;
+            model.tutorial_EnterBattleSetting = 1;
+            model.tutorial_EnterBattleResult = 1;
+            model.tutorial_EnterUIScene = 1;
+            model.tutorial_FloorFeedBookButtonClick = 1;
+            model.tutorial_FloorFeedBookFirstClick = 1;
+            model.tutorial_EnterResultFloorFeedBook = 1;
+            model.tutorial_SelectLibrarianSlot = 1;
+            model.tutorial_EnterBattlePagePanel = 1;
+            model.tutorial_EnterEquipPagePanel = 1;
+            model.tutorial_EnterLibrarianInfo = 1;
+            model.tutorial_EnterCustomizeButton = 1;
+            model.tutorial_EnterStoryArchives = 1;
+            model.tutorial_firstCreatureBattleStart = 1;
+            model.tutorial_EnterUISceneAfterYunOffice = 1;
+            model.tutorial_EnterBattleSettingAfterYunOfficeWaveClear = 1;
+            model.tutorial_PossibleFloorAlarm = 1;
+            model.tutorial_EnterInvtationAfterHookOffice = 1;
+            model.tutorial_OpenPassiveSuccessionAlarm = 1;
+            model.tutorial_NightmareCostUpPassiveSuccessionAlarm = 1;
+            model.tutorial_StarCostUpPassiveSuccessionAlarm = 1;
+            model.tutorial_ImpurityCostUpPassiveSuccessionAlarm = 1;
+            model.tutorial_Alarm_CanUsebinahInMain = 0;
+            model.tutorial_Alarm_CanUseBlackSilence = 0;
+            model.currentclearStoryid = 1;
+            model.currentchapterLevel = 7;
+            model.prologueOpenInvtationManual = 1;
+            model.Tutorial_GetFirstCoreBook = 1;
+            model.first_creaturebattle = 1;
+            model.Start_TheBlueReverberationPrimaryBattle = 0;
+            model.first_TheBluePrimary_keterXmark = 0;
+            model.first_ThrBluePrimary_RewardAlarm = 0;
+            model.story_BlackSilence_progress = 0;
+            model.Start_EndContents = 0;
+            model.Clear_TwistedBluePrevUpdate = 0;
+            model.Clear_EndcontentsAllStage = 1;
+            model.ResetSecondRewardClearEndContents = 0;
+            model.tutorial_EnterBattle = 1;
+            model.tutorial_EnterBattleSpaceDice = 1;
+            model.tutorial_EnterBattle_StartBattleTutorial = 1;
+            model.tutorial_CharacterEmotionCoinManual = 1;
+            model.tutorial_FirstRevealCardRangeManual = 1;
+            model.tutorial_PossibleEmotionCard = 1;
+            model.tutorial_EnterBattlePuppet = 1;
+            model.tutorial_FirstRevealWideCard = 1;
+            model.tutorial_FirstRevealEgoCard = 1;
+            model.tutorial_EnemyUnit_Break = 1;
+            model.tutorial_EnemyUnit_Dead = 1;
+            model.tutorial_CreatureBattle_StartTutorial = 1;
+            model.feedBookCount = 1;
+            model.furiosoKill1 = 1;
+            model.furiosoKill2 = 1;
+
+            LibraryModel.Instance._currentChapter = 7;
+
+            // Put the player in the game, loading is done
+            GameSceneManager.Instance.ActivateUIController(initUIScene: true);
+            GlobalGameManager.Instance._gamePlayInitialized = true;
+
+            // Can now start item pop coroutine
+            ItemManager.Start();
+
+            APConnectWindow.Close();
+            APLog.Show();
         }
 
         // Saving/loading game state
+        internal static SaveData GetSaveData()
+        {
+            SaveData saveData = new SaveData();
+
+            // Save completed receptions
+            saveData.AddData("receptionsCompleted", new SaveData(ReceptionsCompleted));
+
+            // Save floors data about current stage
+            saveData.AddData("floorStages", new SaveData(Floors.Select(p => p.Value.AbnoStage).ToList()));
+
+            // Some other data maybe
+
+            return saveData;
+        }
+
         internal static void LoadFromSaveData(SaveData saveData)
         {
-            ItemsReceived = saveData.GetData("itemsReceived").GetIntSelf();
-            //Debug.Log($"COMPL L:{saveData.GetData("receptionsCompleted")._list.Count}");
             ReceptionsCompleted = saveData.GetData("receptionsCompleted")._list.Select(d => d.GetIntSelf()).ToList();
-            OpenedReceptions = saveData.GetData("openedReceptions")._list.Select(d => d.GetIntSelf()).ToList();
-            FoundBooks = saveData.GetData("foundBooks")._list.Select(d => d.GetIntSelf()).ToList();
 
-            var floorData = saveData.GetData("floors");
+            var floorData = saveData.GetData("floorStages");
             for (int i = 0; i < Floors.Count; i++)
             {
                 var data = floorData._list[i];
                 var pair = Floors.ElementAt(i);
 
-                pair.Value.Open = data.GetInt("Open") == 1;
-                pair.Value.AbnoPages = data.GetInt("AbnoPages");
-                pair.Value.EGO = data.GetInt("EGO");
-                pair.Value.AbnoStage = data.GetInt("CurrentAbno");
+                pair.Value.AbnoStage = data.GetIntSelf();
             }
-
-            BinahUnlocked = saveData.GetData("binahUnlocked").GetIntSelf() == 1;
-            BlackSilenceUnlocked = saveData.GetData("blackSilenceUnlocked").GetIntSelf() == 1;
-            MaxPassiveCost = saveData.GetData("maxPassiveCost").GetIntSelf();
-
-            DropsManager.LoadSaveData(saveData.GetData("dropSystem"));
         }
 
-        internal static SaveData GetSaveData()
+
+        //------ Utils
+        private static void ChangeUIToFloor(SephirahType seph)
         {
-            SaveData saveData = new SaveData();
-            saveData.AddData("itemsReceived", new SaveData(ItemsReceived));
-            saveData.AddData("receptionsCompleted", new SaveData(ReceptionsCompleted));
-            //Debug.Log($"COMPL S:{saveData.GetData("receptionsCompleted")._list.Count}");
-            saveData.AddData("openedReceptions", new SaveData(OpenedReceptions));
-            saveData.AddData("foundBooks", new SaveData(FoundBooks));
+            if (UI.UIController.Instance.CurrentUIPhase != UIPhase.Sephirah || !LibraryModel.Instance.IsOpenedSephirah(seph))
+                return;
 
-            SaveData floors = new SaveData();
-            foreach (var info in Floors.Values)
-            {
-                SaveData floorData = new SaveData();
-                floorData.AddData("Open", new SaveData(info.Open ? 1 : 0));
-                floorData.AddData("AbnoPages", new SaveData(info.AbnoPages));
-                floorData.AddData("EGO", new SaveData(info.EGO));
-                floorData.AddData("CurrentAbno", new SaveData(info.AbnoStage));
-                floors.AddToList(floorData);
-            }
-            saveData.AddData("floors", floors);
-
-            saveData.AddData("binahUnlocked", new SaveData(BinahUnlocked ? 1 : 0));
-            saveData.AddData("blackSilenceUnlocked", new SaveData(BlackSilenceUnlocked ? 1 : 0));
-            saveData.AddData("maxPassiveCost", new SaveData(MaxPassiveCost));
-
-            // Drop system data
-            saveData.AddData("dropSystem", DropsManager.GetSaveData());
-
-            return saveData;
-        }
-
-        // Utils
-        private static void FloorUpgradePopup(string text, SephirahType seph = SephirahType.None)
-        {
-            if (UI.UIController.Instance.CurrentUIPhase == UIPhase.Sephirah && seph != SephirahType.None && LibraryModel.Instance.IsOpenedSephirah(seph))
-            {
-                GameSceneManager.Instance.ActivateUIController();
-                UI.UIController.Instance.SetCurrentSephirah(seph);
-                UI.UIController.Instance.CallUIPhase(UIPhase.Sephirah);
-            }
-
-            MessagePopup.ShowMessage(text);
+            //GameSceneManager.Instance.ActivateUIController();
+            UI.UIController.Instance.SetCurrentSephirah(seph);
+            UI.UIController.Instance.CallUIPhase(UIPhase.Sephirah);
         }
 
         internal static void CheckEndConditions()
         {
             // Check goals
-            if (GoalsManager.GoalsAchieved())
-                ConnectionManager.AchieveGoal();
+            //if (GoalsManager.GoalsAchieved())
+              //  SessionManager.AchieveGoal();
         }
 
-        internal static bool IsReceptionOpened(int id)
-        {
-            return OpenedReceptions.Contains(id);
-        }
-
-        // Progression
-        internal static void ProgressSuppression(SephirahType seph)
-        {
-            Floors[seph].AbnoStage++;
-        }
-
-        internal static void OpenReception(int id)
-        {
-            OpenedReceptions.Add(id);
-
-            (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel.SetStoryLine();
-
-            FloorUpgradePopup($"Reception of {StageNameXmlList.Instance.GetName(id)} was unlocked!");
-        }
-
-        internal static void OpenFloor(SephirahType seph)
+        internal static void OpenFloor(SephirahType seph, bool silent = false)
         {
             if (LibraryModel.Instance.IsOpenedSephirah(seph)) return;
 
             LibraryModel.Instance.OpenSephirah(seph);
 
             if (seph == SephirahType.Binah)
+            {
                 seph.FloorModel().SetOpenedUnitCount(2);
+                Floors[seph].Librarians = 2;
+            }
 
-
-            FloorUpgradePopup($"{seph.FloorName()} was Opened!", seph);
+            ChangeUIToFloor(seph);
+            if (!silent)
+                MessagePopup.ShowMessage($"{seph.FloorName()} was opened!");
         }
 
-        internal static void AddAnboPages(SephirahType seph)
+        internal static void GiveAbnoPages(SephirahType seph, bool silent = false)
         {
-            if (Floors[seph].AbnoPages > 4) return;
+            if (Floors[seph].AbnoPages >= 5) return;
 
             Floors[seph].AbnoPages++;
 
-            MessagePopup.ShowPages(LibraryModel.Instance.GetFloor(seph), Floors[seph].AbnoPages);
+            if (!silent)
+            {
+                ChangeUIToFloor(seph);
+                AbnoEgoPagePopup.ShowPages(seph.FloorModel(), Floors[seph].AbnoPages);
+            }
+            else if (UI.UIController.Instance.CurrentUIPhase == UIPhase.Sephirah)
+            {
+                UI.UIController.Instance.CallUIPhase(UIPhase.Sephirah);
+            }
         }
 
-        internal static void AddEGO(SephirahType seph)
+        internal static void GiveEGOPage(SephirahType seph, bool silent = false)
         {
-            if (Floors[seph].EGO > 4) return;
+            if (Floors[seph].EGO >= 5) return;
 
             Floors[seph].EGO++;
 
-            MessagePopup.ShowPages(LibraryModel.Instance.GetFloor(seph), Floors[seph].EGO, true);
+            if (!silent)
+            {
+                ChangeUIToFloor(seph);
+                AbnoEgoPagePopup.ShowPages(seph.FloorModel(), Floors[seph].EGO, true);
+            }
+            else if (UI.UIController.Instance.CurrentUIPhase == UIPhase.Sephirah)
+            {
+                UI.UIController.Instance.CallUIPhase(UIPhase.Sephirah);
+            }
         }
 
-        internal static void AddLibrarian(SephirahType seph)
+        internal static void GiveLibrarian(SephirahType seph, bool silent = false)
         {
+            if (Floors[seph].Librarians >= 5) return;
+
             var floor = seph.FloorModel();
-            
-            if (floor.GetOpendUnitCount() > 4) return;
+            floor.SetOpenedUnitCount(Floors[seph].Librarians);
 
-            floor.SetOpenedUnitCount(Math.Min(5, floor.GetOpendUnitCount() + 1));
-            FloorUpgradePopup($"{seph.FloorName()} upgrade! +1 Librarian!", seph);
+            if (!silent)
+            {
+                ChangeUIToFloor(seph);
+                MessagePopup.ShowMessage($"{seph.FloorName()} awoken a Librarian!");
+            }
+                
         }
 
-        internal static void GiveBook(int i, int num = 1)
+        internal static void GiveBook(int id, int num = 1, bool silent = false)
         {
-            DropBookInventoryModel.Instance.AddBook(new LorId("lorap", i), num);
+            DropBookInventoryModel.Instance.AddBook(new LorId(id), num);
 
-            MessagePopup.ShowMessage($"You received {DropBookXmlList.Instance.GetData(new LorId("lorap", i)).Name}!");
+            if (!silent)
+                MessagePopup.ShowMessage($"You received {DropBookXmlList.Instance.GetData(new LorId(id)).Name}!");
         }
 
-        internal static void UpMaxPassiveCost(bool silent = false)
+        internal static void UpMaxAttributionPoints(bool silent = false)
         {
-            MaxPassiveCost++;
-            FloorUpgradePopup($"Library upgrade! +1 Max Passive Point!");
+            MaxAttributionPoints += 2;
+            if (!silent)
+                MessagePopup.ShowMessage($"Max Attribution points +2!");
+        }
+
+        internal static void UpMaxPassives(bool silent = false)
+        {
+            MaxPassives++;
+            if (!silent)
+                MessagePopup.ShowMessage($"Max Attributed Passives +1!");
+        }
+
+        internal static void UpMaxEmotion(bool silent = false)
+        {
+            MaxEmotionLevel++;
+            if (!silent)
+                MessagePopup.ShowMessage($"Max emotion level +1!");
         }
 
         internal static void UnlockBinah(bool silent = false)
@@ -346,7 +287,12 @@ namespace LORAP.Playthru
             if (BinahUnlocked) return;
 
             BinahUnlocked = true;
-            FloorUpgradePopup($"Library upgrade! Binah unlocked!", SephirahType.Binah);
+
+            if (!silent)
+            {
+                ChangeUIToFloor(SephirahType.Binah);
+                MessagePopup.ShowMessage($"Binah has been unlocked!");
+            }
         }
 
         internal static void UnlockBlackSilence(bool silent = false)
@@ -355,72 +301,18 @@ namespace LORAP.Playthru
 
             BlackSilenceUnlocked = true;
             LibraryModel.Instance.GetFloor(SephirahType.Keter).GetUnitDataList().Find((x) => x.isSephirah)?.ResetForBlackSilence();
-            FloorUpgradePopup($"Library upgrade! Black Silence unlocked!", SephirahType.Keter);
-        }
-    }
 
-    internal static class LORClassExtensions
-    {
-        internal static int GetCurrentAbnoStage(this LibraryFloorModel floor)
-        {
-            return PlaythruManager.Floors[floor.Sephirah].AbnoStage;
-        }
-
-        internal static int GetEGOAmount(this LibraryFloorModel floor)
-        {
-            return PlaythruManager.Floors[floor.Sephirah].EGO;
-        }
-
-        internal static int GetAbnoPageAmount(this LibraryFloorModel floor)
-        {
-            return PlaythruManager.Floors[floor.Sephirah].AbnoPages;
-        }
-
-        internal static string FloorName(this SephirahType seph)
-        {
-            string floor = "";
-            switch (seph)
+            if (!silent)
             {
-                case SephirahType.None:
-                    floor = "";
-                    break;
-                case SephirahType.Keter:
-                    floor = "Floor of General Works";
-                    break;
-                case SephirahType.Malkuth:
-                    floor = "Floor of History";
-                    break;
-                case SephirahType.Yesod:
-                    floor = "Floor of Technological Sciences";
-                    break;
-                case SephirahType.Hod:
-                    floor = "Floor of Literature";
-                    break;
-                case SephirahType.Netzach:
-                    floor = "Floor of Art";
-                    break;
-                case SephirahType.Tiphereth:
-                    floor = "Floor of Natural Sciences";
-                    break;
-                case SephirahType.Chesed:
-                    floor = "Floor of Social Sciences";
-                    break;
-                case SephirahType.Gebura:
-                    floor = "Floor of Language";
-                    break;
-                case SephirahType.Hokma:
-                    floor = "Floor of Religion";
-                    break;
-                case SephirahType.Binah:
-                    floor = "Floor of Philosophy";
-                    break;
+                ChangeUIToFloor(SephirahType.Keter);
+                MessagePopup.ShowMessage($"The Black Silence's Page has been unlocked!");
             }
-            return floor;
         }
 
-        internal static LibraryFloorModel FloorModel(this SephirahType seph)
+        // Progression
+        internal static void ProgressSuppression(SephirahType seph)
         {
-            return LibraryModel.Instance._floorList.Find(f => f.Sephirah == seph);
+            Floors[seph].AbnoStage++;
         }
     }
 }

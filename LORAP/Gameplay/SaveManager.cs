@@ -1,12 +1,18 @@
-﻿using GameSave;
-using HarmonyLib;
+﻿using Archipelago.MultiClient.Net.Enums;
+using GameSave;
 using LORAP.Archipelago;
+using LORAP.CustomUI;
 using LORAP.Playthru;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
+using System.Threading.Tasks;
 using UI;
 using UnityEngine;
 
@@ -16,15 +22,148 @@ namespace LORAP.Gameplay
     {
         internal static string CurrentSaveFile;
 
-        internal static SessionData LoadLastSessionData()
+        internal static string CompressString(string str)
+        {
+            var bytes = Encoding.UTF8.GetBytes(str);
+            using (var msi = new MemoryStream(bytes))
+            using (var mso = new MemoryStream())
+            {
+                using (var gs = new GZipStream(mso, CompressionMode.Compress))
+                {
+                    msi.CopyTo(gs);
+                }
+
+                return Convert.ToBase64String(mso.ToArray());
+            }
+        }
+        internal static string DecompressString(string data)
+        {
+            using (var msi = new MemoryStream(Convert.FromBase64String(data)))
+            using (var mso = new MemoryStream())
+            {
+                using (var gs = new GZipStream(msi, CompressionMode.Decompress))
+                {
+                    gs.CopyTo(mso);
+                }
+
+                return Encoding.UTF8.GetString(mso.ToArray());
+            }
+        }
+
+        internal static void SaveGame()
+        {
+            Debug.Log("[LORAP] Saving the game...");
+
+            // Save Last Session Data
+            SaveLastSessionData();
+
+            // Some vanilla shenanigans
+            GameSave.SaveManager.Instance._packageIdTable = new Dictionary<string, int>();
+            GameSave.SaveManager.Instance._packageIdIndex = 1;
+
+            // Get SaveData
+            SaveData saveData = new SaveData();
+
+            saveData.AddData("inventory", InventoryModel.Instance.GetSaveData()); // Combat Pages
+            saveData.AddData("bookInventory", BookInventoryModel.Instance.GetSaveData()); // Key Pages
+            saveData.AddData("usingBookInventory", DropBookInventoryModel.Instance.GetSaveData()); // Books //GetDropBookData());
+            saveData.AddData("deckList", DeckListModel.Instance.GetSaveData()); // Decks
+            saveData.AddData("customStorage", LibraryModel.Instance._customStorage.GetSaveData()); // Custom storage for mods(?)
+            saveData.AddData("floorData", GetFloorData()); // Floor units
+            saveData.AddData("playthrough", PlaythruManager.GetSaveData()); // Playthrough data
+            saveData.AddData("itemManager", ItemManager.GetSaveData()); // Item Manager
+
+            // TODO Save package id thing
+
+            // Save to server
+            SessionManager.DataStorage[Scope.Slot, "SaveData"] = CompressString(JsonConvert.SerializeObject(saveData.CustomGetSerializedData()));
+        }
+
+        internal static void LoadGame()
+        {
+            // Get the save file
+            // Init as empty object if there is no save file yet so that game knows
+            SessionManager.DataStorage[Scope.Slot, "SaveData"].Initialize("");
+
+            string CompressedSaveData = SessionManager.DataStorage[Scope.Slot, "SaveData"];
+
+            // If object is empty, it means save file is empty, skip loading
+            if (CompressedSaveData == "")
+                return;
+
+            // Decompress and Deserealize data
+            SaveData SaveData = new SaveData();
+            SaveData.CustomLoadFromSerializedData(JsonConvert.DeserializeObject<JToken>(DecompressString(CompressedSaveData)));
+
+            // Load everything
+            InventoryModel.Instance.LoadFromSaveData(SaveData.GetData("inventory"));
+            BookInventoryModel.Instance.LoadFromSaveData(SaveData.GetData("bookInventory"));
+            DropBookInventoryModel.Instance.LoadFromSaveData(SaveData.GetData("usingBookInventory"));
+            DeckListModel.Instance.LoadFromSaveData(SaveData.GetData("deckList"));
+            LibraryModel.Instance._customStorage.LoadFromSaveData(SaveData.GetData("customStorage"));
+            PlaythruManager.LoadFromSaveData(SaveData.GetData("playthrough"));
+            ItemManager.LoadFromSaveData(SaveData.GetData("itemManager"));
+
+            SaveData data = SaveData.GetData("floorData");
+            foreach (LibraryFloorModel floor in LibraryModel.Instance._floorList)
+            {
+                SaveData _data = data.GetData(SephirahName.GetSephirahNameByType(floor.Sephirah));
+                if (_data == null) continue;
+
+                int num = 0;
+                foreach (SaveData dat in _data)
+                {
+                    floor._unitDataList[num].LoadFromSaveData(dat);
+                    num++;
+                }
+            }
+        }
+
+
+        /*private static SaveData GetDropBookData()
+        {
+            SaveData saveData = new SaveData();
+            SaveData saveData2 = new SaveData();
+            foreach (OwnDropBookModel book in DropBookInventoryModel.Instance._bookList)
+            {
+                SaveData saveData3 = new SaveData();
+                saveData3.AddData("id", new SaveData(book.XmlInfo.id.id));
+                saveData3.AddData("pkg", new SaveData(book.XmlInfo.id.packageId));
+                saveData3.AddData("num", new SaveData(book.num));
+                saveData2.AddToList(saveData3);
+            }
+            saveData.AddData("bookList", saveData2);
+
+            return saveData;
+        }*/
+
+        private static SaveData GetFloorData()
+        {
+            SaveData saveData = new SaveData();
+            foreach (LibraryFloorModel floor in LibraryModel.Instance._floorList)
+            {
+                SaveData unitInfoData = new SaveData();
+                foreach (UnitDataModel unitData in floor._unitDataList)
+                {
+                    unitInfoData.AddToList(unitData.GetSaveData());
+                }
+
+                saveData.AddData(SephirahName.GetSephirahNameByType(floor.Sephirah), unitInfoData);
+            }
+
+            return saveData;
+        }
+
+
+        internal static SessionData LoadLastSessionData() // TODO: Possibly make shorter and TODO: Delete Archipelago Folder & place session data along other save files
         {
             if (!Directory.Exists($"{Application.persistentDataPath}/Archipelago"))
                 Directory.CreateDirectory($"{Application.persistentDataPath}/Archipelago");
 
             if (!File.Exists($"{Application.persistentDataPath}/Archipelago/LastSession"))
             {
-                ConnectionManager.currentSessionData = new SessionData();
-                return ConnectionManager.currentSessionData;
+                SessionManager.sessionData = new SessionData();
+                return SessionManager.sessionData;
             }
 
             BinaryFormatter binaryFormatter = new BinaryFormatter();
@@ -40,300 +179,113 @@ namespace LORAP.Gameplay
                     throw new Exception();
                 }
 
-                ConnectionManager.currentSessionData = Data;
-
-                return ConnectionManager.currentSessionData;
+                return Data;
             }
             catch (Exception)
             {
-                ConnectionManager.currentSessionData = new SessionData();
-
-                return ConnectionManager.currentSessionData;
+                return new SessionData() { IP = "", SlotName = "", Password = "", Progress = 0f };
             }
         }
 
-        internal static void SaveLastSessionData()
+        internal static void SaveLastSessionData() // And this too
         {
+            SessionManager.sessionData.Progress = (float)LocationManager.CheckedLocations.Count / LocationManager.AllLocations.Count;
+            SessionManager.sessionData.Password = "";
+
             if (!Directory.Exists($"{Application.persistentDataPath}/Archipelago"))
                 Directory.CreateDirectory($"{Application.persistentDataPath}/Archipelago");
 
             using (FileStream serializationStream = File.Create($"{Application.persistentDataPath}/Archipelago/LastSession"))
             {
-                new BinaryFormatter().Serialize(serializationStream, ConnectionManager.GetSessionData());
+                new BinaryFormatter().Serialize(serializationStream, SessionManager.sessionData);
             }
         }
 
-        internal static void SaveGame()
+    }
+
+    internal static class SaveDataExtension
+    {
+        internal static object CustomGetSerializedData(this SaveData saveData)
         {
-            Debug.Log("Saving the game...");
-
-            SaveLastSessionData();
-
-            SaveData saveData = new SaveData();
-            saveData.AddData("inventory", InventoryModel.Instance.GetSaveData());
-            saveData.AddData("bookInventory", BookInventoryModel.Instance.GetSaveData());
-            saveData.AddData("bookDropInventory", GetDropBookData());
-            saveData.AddData("deckList", DeckListModel.Instance.GetSaveData());
-            saveData.AddData("archipelago", PlaythruManager.GetSaveData());
-            saveData.AddData("floorData", GetFloorData());
-
-            string SaveFilePath = $"{Application.persistentDataPath}/Archipelago/{CurrentSaveFile}";
-            object serializedData = saveData.GetSerializedData();
-
-            if (!Directory.Exists($"{Application.persistentDataPath}/Archipelago"))
-                Directory.CreateDirectory($"{Application.persistentDataPath}/Archipelago");
-
-            using (FileStream serializationStream = File.Create(SaveFilePath))
+            switch (saveData._type)
             {
-                new BinaryFormatter().Serialize(serializationStream, serializedData);
+                case SaveDataType.Int:
+                    return saveData._pdi;
+                case SaveDataType.UnsignedLong:
+                    return saveData._pdul;
+                case SaveDataType.String:
+                    return saveData._pds;
+                case SaveDataType.Dictionary:
+                    Dictionary<string, object> dict = new Dictionary<string, object>();
+
+                    foreach (var item in saveData._dic)
+                    {
+                        dict[item.Key] = item.Value.CustomGetSerializedData();
+                    }
+
+                    return dict;
+                case SaveDataType.List:
+                    List<object> list = new List<object>();
+
+                    foreach (SaveData item in saveData._list)
+                    {
+                        list.Add(item.CustomGetSerializedData());
+                    }
+
+                    return list;
+                default:
+                    return null;
             }
         }
 
-        internal static void LoadGame(string seed)
+        internal static void CustomLoadFromSerializedData(this SaveData saveData, JToken serialized)
         {
-            Debug.Log("Loading the game...");
-
-            // GlobalGameManager.ContinueGame
-            GlobalGameManager.Instance._gamePlayInitialized = false;
-            if (!GlobalGameManager.Instance._initialized && UIAlarmPopup.instance != null)
+            if (serialized.Type == JTokenType.Object)
             {
-                UIAlarmPopup.instance.SetAlarmText("The game is not initialized. cannot start game");
+                saveData._type = SaveDataType.Dictionary;
+
+                saveData._dic = (serialized as JObject).ToObject<Dictionary<string, JToken>>().ToDictionary(p => p.Key, p =>
+                {
+                    SaveData pairSaveData = new SaveData();
+                    pairSaveData.CustomLoadFromSerializedData(p.Value);
+                    return pairSaveData;
+                });
                 return;
             }
-
-            if (PlatformManager.Instance.IsProccessing)
-                return;
-
-            AssetBundleManagerRemake.Instance.Init();
-
-
-            // Now to the actual load
-            CurrentSaveFile = seed;
-            string SaveFilePath = $"{Application.persistentDataPath}/Archipelago/{CurrentSaveFile}";
-
-            if (!Directory.Exists($"{Application.persistentDataPath}/Archipelago"))
-                Directory.CreateDirectory($"{Application.persistentDataPath}/Archipelago");
-
-            // If there is save like that, we load it, else we just create and empty one
-            if (File.Exists(SaveFilePath))
+            else if (serialized.Type == JTokenType.Array)
             {
-                // PlatformCore_steam.LoadPlayData
-                BinaryFormatter binaryFormatter = new BinaryFormatter();
-                SaveData saveData = new SaveData();
-                try
-                {
-                    object obj;
-                    using (FileStream fileStream = File.Open(SaveFilePath, FileMode.Open))
-                    {
-                        obj = binaryFormatter.Deserialize(fileStream);
-                    }
-                    if (obj == null)
-                    {
-                        throw new Exception();
-                    }
+                saveData._type = SaveDataType.List;
 
-                    saveData.LoadFromSerializedData(obj);
-                }
-                catch (Exception)
+                saveData._list = (serialized as JArray).Select(d =>
                 {
-                    return;
-                }
-
-                // Now fill game data with the loaded save
-                LoadFromSave(saveData);
+                    SaveData listSaveData = new SaveData();
+                    listSaveData.CustomLoadFromSerializedData(d);
+                    return listSaveData;
+                }).ToList();
+            }
+            else if (serialized.Type == JTokenType.Integer)
+            {
+                saveData._type = SaveDataType.Int;
+                saveData._pdi = serialized.Value<int>();
+            }
+            /*else if (serialized is ulong)
+            {
+                saveData._type = SaveDataType.UnsignedLong;
+                saveData._pdul = (ulong)serialized;
+            }*/
+            else if (serialized.Type == JTokenType.String)
+            {
+                saveData._type = SaveDataType.String;
+                saveData._pds = serialized.Value<string>();
+            }
+            else if (serialized.Type == JTokenType.Null)
+            {
+                saveData._type = SaveDataType.None;
             }
             else
             {
-                LoadNew();
+                Debug.LogError("invalid SaveData");
             }
-
-            PlayHistoryModel model = LibraryModel.Instance._playHistory;
-            model.prologueOpenInvtationManual = 1;
-            model.tutorial_keterOpenbyratsClear = 1;
-            model.tutorialInteractUI_HighlightedInvitaionButton = 1;
-            model.tutorial_SelectOneBook = 1;
-            model.tutorial_EnterBattleSetting = 1;
-            model.tutorial_EnterBattleResult = 1;
-            model.tutorial_EnterUIScene = 1;
-            model.tutorial_FloorFeedBookButtonClick = 1;
-            model.tutorial_FloorFeedBookFirstClick = 1;
-            model.tutorial_EnterResultFloorFeedBook = 1;
-            model.tutorial_SelectLibrarianSlot = 1;
-            model.tutorial_EnterBattlePagePanel = 1;
-            model.tutorial_EnterEquipPagePanel = 1;
-            model.tutorial_EnterLibrarianInfo = 1;
-            model.tutorial_EnterCustomizeButton = 1;
-            model.tutorial_EnterStoryArchives = 1;
-            model.tutorial_firstCreatureBattleStart = 1;
-            model.tutorial_EnterUISceneAfterYunOffice = 1;
-            model.tutorial_EnterBattleSettingAfterYunOfficeWaveClear = 1;
-            model.tutorial_PossibleFloorAlarm = 1;
-            model.tutorial_EnterInvtationAfterHookOffice = 1;
-            model.tutorial_OpenPassiveSuccessionAlarm = 1;
-            model.tutorial_NightmareCostUpPassiveSuccessionAlarm = 1;
-            model.tutorial_StarCostUpPassiveSuccessionAlarm = 1;
-            model.tutorial_ImpurityCostUpPassiveSuccessionAlarm = 1;
-            model.tutorial_Alarm_CanUsebinahInMain = 0;
-            model.tutorial_Alarm_CanUseBlackSilence = 0;
-            model.currentclearStoryid = 1;
-            model.currentchapterLevel = 7;
-            model.prologueOpenInvtationManual = 1;
-            model.Tutorial_GetFirstCoreBook = 1;
-            model.first_creaturebattle = 1;
-            model.Start_TheBlueReverberationPrimaryBattle = 0;
-            model.first_TheBluePrimary_keterXmark = 0;
-            model.first_ThrBluePrimary_RewardAlarm = 0;
-            model.story_BlackSilence_progress = 0;
-            model.Start_EndContents = 0;
-            model.Clear_TwistedBluePrevUpdate = 0;
-            model.Clear_EndcontentsAllStage = 1;
-            model.ResetSecondRewardClearEndContents = 0;
-            model.tutorial_EnterBattle = 1;
-            model.tutorial_EnterBattleSpaceDice = 1;
-            model.tutorial_EnterBattle_StartBattleTutorial = 1;
-            model.tutorial_CharacterEmotionCoinManual = 1;
-            model.tutorial_FirstRevealCardRangeManual = 1;
-            model.tutorial_PossibleEmotionCard = 1;
-            model.tutorial_EnterBattlePuppet = 1;
-            model.tutorial_FirstRevealWideCard = 1;
-            model.tutorial_FirstRevealEgoCard = 1;
-            model.tutorial_EnemyUnit_Break = 1;
-            model.tutorial_EnemyUnit_Dead = 1;
-            model.tutorial_CreatureBattle_StartTutorial = 1;
-            model.feedBookCount = 1;
-            model.furiosoKill1 = 1;
-            model.furiosoKill2 = 1;
-
-            LibraryModel.Instance._currentChapter = 7;
-
-            //LibraryModel.Instance.ClearInfo.AddClearCount(2);
-
-            // Put the player in the game, loading is done
-            GameSceneManager.Instance.ActivateUIController(initUIScene: true);
-
-            GlobalGameManager.Instance._gamePlayInitialized = true;
-        }
-
-        private static void LoadFromSave(SaveData saveData)
-        {
-            LibraryModel.Instance.Init();
-            LibraryModel.Instance._floorList.ForEach(f => f._level = 6);
-
-            // Load base game stuff
-            InventoryModel.Instance.LoadFromSaveData(saveData.GetData("inventory"));
-            BookInventoryModel.Instance.LoadFromSaveData(saveData.GetData("bookInventory"));
-            DeckListModel.Instance.LoadFromSaveData(saveData.GetData("deckList"));
-            // Drop Books
-            DropBookInventoryModel.Instance._bookList.Clear();
-            DropBookInventoryModel.Instance._bookDictionary.Clear();
-
-            SaveData data = saveData.GetData("bookDropInventory");
-            if (data != null)
-            {
-                foreach (SaveData d in data.GetData("bookList"))
-                {
-                    SaveData id = d.GetData("id");
-                    SaveData pkg = d.GetData("pkg");
-
-                    LorId bookId = new LorId(pkg.GetStringSelf(), id.GetIntSelf());
-                    //Debug.Log($"Loading book: {bookId}");
-
-                    int num = d.GetInt("num");
-                    DropBookInventoryModel.Instance.AddBook(bookId, num);
-                }
-            }
-
-            // Load PlaythruManager
-            PlaythruManager.LoadFromSaveData(saveData.GetData("archipelago"));
-
-            // Set Floors Opened
-            foreach (var f in PlaythruManager.Floors)
-            {
-                if (f.Value.Open)
-                    LibraryModel.Instance._openedSephirah.Add(f.Key);
-            }
-
-            // Floor unit info
-            data = saveData.GetData("floorData");
-            foreach (LibraryFloorModel floor in LibraryModel.Instance._floorList)
-            {
-                SaveData _data = data.GetData(SephirahName.GetSephirahNameByType(floor.Sephirah));
-                if (_data == null) continue;
-
-                int num = 0;
-                foreach (SaveData dat in _data.GetData("unitInfo"))
-                {
-                    Traverse.Create(floor).Field<List<UnitDataModel>>("_unitDataList").Value[num].LoadFromSaveData(dat);
-                    num++;
-                }
-
-                floor.SetOpenedUnitCount(_data.GetInt("unitsOpened"));
-            }
-        }
-
-        private static void LoadNew()
-        {
-            LibraryModel.Instance.Init();
-
-            foreach (var floor in LibraryModel.Instance._floorList)
-            {
-                LibraryModel.Instance.OpenSephirah(floor.Sephirah);
-
-                if (floor.Sephirah == SephirahType.Binah)
-                {
-                    floor.SetOpenedUnitCount(2);
-                }
-
-                floor._level = 6;
-            }
-
-            PlaythruManager.FoundBooks = new List<int>();
-
-            PlaythruManager.Floors = Enum.GetValues(typeof(SephirahType)).Cast<SephirahType>().ToDictionary(k => k, v => new FloorInfo());
-
-            PlaythruManager.BinahUnlocked = false;
-            PlaythruManager.BlackSilenceUnlocked = false;
-            PlaythruManager.MaxPassiveCost = 8;
-
-            PlaythruManager.ItemsReceived = 0;
-        }
-
-        private static SaveData GetDropBookData()
-        {
-            SaveData saveData = new SaveData();
-            SaveData saveData2 = new SaveData();
-            foreach (OwnDropBookModel book in DropBookInventoryModel.Instance._bookList)
-            {
-                //Debug.Log($"Saving book: {book.XmlInfo.id}");
-                SaveData saveData3 = new SaveData();
-                saveData3.AddData("id", new SaveData(book.XmlInfo.id.id));
-                saveData3.AddData("pkg", new SaveData(book.XmlInfo.id.packageId));
-                saveData3.AddData("num", new SaveData(book.num));
-                saveData2.AddToList(saveData3);
-            }
-            saveData.AddData("bookList", saveData2);
-
-            return saveData;
-        }
-
-        private static SaveData GetFloorData()
-        {
-            SaveData saveData = new SaveData();
-            foreach (LibraryFloorModel floor in LibraryModel.Instance._floorList)
-            {
-                SaveData saveData2 = new SaveData();
-                SaveData saveData3 = new SaveData();
-                foreach (UnitDataModel unitData in floor._unitDataList)
-                {
-                    saveData3.AddToList(unitData.GetSaveData());
-                }
-                saveData2.AddData("unitInfo", saveData3);
-                saveData2.AddData("unitsOpened", new SaveData(floor.GetOpendUnitCount()));
-
-                saveData.AddData(SephirahName.GetSephirahNameByType(floor.Sephirah), saveData2);
-            }
-
-            return saveData;
         }
     }
 }

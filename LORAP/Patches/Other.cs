@@ -5,60 +5,128 @@ using LORAP.Archipelago;
 using LORAP.CustomUI;
 using LORAP.Gameplay;
 using LORAP.Playthru;
-using LORAP.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
-using TMPro;
 using UI;
 using UnityEngine;
 using UnityEngine.UI;
-using static StageController;
+using static UI.UIMainPanel;
 
 namespace LORAP.Patches
 {
     internal class OtherPatches
     {
-        // UIFloorQuestPanel patch. Change Quest info to hints. //
+        // Change Quest info to hints
         [HarmonyPatch(typeof(UIFloorQuestPanel), nameof(UIFloorQuestPanel.SetData))]
         [HarmonyPrefix]
-        static bool QuestToHints(UIFloorQuestPanel __instance, LibraryFloorModel floor)
+        static bool QuestToHints(UIFloorQuestPanel __instance, LibraryFloorModel floor) // Honestly, this is a mess. Don't think i can do anything about it currently. And don't wanna yet.
         {
-            var questSlotList = __instance.questSlotList;
+            UIFloorQuestSlot[] questSlotList = __instance.questSlotList;
+            SephirahType seph = floor.Sephirah;
+            FloorInfo floorInfo = PlaythruManager.Floors[seph];
 
-            void setQuestText(UIFloorQuestSlot slot, string text, bool complete)
+            // Parse all the things we need to put into the list (Use lock icon for upgrades and base exclamation mark for book requirements)
+            Sprite lockIcon = UISpriteDataManager.instance._floorCurrentStateIcon[0];
+            Sprite exclamMarkIcon = UISpriteDataManager.instance._floorQuestStateIcon[0];
+            // Quest Info, Quest Progress, Complete, Sprite
+            List<Tuple<string, string, bool, Sprite>> infos = new List<Tuple<string, string, bool, Sprite>>();
+
+            // Abno Pages
+            List<ItemLocationPair> pairs = LocationManager.GetPairsWithItemAndHint(ItemManager.GetItemId((int)seph, APItemType.AbnoPages), true);
+            infos.Add(new Tuple<string, string, bool, Sprite>(
+                $"Abno Pages: {(pairs.Count > 0 ? LocationManager.FormatPairLocation(pairs.First()) : "No Hints")}",
+                $"{floorInfo.AbnoPages}/5",
+                floorInfo.AbnoPages >= 5,
+                lockIcon
+            ));
+
+            // EGO Pages
+            pairs = LocationManager.GetPairsWithItemAndHint(ItemManager.GetItemId((int)seph, APItemType.EgoPage), true);
+            infos.Add(new Tuple<string, string, bool, Sprite>(
+                $"EGO Page: {(pairs.Count > 0 ? LocationManager.FormatPairLocation(pairs.First()) : "No Hints")}",
+                $"{floorInfo.EGO}/5",
+                floorInfo.EGO >= 5,
+                lockIcon
+            ));
+
+            // Librarians
+            pairs = LocationManager.GetPairsWithItemAndHint(ItemManager.GetItemId((int)seph, APItemType.Librarian), true);
+            infos.Add(new Tuple<string, string, bool, Sprite>(
+                    $"Librarian: {(pairs.Count > 0 ? LocationManager.FormatPairLocation(pairs.First()) : "No Hints")}",
+                    $"{floorInfo.Librarians - (seph == SephirahType.Binah ? 2 : 1)}/{(seph == SephirahType.Binah ? 3 : 4)}",
+                    floorInfo.Librarians - (seph == SephirahType.Binah ? 2 : 1) >= (seph == SephirahType.Binah ? 3 : 4),
+                    lockIcon
+            ));
+
+            // Black Silence/Binah
+            if (seph == SephirahType.Keter)
             {
-                slot.SetActiveSlot(on: true);
-                slot.SetColor(complete ? UIColorManager.Manager.GetUIColor(UIColor.Disabled) : UIColorManager.Manager.GetUIColor(UIColor.Default));
+                pairs = LocationManager.GetPairsWithItemAndHint(ItemManager.GetOtherItemId(OtherItem.BlackSilence), true);
+                infos.Add(new Tuple<string, string, bool, Sprite>(
+                    $"Black Silence's Page: {(pairs.Count > 0 ? LocationManager.FormatPairLocation(pairs.First()) : "No Hints")}",
+                    $"{(PlaythruManager.BlackSilenceUnlocked ? 1 : 0)}/1",
+                    PlaythruManager.BlackSilenceUnlocked,
+                    lockIcon
+                ));
+            }
+            else if (seph == SephirahType.Binah)
+            {
+                pairs = LocationManager.GetPairsWithItemAndHint(ItemManager.GetOtherItemId(OtherItem.Binah), true);
+                infos.Add(new Tuple<string, string, bool, Sprite>(
+                    $"Binah: {(pairs.Count > 0 ? LocationManager.FormatPairLocation(pairs.First()) : "No Hints")}",
+                    $"{(PlaythruManager.BinahUnlocked ? 1 : 0)}/1",
+                    PlaythruManager.BinahUnlocked,
+                    lockIcon
+                ));
+            }
 
-                slot.txt_QuestName.text = text;
+
+            // Book requirements
+            List<int> books = SlotDataManager.AbnoBookRequirements[seph][floorInfo.AbnoStage - 1];
+            foreach (int book in books)
+            {
+                pairs = LocationManager.GetPairsWithItemAndHint(ItemManager.GetItemId(book, APItemType.Book), true);
+                infos.Add(new Tuple<string, string, bool, Sprite>(
+                    $"{DropBookXmlList.Instance.GetData(new LorId(book)).Name}: {(pairs.Count > 0 ? LocationManager.FormatPairLocation(pairs.First()) : "No Hints")}",
+                    $"{DropBookInventoryModel.Instance.GetBookCount(book)}/1",
+                    DropBookInventoryModel.Instance.GetBookCount(book) > 0,
+                    exclamMarkIcon
+                ));
+            }
+
+
+            // Now render this shit!
+            for (int i = 0; i < 7; i++)
+            {
+                UIFloorQuestSlot slot = __instance.questSlotList[i];
+
+                if (i >= infos.Count)
+                {
+                    slot.SetActiveSlot(false);
+                    continue;
+                }
+                slot.SetActiveSlot(true);
+
+                Tuple<string, string, bool, Sprite> info = infos[i];
+
+                slot.SetColor(info.Item3 ? UIColorManager.Manager.GetUIColor(UIColor.Disabled) : UIColorManager.Manager.GetUIColor(UIColor.Default));
+
+                slot.txt_QuestName.text = info.Item1;
                 slot.txt_QuestName.ForceMeshUpdate();
                 slot.img_BgFrame.rectTransform.sizeDelta = new Vector2(slot.txt_QuestName.preferredWidth + 10f, slot.img_BgFrame.rectTransform.sizeDelta.y);
-
                 slot.txt_QuestName.enabled = false;
                 slot.txt_QuestName.enabled = true;
-
                 float x = (slot.txt_QuestName.preferredWidth + 25f > 370f) ? 370f : (slot.txt_QuestName.preferredWidth + 25f);
                 slot.img_BgFrame.rectTransform.sizeDelta = new Vector2(x, slot.img_BgFrame.rectTransform.sizeDelta.y);
 
-                slot.txt_QuestProgress.text = "";
+                slot.txt_QuestProgress.text = info.Item2;
 
-                slot.img_Icon.sprite = (complete ? UISpriteDataManager.instance._floorQuestStateIcon[1] : UISpriteDataManager.instance._floorQuestStateIcon[0]);
+                slot.img_Icon.sprite = info.Item4;
                 slot.img_Icon.enabled = true;
-                slot.img_Icon.color = (complete ? UIColorManager.Manager._floorQuestSlotIconColor[1] : UIColorManager.Manager._floorQuestSlotIconColor[0]);
+                slot.img_Icon.color = (info.Item3 ? UIColorManager.Manager.GetUIColor(UIColor.Disabled) : UIColorManager.Manager._floorQuestSlotIconColor[0]);
             }
-
-            setQuestText(questSlotList[0], $"Abno Page: Unknown", false);
-            setQuestText(questSlotList[1], $"EGO: Unknown", false);
-            setQuestText(questSlotList[2], $"Librarian: Unknown", false);
-            if (floor.Sephirah == SephirahType.Keter)
-                setQuestText(questSlotList[3], $"Black Silence: Unknown", false);
-            if (floor.Sephirah == SephirahType.Binah)
-                setQuestText(questSlotList[3], $"Binah: Unknown", false);
-            else
-                questSlotList[3].SetActiveSlot(on: false);
-            questSlotList[4].SetActiveSlot(on: false);
 
             return false;
         }
@@ -93,11 +161,25 @@ namespace LORAP.Patches
 
 
         // LibraryModel patches. Black Silence and Binah unlocks. //
+        // Stop library from opening Keter floor from the start.
+        [HarmonyPatch(typeof(LibraryModel), nameof(LibraryModel.Init))]
+        [HarmonyTranspiler]
+        static IEnumerable<CodeInstruction> GenerateDropsSendChecks(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+        {
+            var codeMatcher = new CodeMatcher(instructions, generator);
+
+            codeMatcher.MatchStartForward(OpCodes.Callvirt, OpCodes.Ldarg_0, OpCodes.Ldc_I4_S, OpCodes.Call)
+                .Advance(1)
+                .RemoveInstructions(3);
+
+            return codeMatcher.Instructions();
+        }
+
         [HarmonyPatch(typeof(LibraryModel), nameof(LibraryModel.IsBinahLockedInLibrary))]
         [HarmonyPrefix]
         static bool IsBinahLockedInLibrary(LibraryModel __instance, ref bool __result)
         {
-            __result = !PlaythruManager.BinahUnlocked;
+            __result = true; //!PlaythruManager.BinahUnlocked;
 
             return false;
         }
@@ -106,7 +188,7 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool IsBlackSilenceLockedInLibrary(LibraryModel __instance, ref bool __result)
         {
-            __result = !PlaythruManager.BlackSilenceUnlocked;
+            __result = true; //!PlaythruManager.BlackSilenceUnlocked;
 
             return false;
         }
@@ -115,7 +197,7 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool IsBinahLockedInStage(LibraryModel __instance, StageClassInfo stageInfo, ref bool __result)
         {
-            __result = !PlaythruManager.BinahUnlocked;
+            __result = true; //!PlaythruManager.BinahUnlocked;
 
             return false;
         }
@@ -124,22 +206,48 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool IsBlackSilenceLockedInStage(LibraryModel __instance, StageClassInfo stageInfo, ref bool __result)
         {
-            __result = !PlaythruManager.BlackSilenceUnlocked;
+            __result = true; //!PlaythruManager.BlackSilenceUnlocked;
 
             return false;
         }
 
 
-
         // LibraryFloorModel patch. Custom unlocked units amount. //
-        // Custom floor unit count
         [HarmonyPatch(typeof(LibraryFloorModel), nameof(LibraryFloorModel.UpdateOpenedCount), typeof(int))]
         [HarmonyPrefix]
         static bool UpdateOpenedCountPrefix(LibraryFloorModel __instance)
         {
-            __instance._opendUnitCount = Math.Max(1, __instance._opendUnitCount);
+            __instance._opendUnitCount = PlaythruManager.Floors[__instance.Sephirah].Librarians;
 
             return false;
+        }
+
+
+        // UIMainPanel patch. Fake last selectable sephirah to be hokma
+        [HarmonyPatch(typeof(UIMainPanel), nameof(UIMainPanel.GetLastSelectableSephirah))]
+        [HarmonyPrefix]
+        static bool FakeTransformInfo(UIMainPanel __instance, ref SephirahType __result)
+        {
+            __result = SephirahType.Hokma;
+
+            return false;
+        }
+
+        [HarmonyPatch(typeof(UIMainPanel), nameof(UIMainPanel.SetKetherTransform))]
+        [HarmonyPrefix]
+        static bool IsBinahLockedInLibrary(UIMainPanel __instance, KetherTransformInfo info, bool isRight)
+        {
+            isRight = false;
+
+            if (!LibraryModel.Instance.IsOpenedSephirah(SephirahType.Keter))
+            {
+                __instance.SephirahButtons[10].gameObject.SetActive(false);
+                __instance.SephirahButtons[9].gameObject.SetActive(false);
+
+                return false;
+            }
+
+            return true;
         }
 
 
@@ -189,8 +297,8 @@ namespace LORAP.Patches
             __instance.img_CityIcon.sprite = UISpriteDataManager.instance._bookGradeFilterIcon[chapter - 1].icon;
             __instance.img_CityIconGlow.sprite = UISpriteDataManager.instance._bookGradeFilterIcon[chapter - 1].iconGlow;
 
-            float num = ConnectionManager.FoundLocations;
-            float num2 = ConnectionManager.TotalLocations;
+            float num = LocationManager.CheckedLocations.Count;
+            float num2 = LocationManager.AllLocations.Count;
             float sliderLength = __instance.sliderLength;
             float x = sliderLength * (num / num2);
 
@@ -221,7 +329,7 @@ namespace LORAP.Patches
             var pos = instr.FindIndex(i => i.opcode == OpCodes.Ldarg_1);
 
             instr.RemoveRange(pos, 3);
-            instr.Insert(pos, new CodeInstruction(OpCodes.Ldstr, "Archipelago Progress"));
+            instr.Insert(pos, new CodeInstruction(OpCodes.Ldstr, "AP Run Progress"));
 
             return instr;
         }
@@ -233,7 +341,7 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool CustomMaxPassiveCost(DropBookXmlInfo __instance, ref int __result)
         {
-            __result = PlaythruManager.MaxPassiveCost;
+            __result = PlaythruManager.MaxAttributionPoints;
 
             return false;
         }
@@ -252,13 +360,36 @@ namespace LORAP.Patches
 
 
 
-        // UIBgScreenChangeAnim patch. Disconnect from AP when going to title. //
+        // UIBgScreenChangeAnim patch. Disconnect from AP when going to title. Also destroy reception tree if it was randomized //
         [HarmonyPatch(typeof(UIBgScreenChangeAnim), nameof(UIBgScreenChangeAnim.StartBg))]
         [HarmonyPrefix]
         static void ToTitleDisconnectAP(UIBgScreenChangeAnim __instance, UIScreenChangeType cType)
         {
+            if (cType != UIScreenChangeType.ReturnTitle)
+                return;
+
+            UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
+            if (SlotDataManager.RandomizeReceptionTree || SlotDataManager.ReceptionsProgression == ReceptionsProgression.Progressive || SlotDataManager.ReceptionsProgression == ReceptionsProgression.ProgressiveBooks)
+            {
+                foreach (var icon in MapPanel.iconList)
+                {
+                    GameObject.Destroy(icon.gameObject);
+                    GameObject.Destroy(icon);
+                }
+            }
+            else
+            {
+                foreach (var icon in MapPanel.iconList)
+                {
+                    icon.SetActiveStory(false);
+                }
+            }
+            MapPanel.iconList.Clear();
+
+            ItemManager.Suspended = true;
+
             if (cType == UIScreenChangeType.ReturnTitle)
-                ConnectionManager.APDisconnect();
+                SessionManager.EndSession();
         }
 
 
@@ -303,8 +434,7 @@ namespace LORAP.Patches
         [HarmonyPostfix]
         static void AddCustomContent()
         {
-            ContentManager.AddCustomContent();
-            APConnectWindow.Init();
+            ContentManager.Init();
         }
 
 
@@ -312,18 +442,18 @@ namespace LORAP.Patches
         // PlatformManager patch. Make game unable to grant steam achievements. //
         [HarmonyPatch(typeof(PlatformManager), nameof(PlatformManager.UnlockAchievement))]
         [HarmonyPrefix]
-        static bool NoAchievements() => false;
+        static bool DisableAchievements() => false;
 
 
 
         // UIMainAutoTooltipManager patch. Remove tutorial tooltips. //
         [HarmonyPatch(typeof(UIMainAutoTooltipManager), nameof(UIMainAutoTooltipManager.OpenTooltip))]
         [HarmonyPrefix]
-        static bool NoTooltips() => false;
+        static bool DisableTooltips() => false;
 
 
 
-        // UIInvenFeedBookList patch. Remove highlight of "none" book in feed book menu. //
+        // UIInvenFeedBookList patch. Remove the tutorial highlight of "none" book in feed book menu. //
         [HarmonyPatch(typeof(UIInvenFeedBookList), nameof(UIInvenFeedBookList.OnOpen))]
         [HarmonyPostfix]
         static void NoFeedBookHighlight(UIInvenFeedBookList __instance)

@@ -3,7 +3,7 @@ using System.Linq;
 using System.Reflection.Emit;
 using HarmonyLib;
 using LORAP.CustomUI;
-using LORAP.Playthru;
+using LORAP.Utils;
 using UI;
 using UnityEngine;
 
@@ -22,7 +22,8 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool RedirectPanelClosure(UIGetAbnormalityPanel __instance)
         {
-            MessagePopup.PagesClose();
+            // Try to show next message. If the queue is empty, it will just close
+            AbnoEgoPagePopup.NextMessage();
 
             return false;
         }
@@ -155,7 +156,7 @@ namespace LORAP.Patches
             pos += 7;
             instr.Insert(pos, new CodeInstruction(OpCodes.Ldc_I4_0)); // 0 to stack
             instr.Insert(pos + 1, new CodeInstruction(OpCodes.Ldloc_S, floor.LocalIndex)); // floor to stack from local
-            instr.Insert(pos + 2, new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(LORClassExtensions), nameof(LORClassExtensions.GetEGOAmount)))); // get number of ego from floor
+            instr.Insert(pos + 2, new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(ClassExtensions), nameof(ClassExtensions.GetEGOAmount)))); // get number of ego from floor
             instr.Insert(pos + 3, new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(List<EmotionEgoXmlInfo>), nameof(List<EmotionEgoXmlInfo>.GetRange)))); // egolist.GetRange()
 
             return instr;
@@ -183,7 +184,7 @@ namespace LORAP.Patches
             pos -= 3;
 
             instr.RemoveRange(pos, 4);
-            instr.Insert(pos, new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(LORClassExtensions), nameof(LORClassExtensions.GetAbnoPageAmount))));
+            instr.Insert(pos, new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(ClassExtensions), nameof(ClassExtensions.GetAbnoPageAmount))));
             instr.Insert(pos + 1, new CodeInstruction(OpCodes.Blt_S, l));
 
             return instr;
@@ -206,7 +207,7 @@ namespace LORAP.Patches
 
             instr.RemoveRange(pos, 2); // remove egoCardList.Count
             instr.Insert(pos, new CodeInstruction(OpCodes.Ldarg_1)); // floor to stack from args
-            instr.Insert(pos + 1, new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(LORClassExtensions), nameof(LORClassExtensions.GetEGOAmount)))); // get number of ego from floor
+            instr.Insert(pos + 1, new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(ClassExtensions), nameof(ClassExtensions.GetEGOAmount)))); // get number of ego from floor
 
             return instr;
         }

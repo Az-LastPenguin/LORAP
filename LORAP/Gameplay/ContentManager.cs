@@ -1,5 +1,5 @@
-﻿using HarmonyLib;
-using LORAP.Playthru;
+﻿using LORAP.Archipelago;
+using LORAP.CustomUI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +10,50 @@ using UnityEngine.UI;
 
 namespace LORAP.Gameplay
 {
+    internal class ReceptionNode
+    {
+        public int id;
+
+        public List<int> next;
+
+        public int y;
+    }
+
+    internal class ReceptionTree
+    {
+        public List<ReceptionNode> Nodes = new List<ReceptionNode>();
+
+        public Dictionary<int, List<int>> NodesOfDepth {
+            get
+            {
+                Dictionary<int, List<int>> result = new Dictionary<int, List<int>>();
+
+                foreach (var node in Nodes) 
+                {
+                    if (!result.ContainsKey(node.y))
+                        result[node.y] = new List<int>();
+
+                    result[node.y].Add(node.id);
+                }
+
+                return result;
+            }
+            set 
+            {
+                NodesOfDepth = value;
+            } 
+        }
+
+        public int First;
+
+        public int Last;
+
+        
+        public ReceptionNode GetNode(int id) => Nodes.Find(n => n.id == id);
+
+        public List<ReceptionNode> GetPrevNodes(int id) => Nodes.Where(n => n.next.Contains(id)).ToList();
+    }
+
     internal static class ContentManager
     {
         internal static Dictionary<int, DropBookXmlInfo> CustomBooks = new Dictionary<int, DropBookXmlInfo>();
@@ -17,6 +61,12 @@ namespace LORAP.Gameplay
         private static List<EmotionCardXmlInfo> AbnoPageInitialList;
 
         private static List<EmotionEgoXmlInfo> EGOPageInitialList;
+
+        private static List<UIStoryProgressIconSlot> VanillaIconsBackup = new List<UIStoryProgressIconSlot>();
+
+        private static UIStoryProgressIconSlot MapIconTemplate;
+        private static GameObject LineTemplate;
+        private static GameObject CheckmarkIconTemplate = UICardListDetailFilterPopup.Instance.transform.Find("[Image]Frame/Scroll View/Viewport/Content/RarityGroup/Group/[Toggle]DetailSlot/[Toggle]SelectableToggle/[Image]IconGlow").gameObject;
 
         private static DropBookXmlInfo CreateCustomBook(int id, string name, int dropNum, List<BookDropItemInfo> dropList)
         {
@@ -34,25 +84,139 @@ namespace LORAP.Gameplay
             return Book;
         }
 
-        private static UIStoryProgressIconSlot AddReceptionToMap(int id, UIStoryLine story, Vector3 position)
+        private static UIStoryProgressIconSlot PlaceReceptionOnMap(int id, UIStoryLine story, Vector3 position)
         {
             UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
 
-            var original = MapPanel.iconList.First();
-            var copy = UnityEngine.Object.Instantiate(original, MapPanel.chapterList.First().transform);
-            copy.transform.localPosition = position;
-            copy.StoryProgressPanel = MapPanel;
-            copy.connectLineList = new List<GameObject>();
-            copy.storyData = new List<StageClassInfo>() { StageClassInfoList.Instance.GetData(id) };
-            copy.currentStory = story;
+            var icon = UnityEngine.Object.Instantiate(MapIconTemplate, MapPanel.chapterList.First().transform);
+            icon.transform.localPosition = position;
+            icon.StoryProgressPanel = MapPanel;
+            icon.connectLineList = new List<GameObject>();
+            icon.storyData = new List<StageClassInfo>() { StageClassInfoList.Instance.GetData(id) };
+            icon.currentStory = story;
 
-            MapPanel.iconList.Add(copy);
+            var check = UnityEngine.Object.Instantiate(CheckmarkIconTemplate, icon.transform);
+            check.transform.localPosition = new Vector3(30, 100, 0);
+            check.name = "Checkmark";
+            check.transform.SetSiblingIndex(2);
 
-            return copy;
+            MapPanel.iconList.Add(icon);
+
+            return icon;
         }
 
-        internal static void RandomizeContent()
+        internal static void SetupRunContent()
         {
+            var Random = new System.Random(SlotDataManager.Seed);
+
+            // Setup Reception Tree
+            UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
+            if (SlotDataManager.RandomizeReceptionTree && (SlotDataManager.ReceptionsProgression == ReceptionsProgression.Progressive || SlotDataManager.ReceptionsProgression == ReceptionsProgression.ProgressiveBooks))
+            {
+                Dictionary<int, List<int>> Depths = SlotDataManager.ReceptionTree.NodesOfDepth;
+
+                Dictionary<string, UIStoryLine> storylines = Enum.GetValues(typeof(UIStoryLine)).Cast<UIStoryLine>().ToDictionary(e => e.ToString(), e => e);
+
+                Dictionary<int, UIStoryProgressIconSlot> icons = new Dictionary<int, UIStoryProgressIconSlot>();
+                foreach (var pair in Depths)
+                {
+                    int cur_depth = pair.Key;
+                    int nodes_num = pair.Value.Count;
+                    int cur_node = 1;
+                    foreach (int id in pair.Value)
+                    {
+                        StageClassInfo info = StageClassInfoList.Instance.GetData(id);
+                        UIStoryLine storyline = storylines.Where(p => p.Key == info.storyType).First().Value;
+
+                        icons[id] = PlaceReceptionOnMap(id, storyline, new Vector3(-(240 * (nodes_num - 1)) / 2 + (240 * (cur_node - 1)), -220 + cur_depth * 220, 0));
+
+                        // Add recipes
+                        info.invitationInfo.needsBooks = SlotDataManager.ReceptionBookRequirements[id].Select(b => new LorId(b)).ToList();
+
+                        cur_node++;
+                    }
+                }
+
+                foreach (var pair in icons)
+                {
+                    int id = pair.Key;
+                    UIStoryProgressIconSlot icon = pair.Value;
+                    icon.connectLineList.Clear();
+                    // Create Paths
+                    foreach (int next in SlotDataManager.ReceptionTree.GetNode(id).next)
+                    {
+                        UIStoryProgressIconSlot nextIcon = icons[next];
+                        var line = UnityEngine.Object.Instantiate(LineTemplate, icon.transform.Find("[Rect]Lines"));
+                        line.transform.localPosition = (nextIcon.transform.localPosition - icon.transform.localPosition)/2;
+                        line.transform.right = (nextIcon.transform.localPosition - icon.transform.localPosition).normalized;
+                        line.transform.localScale = new Vector3((nextIcon.transform.localPosition - icon.transform.localPosition).magnitude / 220, 1,1);
+                        line.SetActive(true);
+
+                        icon.connectLineList.Add(line);
+                    }
+                }
+
+                // TODO Place endgoals after Oliver
+            }
+            else if (SlotDataManager.ReceptionsProgression == ReceptionsProgression.Unlocked || SlotDataManager.ReceptionsProgression == ReceptionsProgression.Books)
+            {
+                // Place receptions randomly on the map
+                // To do this we select same amount of points as there are receptions and randomly place them on the map,
+                // also move them far enough from eachother
+                int TotalReceptions = SlotDataManager.ReceptionTree.Nodes.Count;
+                List<Vector2> points = new List<Vector2>();
+
+                for (int i = 0; i < TotalReceptions; i++)
+                {
+                    points.Add(new Vector2(Random.Next(-1000, 1000), Random.Next(-220, 3000)));
+                }
+
+                for (int k = 0; k < 10; k++)
+                {
+                    for (int i = 0; i < TotalReceptions; i++)
+                    {
+                        // Check every point that it's more than 220 units further than any other point
+                        for (int j = 0; j < TotalReceptions; j++)
+                        {
+                            if (i == j) continue;
+                            var point = points[i];
+                            var point2 = points[j];
+
+                            if ((point2 - point).magnitude < 220f)
+                            {
+                                float coef = 1f - (point2 - point).magnitude / 219f;
+                                Vector2 dir = point2 - point;
+                                point2 += dir * coef/2;
+                                point -= dir * coef/2;
+
+                                points[i] = point;
+                                points[j] = point2;
+                            }
+                        }
+                    }
+                }
+
+                Dictionary<string, UIStoryLine> storylines = Enum.GetValues(typeof(UIStoryLine)).Cast<UIStoryLine>().ToDictionary(e => e.ToString(), e => e);
+                for (int i = 0; i < TotalReceptions; i++)
+                {
+                    ReceptionNode node = SlotDataManager.ReceptionTree.Nodes[i];
+                    Vector2 vector = points[i];
+
+                    StageClassInfo info = StageClassInfoList.Instance.GetData(node.id);
+                    UIStoryLine storyline = storylines.Where(p => p.Key == info.storyType).First().Value;
+
+                    PlaceReceptionOnMap(node.id, storyline, new Vector3(vector.x, vector.y, 0));
+                }
+            }
+            else
+            {
+                MapPanel.iconList = VanillaIconsBackup;
+            }
+
+
+
+            /*
+
             // Save vanilla lists of abno and ego pages to randomize them every run open
             // .ToList() is a hacky way to create a clone of the list
             if (AbnoPageInitialList == null)
@@ -137,149 +301,127 @@ namespace LORAP.Gameplay
             }
 
             EmotionEgoXmlList.Instance._list = shuffledEGO;
+
+            */
         }
     
-        internal static void AddCustomContent()
+        internal static void Init()
         {
-            Debug.Log("Adding Custom Cotent!");
-            // Some minor changes
-            // Move the Abno and EGO page receive window to other canvas, also center EGO page display
-            UIGetAbnormalityPanel.instance.gameObject.transform.SetParent(GameObject.Find("[Canvas][Script]PopupCanvas").transform);
-            GameObject.Find("[Canvas][Script]PopupCanvas").GetComponent<Canvas>().sortingOrder = 90;
-            UIGetAbnormalityPanel.instance.transform.localScale = Vector3.one;
-            UIGetAbnormalityPanel.instance.EgoCardsRoot.transform.Find("[Prefab]DetailEgoCardSlot").gameObject.GetComponent<Canvas>().sortingOrder = 90;
-            UIGetAbnormalityPanel.instance.EgoCardsRoot.transform.Find("[Layout]CardViewList").localPosition = new Vector3(-90, 17.7f, 0);
-            UIGetAbnormalityPanel.instance.EgoCardsRoot.transform.Find("[Layout]CardViewList").gameObject.GetComponent<GridLayoutGroup>().childAlignment = TextAnchor.UpperCenter;
+            Debug.Log("[LORAP] Custom Content Init!");
 
-            // Add Keter Realization stages to FloorLevelXmlList
-            FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 5, stageId = 210005, sephirahType = SephirahType.Keter });
-            FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 6, stageId = 210006, sephirahType = SephirahType.Keter });
-            FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 7, stageId = 210007, sephirahType = SephirahType.Keter });
-            FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 8, stageId = 210008, sephirahType = SephirahType.Keter });
-            FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 9, stageId = 210009, sephirahType = SephirahType.Keter });
+            // Init some custom UI
+            APConnectWindow.Init();
+            MessagePopup.Init();
+            AbnoEgoPagePopup.Init();
+
+            // Make Esc menu above everything else
+            GameObject.Find("[Canvas][Script]PopupCanvas").GetComponent<Canvas>().sortingOrder = 90;
+            GameObject.Find("[Canvas][Script]PopupCanvas/[Script]PopupManager").transform.SetAsLastSibling();
+            Canvas newCanvas = GameObject.Find("[Canvas][Script]PopupCanvas/[Script]PopupManager").AddComponent<Canvas>();
+            newCanvas.overrideSorting = true;
+            newCanvas.sortingOrder = 100;
+            newCanvas.gameObject.AddComponent<GraphicRaycaster>();
+
+            // Change UIFloorPanel: Remove floor level (irrelevant in this mod) & move quest info up, also add more info lines
+            UIFloorPanel floorPanel = UI.UIController.Instance.GetUIPanel(UIPanelType.FloorInfo) as UIFloorPanel;
+            floorPanel.transform.Find("PanelActiveController/[Rect]Info_Panel/[Rect]LevelBg").gameObject.SetActive(false);
+            floorPanel.questPanel.transform.localPosition = new Vector3(-558.4f, 406f, 0);
+            floorPanel.questPanel.questSlotsRoot.GetComponent<VerticalLayoutGroup>().spacing = 0;
+
+            for (int i = 0; i < 2; i++)
+            {
+                GameObject copy = GameObject.Instantiate(floorPanel.questPanel.questSlotsRoot.transform.Find("[Script]Quest_Condition_Slot").gameObject);
+                UIFloorQuestSlot slot = copy.GetComponent<UIFloorQuestSlot>();
+                slot.cg = copy.GetComponent<CanvasGroup>();
+                slot.img_BgFrame = copy.transform.Find("[Image]Bg").GetComponent<Image>();
+                slot.img_Icon = copy.transform.Find("[ImageQuest_Condition_Icon").GetComponent<Image>();
+                slot.img_lineframe = copy.transform.Find("[Image]Line").GetComponent<Image>();
+                slot.txt_QuestName = copy.transform.Find("[Text]Quest_Name").GetComponent<TextMeshProUGUI>();
+                slot.txt_QuestProgress = copy.transform.Find("[Text]Quest_Progress").GetComponent<TextMeshProUGUI>();
+                copy.transform.parent = floorPanel.questPanel.questSlotsRoot.transform;
+                floorPanel.questPanel.questSlotList = floorPanel.questPanel.questSlotList.ToList().Append(slot).ToArray();
+            }
+
+
+            // Add Keter Realization stages to FloorLevelXmlList TODO: You know.
+            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 5, stageId = 210005, sephirahType = SephirahType.Keter });
+            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 6, stageId = 210006, sephirahType = SephirahType.Keter });
+            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 7, stageId = 210007, sephirahType = SephirahType.Keter });
+            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 8, stageId = 210008, sephirahType = SephirahType.Keter });
+            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 9, stageId = 210009, sephirahType = SephirahType.Keter });
 
             // Make map bigger
             UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
-            Traverse.Create(MapPanel).Field<RectTransform>("posRect").Value.sizeDelta = new Vector2(3600, 10000);
-
-            // Create lines on map
-            var originalLine = Traverse.Create(Traverse.Create(MapPanel).Field<List<UIStoryProgressIconSlot>>("iconList").Value.First()).Field<List<GameObject>>("connectLineList").Value.First();
-            List<Tuple<Vector3, Vector3, Vector3>> LinePositions = new List<Tuple<Vector3, Vector3, Vector3>>()
-            {
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(0, 7410, 0), new Vector3(0, 0, 270), new Vector3(0.5f, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(0, 7720, 0), new Vector3(0, 0, 270), new Vector3(1.3f, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(-140, 7510, 0), new Vector3(0, 0, 300), new Vector3(1.7f, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(140, 7510, 0), new Vector3(0, 0, 240), new Vector3(1.7f, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(-130, 7630, 0), new Vector3(0, 0, 315), new Vector3(1, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(130, 7630, 0), new Vector3(0, 0, 225), new Vector3(1, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(-125, 7830, 0), new Vector3(0, 0, 220), new Vector3(1, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(125, 7830, 0), new Vector3(0, 0, 320), new Vector3(1, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(-250, 7920, 0), new Vector3(0, 0, 270), new Vector3(1.4f, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(250, 7920, 0), new Vector3(0, 0, 270), new Vector3(1.4f, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(-125, 8030, 0), new Vector3(0, 0, 320), new Vector3(1.1f, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(125, 8030, 0), new Vector3(0, 0, 220), new Vector3(1.1f, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(0, 8225, 0), new Vector3(0, 0, 270), new Vector3(2.2f, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(0, 8240, 0), new Vector3(0, 0, 207), new Vector3(2.2f, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(0, 8240, 0), new Vector3(0, 0, 333), new Vector3(2.2f, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(-250, 8250, 0), new Vector3(0, 0, 270), new Vector3(0.8f, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(250, 8250, 0), new Vector3(0, 0, 270), new Vector3(0.8f, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(-125, 8450, 0), new Vector3(0, 0, 210), new Vector3(0.9f, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(125, 8450, 0), new Vector3(0, 0, 330), new Vector3(0.9f, 1, 1)),
-                new Tuple<Vector3, Vector3, Vector3>(new Vector3(0, 7160, 0), new Vector3(0, 0, 270), new Vector3(1, 1, 1)),
-            };
-
-            for (int i = 0; i < 20; i++)
-            {
-                var line = UnityEngine.Object.Instantiate(originalLine, originalLine.transform.parent);
-                line.transform.localPosition = LinePositions[i].Item1;
-                line.transform.eulerAngles = LinePositions[i].Item2;
-                line.transform.localScale = LinePositions[i].Item3;
-            }
+            MapPanel.posRect.sizeDelta = new Vector2(3600, 7000);
 
             // Move Black Silence and Distorted Ensemble receptions on the map
             var BlackSilence = MapPanel.iconList.Find(i => i.currentStory == UIStoryLine.BlackSilence);
-            BlackSilence.transform.localPosition = new Vector3(-120, 8390, 0);
-            BlackSilence.connectLineList.First().transform.localPosition = new Vector3(-80, 1450, 0);
-            BlackSilence.connectLineList.First().transform.eulerAngles = new Vector3(0, 0, 300);
+            BlackSilence.transform.localPosition = new Vector3(-200, 6915, 0);
+            BlackSilence.connectLineList.First().transform.localPosition = new Vector3(-100, -40, 0);
+            BlackSilence.connectLineList.First().transform.eulerAngles = new Vector3(0, 0, 310);
 
             var Distorted = MapPanel.iconList.Find(i => i.currentStory == UIStoryLine.TwistedBlue);
-            Distorted.transform.localPosition = new Vector3(120, 8390, 0);
-            Distorted.connectLineList.First().transform.localPosition = new Vector3(80, 1450, 0);
-            Distorted.connectLineList.First().transform.eulerAngles = new Vector3(0, 0, 240);
+            Distorted.transform.localPosition = new Vector3(200, 6915, 0);
+            Distorted.connectLineList.First().transform.localPosition = new Vector3(100, -40, 0);
+            Distorted.connectLineList.First().transform.eulerAngles = new Vector3(0, 0, 230);
 
-            // Hide "Reset Rewards" button from the book burning screen and copy text to make custom one
+            // Hide "Reset Rewards" button from the book burning screen
             UIShowUsingBookInfoPanel dropBookPanel = (UI.UIController.Instance.Panels.ElementAt(3) as UIBookPanel).DropBookInfoPanel;
             dropBookPanel.button_rewardResetButton.gameObject.SetActive(false);
-            GameObject burnBookTextObj = GameObject.Instantiate(dropBookPanel.txt_bookName.gameObject, dropBookPanel.transform);
-            burnBookTextObj.name = "BurnAndSee";
-            burnBookTextObj.transform.localPosition = new Vector3(300, 65, 0);
-            TextMeshProUGUI burnBookText = burnBookTextObj.GetComponent<TextMeshProUGUI>();
-            burnBookText.text = "Burn it and see ;)";
-            burnBookText.alignment = TextAlignmentOptions.Center;
-            burnBookText.color = new Color(0.9373f, 0.7608f, 0.5059f);
-            TextMeshProMaterialSetter burnBookTextMat = burnBookTextObj.GetComponent<TextMeshProMaterialSetter>();
-            burnBookTextMat.underlayColor = new Color(0.9373f, 0.7608f, 0.5059f);
-            burnBookTextMat.enabled = false;
-            burnBookTextMat.enabled = true;
-            burnBookTextObj.SetActive(false);
+
+            // Save a "Template" for a map icon
+            MapIconTemplate = MapPanel.iconList.First();
+            LineTemplate = MapIconTemplate.connectLineList.First();
 
 
             // Adding receptions to the map
             // General Receptions
-            AddReceptionToMap(100001, UIStoryLine.Chapter2, new Vector3(-260, 1880, 0)); // Backstreets Butchers
-            AddReceptionToMap(100002, UIStoryLine.Chapter2, new Vector3(-520, 1880, 0)); // Hook Office Remnants
-            AddReceptionToMap(100003, UIStoryLine.Chapter2, new Vector3(260, 1880, 0));  // Urban Myth-class Syndicate
+            PlaceReceptionOnMap(100001, UIStoryLine.PierresMeatPies, new Vector3(-260, 1880, 0)); // Backstreets Butchers
+            PlaceReceptionOnMap(100002, UIStoryLine.HookOfficeRemnant, new Vector3(-520, 1880, 0)); // Hook Office Remnants
+            PlaceReceptionOnMap(100003, UIStoryLine.Chapter2, new Vector3(260, 1880, 0));  // Urban Myth-class Syndicate
 
-            AddReceptionToMap(100004, UIStoryLine.Chapter3, new Vector3(-450, 2900, 0)); // Grade 8 Fixers
-            AddReceptionToMap(100006, UIStoryLine.Chapter3, new Vector3(450, 2900, 0));  // Grade 7 Fixers 
-            AddReceptionToMap(100005, UIStoryLine.Chapter3, new Vector3(0, 2900, 0));    // Urban Legend-class Office
-            AddReceptionToMap(100007, UIStoryLine.Chapter3, new Vector3(-900, 2900, 0)); // Urban Legend-class Syndicate
-            AddReceptionToMap(100008, UIStoryLine.Chapter3, new Vector3(900, 2900, 0));  // Axe Gang
+            PlaceReceptionOnMap(100004, UIStoryLine.Grade8Fixers, new Vector3(-450, 2900, 0)); // Grade 8 Fixers
+            PlaceReceptionOnMap(100006, UIStoryLine.Grade7Fixers, new Vector3(450, 2900, 0));  // Grade 7 Fixers 
+            PlaceReceptionOnMap(100005, UIStoryLine.Chapter3, new Vector3(0, 2900, 0));    // Urban Legend-class Office
+            PlaceReceptionOnMap(100007, UIStoryLine.Chapter3, new Vector3(-900, 2900, 0)); // Urban Legend-class Syndicate
+            PlaceReceptionOnMap(100008, UIStoryLine.AxeGang, new Vector3(900, 2900, 0));  // Axe Gang
 
-            AddReceptionToMap(100009, UIStoryLine.Chapter4, new Vector3(-450, 3610, 0)); // Rusted Chains
-            AddReceptionToMap(100010, UIStoryLine.Chapter4, new Vector3(0, 3610, 0));    // Workshop-affiliated Fixers
-            AddReceptionToMap(100014, UIStoryLine.Chapter4, new Vector3(450, 3610, 0));  // Jeong's Office
+            PlaceReceptionOnMap(100009, UIStoryLine.RustyChainGroup, new Vector3(-450, 3610, 0)); // Rusted Chains
+            PlaceReceptionOnMap(100010, UIStoryLine.WorkshopFixer, new Vector3(0, 3610, 0));    // Workshop-affiliated Fixers
+            PlaceReceptionOnMap(100014, UIStoryLine.Jeong, new Vector3(450, 3610, 0));  // Jeong's Office
 
-            AddReceptionToMap(100011, UIStoryLine.Chapter5, new Vector3(-450, 4520, 0)); // Seven Association
-            AddReceptionToMap(100012, UIStoryLine.Chapter5, new Vector3(450, 4520, 0));  // Blade Lineage
+            PlaceReceptionOnMap(100011, UIStoryLine.SevenAssociation, new Vector3(-450, 4520, 0)); // Seven Association
+            PlaceReceptionOnMap(100012, UIStoryLine.Sword, new Vector3(450, 4520, 0));  // Blade Lineage
 
-            AddReceptionToMap(100013, UIStoryLine.Chapter6, new Vector3(-450, 5550, 0)); // Dong-hwan the Grade 1 Fixer
-            AddReceptionToMap(100015, UIStoryLine.Chapter6, new Vector3(450, 5550, 0));  // Night Awls
-            AddReceptionToMap(100016, UIStoryLine.Chapter6, new Vector3(0, 5690, 0));    // The Udjat
-            AddReceptionToMap(100017, UIStoryLine.Chapter6, new Vector3(0, 5420, 0));    // Mirae Life Insurance
-            AddReceptionToMap(100018, UIStoryLine.Chapter6, new Vector3(-900, 5550, 0)); // Leaflet Workshop
-            AddReceptionToMap(100019, UIStoryLine.Chapter6, new Vector3(900, 5550, 0));  // Bayard
+            PlaceReceptionOnMap(100013, UIStoryLine.ClassOneFixer, new Vector3(-450, 5550, 0)); // Dong-hwan the Grade 1 Fixer
+            PlaceReceptionOnMap(100015, UIStoryLine.AwlOfNight, new Vector3(450, 5550, 0));  // Night Awls
+            PlaceReceptionOnMap(100016, UIStoryLine.Usett, new Vector3(0, 5690, 0));    // The Udjat
+            PlaceReceptionOnMap(100017, UIStoryLine.Mirae, new Vector3(0, 5420, 0));    // Mirae Life Insurance
+            PlaceReceptionOnMap(100018, UIStoryLine.Workshop, new Vector3(-900, 5550, 0)); // Leaflet Workshop
+            PlaceReceptionOnMap(100019, UIStoryLine.Bayyard, new Vector3(900, 5550, 0));  // Bayard
 
-            // Reverb Ensemble
-            foreach (var icon in UISpriteDataManager.instance.floorIconSet) // Some changes to the icons for ensemble receptions
+
+            // Backup vanilla map icons (we restore them if reception tree is not randomized)
+            foreach (var icon in MapPanel.iconList)
             {
-                icon.iconGlow = icon.icon;
+                icon.SetActiveStory(false);
             }
 
-            AddReceptionToMap(70001, (UIStoryLine)151, new Vector3(0, 6920, 0)).isChapterIcon = true;
-            AddReceptionToMap(70002, (UIStoryLine)152, new Vector3(0, 7150, 0)).isChapterIcon = true;
-            AddReceptionToMap(70003, (UIStoryLine)153, new Vector3(-250, 7350, 0)).isChapterIcon = true;
-            AddReceptionToMap(70004, (UIStoryLine)154, new Vector3(250, 7350, 0)).isChapterIcon = true;
-            AddReceptionToMap(70005, (UIStoryLine)155, new Vector3(0, 7550, 0)).isChapterIcon = true;
-            AddReceptionToMap(70006, (UIStoryLine)156, new Vector3(-250, 7750, 0)).isChapterIcon = true;
-            AddReceptionToMap(70007, (UIStoryLine)157, new Vector3(250, 7750, 0)).isChapterIcon = true;
-            AddReceptionToMap(70008, (UIStoryLine)158, new Vector3(-250, 8000, 0)).isChapterIcon = true;
-            AddReceptionToMap(70009, (UIStoryLine)159, new Vector3(250, 8000, 0)).isChapterIcon = true;
-            AddReceptionToMap(70010, (UIStoryLine)160, new Vector3(0, 8150, 0)).isChapterIcon = true;
-
+            VanillaIconsBackup = MapPanel.iconList;
+            MapPanel.iconList = new List<UIStoryProgressIconSlot>();
 
             // Additions
             // Checkmarks for all found books receptions
-            var CheckmarkIcon = UICardListDetailFilterPopup.Instance.transform.Find("[Image]Frame/Scroll View/Viewport/Content/RarityGroup/Group/[Toggle]DetailSlot/[Toggle]SelectableToggle/[Image]IconGlow").gameObject;
-
             foreach (var icon in MapPanel.iconList)
             {
-                var copy = UnityEngine.Object.Instantiate(CheckmarkIcon, icon.transform);
-                copy.transform.localPosition = new Vector3(30, 100, 0);
-                copy.name = "Checkmark";
-                copy.transform.SetSiblingIndex(2);
+                var check = UnityEngine.Object.Instantiate(CheckmarkIconTemplate, icon.transform);
+                check.transform.localPosition = new Vector3(30, 100, 0);
+                check.name = "Checkmark";
+                check.transform.SetSiblingIndex(2);
             }
 
+
+            return;
 
             // Custom Books ( maybe move that to the respective drop system? )
             // Get all the possible drops
@@ -338,25 +480,3 @@ namespace LORAP.Gameplay
         }
     }
 }
-
-
-
-// How to create Custom Reception
-/*  
-    StageClassInfo end = new StageClassInfo();
-    end.chapter = 7;
-    end.floorNum = 3;
-    end.stageName = "Test";
-    end._id = 123456;
-    end.invitationInfo.combine = StageCombineType.BookValue;
-    StageWaveInfo inf = new StageWaveInfo();
-    inf.availableNumber = 5;
-    inf.formationId = 2;
-    inf.formationType = EnemyFormationType.Default;
-    inf._enemyUnitIdList = new List<LorIdXml>() {new LorIdXml(null, 1), new LorIdXml(null, 2), new LorIdXml(null, 4)};
-    inf.enemyUnitIdList = new List<LorId>() { new LorId(1), new LorId(2), new LorId(4) };
-    end.waveList = new List<StageWaveInfo>() { inf };
-    Traverse.Create(StageClassInfoList.Instance).Field<List<StageClassInfo>>("_list").Value.Add(end);
-
-    AddReceptionToMap(123456, UIStoryLine.Chapter7, new Vector3(0, 7000, 0));
-*/

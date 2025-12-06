@@ -9,7 +9,7 @@ namespace LORAP.CustomUI
     {
         private static GameObject Panel;
 
-        private static GameObject LogPrefab = PrefabHelper.GetPrefab("archipelagolog", "Log");
+        private static GameObject LogPrefab = AssetBundleHelper.GetAsset("Log");
 
         internal static int LogCount { get; private set; }
 
@@ -17,11 +17,11 @@ namespace LORAP.CustomUI
 
         private static void Init()
         {
-            Panel = GameObject.Instantiate(PrefabHelper.GetPrefab("archipelagolog", "APActionsLog"));
+            Panel = GameObject.Instantiate(AssetBundleHelper.GetAsset("APActionsLog"));
 
             Panel.transform.Find("LogHolder").localPosition = new Vector3(-950, 0, 0);
 
-            LogPrefab.GetComponent<TextMeshProUGUI>().font = UIHelper.Font2;
+            //LogPrefab.GetComponent<TextMeshProUGUI>().font = UIHelper.Font2;
 
             SetLogAtBottom(true);
             Panel.SetActive(false);

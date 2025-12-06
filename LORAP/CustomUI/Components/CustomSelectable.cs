@@ -12,7 +12,7 @@ public class CustomSelectable : Selectable
 {
     public PointerEvent MouseClickEvent;
 
-    private TextMeshProUGUI input;
+    public TextMeshProUGUI text;
 
     protected override void OnDisable()
     {
@@ -23,18 +23,14 @@ public class CustomSelectable : Selectable
     {
         MouseClickEvent = new PointerEvent();
 
-        input = gameObject.GetComponentInChildren<TextMeshProUGUI>();
-        image = gameObject.transform.Find("[Image]buttonImage").gameObject.GetComponent<Image>();
-
         base.Awake();
     }
 
     public override void OnPointerEnter(PointerEventData eventData)
     {
-        if (base.interactable)
+        if (interactable)
         {
-            input.color = new Color(0.1333f, 1, 0.8941f, 1);
-            image.color = new Color(0.1333f, 1, 0.8941f, 1);
+            text.color = colors.highlightedColor;
 
             base.OnPointerEnter(eventData);
         }
@@ -42,10 +38,9 @@ public class CustomSelectable : Selectable
 
     public override void OnPointerExit(PointerEventData eventData)
     {
-        if (base.interactable)
+        if (interactable)
         {
-            input.color = new Color(0.9372f, 0.7607f, 0.5058f, 1);
-            image.color = new Color(0.9372f, 0.7607f, 0.5058f, 1);
+            text.color = colors.normalColor;
 
             base.OnPointerExit(eventData);
         }
@@ -53,7 +48,7 @@ public class CustomSelectable : Selectable
 
     public override void OnPointerDown(PointerEventData eventData)
     {
-        if (base.interactable)
+        if (interactable)
         {
             base.OnPointerDown(eventData);
         }
@@ -61,11 +56,13 @@ public class CustomSelectable : Selectable
 
     public override void OnPointerUp(PointerEventData eventData)
     {
-        if (base.interactable)
+        if (interactable)
         {
             MouseClickEvent.Invoke(eventData);
 
-            OnPointerExit(eventData);
+            OnDeselect(eventData);
+
+            //OnPointerExit(eventData);
 
             base.OnPointerUp(eventData);
         }

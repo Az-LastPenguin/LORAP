@@ -1,331 +1,102 @@
-﻿using HarmonyLib;
-using LOR_DiceSystem;
-using LORAP.Utils;
-using System;
-using System.Collections;
+﻿using LORAP.Utils;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using TMPro;
 using UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UI;
 
 namespace LORAP.CustomUI
 {
     internal static class MessagePopup
     {
         private static GameObject Panel;
+        internal static bool Active => Panel.activeSelf;
+
+        private static Animator Animator => Panel.GetComponent<Animator>();
+
+        private static GameObject ConfirmButton => Panel.transform.Find("Popup/Buttons/Layout/Confirm").gameObject;
+        private static GameObject SkipButton => Panel.transform.Find("Popup/Buttons/Layout/Skip").gameObject;
+
+        private static TextMeshProUGUI Text => Panel.transform.Find("Popup/PopupText").gameObject.GetComponent<TextMeshProUGUI>();
+        private static GameObject MessageNumber => Panel.transform.Find("Popup/TotalNumber").gameObject;
+        private static TextMeshProUGUI MessageNumberText => MessageNumber.GetComponent<TextMeshProUGUI>();
+
 
         private static List<string> messages = new List<string>();
 
-        private static int currentMessage = 0;
-
-        private static List<Tuple<LibraryFloorModel, int, bool>> pageMessages = new List<Tuple<LibraryFloorModel, int, bool>>();
-
-        private static void Init()
+        internal static void Init()
         {
-            Panel = GameObject.Instantiate(PrefabHelper.GetPrefab("messagepopup", "MessagePopup"));
-            Panel.transform.Find("Popup/Buttons/Layout/Confirm").gameObject.AddComponent<CustomSelectable>().MouseClickEvent.AddListener(ConfirmClick);
-            Panel.transform.Find("Popup/Buttons/Layout/Skip").gameObject.AddComponent<CustomSelectable>().MouseClickEvent.AddListener(SkipClick);
-            Panel.transform.Find("Popup/PopupText").gameObject.GetComponent<TextMeshProUGUI>().font = UIHelper.Font1;
+            Panel = GameObject.Instantiate(AssetBundleHelper.GetAsset("MessagePopup"));
 
-            Panel.GetComponent<CanvasGroup>().blocksRaycasts = true;
-            Panel.transform.Find("Background").gameObject.GetComponent<Image>().raycastTarget = true;
+            ConfirmButton.AddComponent<BasicButtonScript>().MouseClickEvent.AddListener(ConfirmClick);
+            SkipButton.AddComponent<BasicButtonScript>().MouseClickEvent.AddListener(SkipClick);
 
             Panel.SetActive(false);
         }
 
         internal static void ShowMessage(string message)
         {
-            if (Panel == null)
-                Init();
-
             messages.Add(message);
 
-            if (!Panel.activeSelf)
-            {
-                Open();
+            // If there is a battle currently or it's about to start, we delay this message.
+            if (StageController.Instance.battleState != StageController.BattleState.None)
+                return;
 
-                SetText(messages[currentMessage]);
-            }
+            Open();
+        } 
 
-            SetMessageNumber(messages.Count - (currentMessage + 1));
-        }
-
-        internal static void ShowPages(LibraryFloorModel floor, int level, bool ego = false)
+        internal static void Open()
         {
-            if (Panel == null)
-                Init();
+            UpdatePanel();
 
-            pageMessages.Add(new Tuple<LibraryFloorModel, int, bool>(floor, level, ego));
-
-            if (!Panel.activeSelf && !UIGetAbnormalityPanel.instance.IsOpened())
-            {
-                PagesPopup();
-            }
-        }
-
-        private static void PagesPopup()
-        {
-            var cur = pageMessages.First();
-            pageMessages.RemoveAt(0);
-
-            var floor = cur.Item1;
-            var lv = cur.Item2;
-            var ego = cur.Item3;
-
-            if (UI.UIController.Instance.CurrentUIPhase == UIPhase.Sephirah && floor.Sephirah != SephirahType.None && LibraryModel.Instance.IsOpenedSephirah(floor.Sephirah))
-            {
-                GameSceneManager.Instance.ActivateUIController();
-                UI.UIController.Instance.SetCurrentSephirah(floor.Sephirah);
-                UI.UIController.Instance.CallUIPhase(UIPhase.Sephirah);
-            }
-
-            UIGetAbnormalityPanel panel = UIGetAbnormalityPanel.instance;
-
-            var currentFloor = panel.currentFloor;
-            currentFloor = floor;
-            panel.ob_blackbgForKeterCompleterOpen.gameObject.SetActive(LibraryModel.Instance.IsKeterCompleteOpen(floor));
-
-            var currentSettinfCardCount = panel.currentSettinfCardCount;
-
-            currentSettinfCardCount = -1;
-            panel.Open();
-
-            var sep = panel.sep;
-            sep = floor.Sephirah;
-
-            panel.img_floorIcon.sprite = UISpriteDataManager.instance._floorIconSet[(int)sep].icon;
-
-            List<EmotionCardXmlInfo> dataListByLevel = Singleton<EmotionCardXmlList>.Instance.GetDataListByLevel(floor.Sephirah, lv+1);
-            currentSettinfCardCount = dataListByLevel.Count;
-
-            string id = "";
-            switch (sep)
-            {
-                case SephirahType.None:
-                    id = "";
-                    break;
-                case SephirahType.Malkuth:
-                    id = "ui_malkuthfloor";
-                    break;
-                case SephirahType.Yesod:
-                    id = "ui_yesodfloor";
-                    break;
-                case SephirahType.Hod:
-                    id = "ui_hodfloor";
-                    break;
-                case SephirahType.Netzach:
-                    id = "ui_netzachfloor";
-                    break;
-                case SephirahType.Tiphereth:
-                    id = "ui_tipherethfloor";
-                    break;
-                case SephirahType.Chesed:
-                    id = "ui_chesedfloor";
-                    break;
-                case SephirahType.Gebura:
-                    id = "ui_geburafloor";
-                    break;
-                case SephirahType.Hokma:
-                    id = "ui_hokmafloor";
-                    break;
-                case SephirahType.Binah:
-                    id = "ui_binahfloor";
-                    break;
-                case SephirahType.Keter:
-                    id = "ui_keterfloor";
-                    break;
-            }
-
-            panel.txt_floorname.text = TextDataModel.GetText(id);
-
-            string text = "I";
-            switch (lv)
-            {
-                case 1:
-                    text = "I";
-                    break;
-                case 2:
-                    text = "II";
-                    break;
-                case 3:
-                    text = "III";
-                    break;
-                case 4:
-                    text = "IV";
-                    break;
-                case 5:
-                    text = "V";
-                    break;
-                case 6:
-                    text = "VI";
-                    break;
-                case 7:
-                    text = "VII";
-                    break;
-                case 8:
-                    text = "VIII";
-                    break;
-                case 9:
-                    text = "IX";
-                    break;
-                case 10:
-                    text = "X";
-                    break;
-            }
-
-            panel.txt_level.text = text;
-
-            panel.SetColor(UIColorManager.Manager.GetSephirahColor(sep));
-
-            if (sep == SephirahType.Binah)
-                panel.SetColor(UIColorManager.Manager.GetSephirahGlowColor(sep));
-
-            if (!ego && dataListByLevel.Count > 0)
-            {
-                panel.AbnormalitiesRoot.SetActive(value: true);
-                panel.EgoCardsRoot.SetActive(value: false);
-
-                panel.txt_getabcardtxt.gameObject.SetActive(value: true);
-                panel.txt_getegocardtxt.gameObject.SetActive(value: false);
-
-                panel.selectablePanel.ChildSelectable = panel.abpanelSelectable;
-
-                var AbnormalityList = panel.AbnormalityList;
-
-                for (int i = 0; i < dataListByLevel.Count; i++)
-                {
-                    if (i > AbnormalityList.Count)
-                    {
-                        break;
-                    }
-                    AbnormalityList[i].Init(dataListByLevel[i]);
-                }
-
-                foreach (UIEmotionPassiveCardInven abnormality in AbnormalityList)
-                {
-                    abnormality.SetActiveDetail(on: true);
-                }
-
-                panel.isShowEgo = false;
-            }
-            else if (ego && Singleton<EmotionEgoXmlList>.Instance.GetEgoCardList(currentFloor.Sephirah).Count > 0)
-            {
-                panel.AbnormalitiesRoot.SetActive(value: false);
-                panel.EgoCardsRoot.SetActive(value: true);
-
-                panel.txt_getabcardtxt.gameObject.SetActive(value: false);
-                panel.txt_getegocardtxt.gameObject.SetActive(value: true);
-
-                panel.selectablePanel.ChildSelectable = panel.egopanelSelectable;
-
-                List<DiceCardXmlInfo> list = new List<DiceCardXmlInfo> { Singleton<EmotionEgoXmlList>.Instance.GetEgoCardList(floor.Sephirah)[lv - 1] };
-                List<DiceCardItemModel> list2 = new List<DiceCardItemModel>();
-                for (int i = 0; i < list.Count; i++)
-                {
-                    list2.Add(new DiceCardItemModel(list[i]));
-                }
-
-                panel.egoCardList.SetEgoCards(list2);
-
-                panel.isShowEgo = true;
-            }
-
-            panel.SetDefault();
-
-            panel.anim.SetTrigger("Reveal");
-        }
-
-        internal static void PagesClose()
-        {
-            UIGetAbnormalityPanel panel = UIGetAbnormalityPanel.instance;
-
-            panel.SetDefault();
-
-            panel.Close();
-
-            if (pageMessages.Count > 0)
-                PagesPopup();
-        }
-
-        private static void Open()
-        {
-            if (Panel == null)
-                Init();
+            if (Panel.activeSelf)
+                return;
 
             Panel.SetActive(true);
 
             UISoundManager.instance.PlayEffectSound(UISoundType.Gacha_Hexagon);
-            Timing.Coroutine(RevealAnim());
+
+            Animator.SetTrigger("PopupRevealAnim");
+
+            NextMessage();
         }
 
         private static void Close()
         {
-            if (Panel == null)
-                Init();
-
             Panel.SetActive(false);
         }
 
-        private static IEnumerator RevealAnim()
+        private static void NextMessage()
         {
-            var canvasGroup = Panel.GetComponent<CanvasGroup>();
-            var time = Time.time;
-
-            while (true)
+            if (messages.Count <= 0)
             {
-                float cur = Mathf.Min(Mathf.Lerp(0f, 1f, (Time.time - time) / 0.25f), 1f);
-
-                canvasGroup.alpha = cur;
-
-                if (canvasGroup.alpha >= 1f) break;
-
-                yield return new WaitForEndOfFrame();
-            }
-        }
-
-        private static void SetText(string text)
-        {
-            Panel.transform.Find("Popup/PopupText").gameObject.GetComponent<TextMeshProUGUI>().text = text;
-        }
-
-        private static void SetMessageNumber(int number)
-        {
-            if (number <= 0)
-            {
-                Panel.transform.Find("Popup/TotalNumber").gameObject.SetActive(false);
-                Panel.transform.Find("Popup/Buttons/Layout/Skip").gameObject.SetActive(false);
-
+                Close();
                 return;
             }
 
-            Panel.transform.Find("Popup/Buttons/Layout/Skip").gameObject.SetActive(true);
-            Panel.transform.Find("Popup/TotalNumber").gameObject.SetActive(true);
-            Panel.transform.Find("Popup/TotalNumber").gameObject.GetComponent<TextMeshProUGUI>().text = $"{number} More Messages";
+            string Message = messages.First();
+            messages.RemoveAt(0);
+
+            Text.text = Message;
+
+            UpdatePanel();
+        }
+
+        private static void UpdatePanel()
+        {
+            // If there are any messages left, show how much and an option to skip
+            SkipButton.SetActive(messages.Count > 0);
+            MessageNumber.SetActive(messages.Count > 0);
+            if (messages.Count > 0)
+                MessageNumberText.text = $"{messages.Count} more messages!";
         }
 
         private static void ConfirmClick(PointerEventData eventData)
         {
             UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Click);
-            if (currentMessage + 1 >= messages.Count)
-            {
-                messages.Clear();
-                currentMessage = 0;
-                Close();
 
-                if (pageMessages.Count > 0 && !UIGetAbnormalityPanel.instance.IsOpened())
-                    PagesPopup();
-
-                return;
-            }
-
-            currentMessage++;
-
-            SetText(messages[currentMessage]);
-            SetMessageNumber(messages.Count - (currentMessage + 1));
+            NextMessage();
         }
 
         private static void SkipClick(PointerEventData eventData)
@@ -333,11 +104,8 @@ namespace LORAP.CustomUI
             UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Click);
 
             messages.Clear();
-            currentMessage = 0;
-            Close();
 
-            if (pageMessages.Count > 0 && !UIGetAbnormalityPanel.instance.IsOpened())
-                PagesPopup();
+            Close();
         }
     }
 }

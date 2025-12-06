@@ -8,18 +8,30 @@ using UnityEngine;
 using System.Reflection.Emit;
 using System.Linq;
 using System.Diagnostics;
+using UnityEngine.UI;
 
 namespace LORAP.Utils
 {
-    // Class to help accessing some UI elements/assets of the game to use in custom UI
-    internal static class UIHelper
+    // Class to help work with UI
+    internal static class UIUtils
     {
-        internal static TMP_FontAsset Font1 => UIAlarmPopup.instance.transform.Find("[Rect]Normal/[Text]AlarmText").gameObject.GetComponent<TextMeshProUGUI>().font;
+        internal static ColorBlock BasicButtonColors = new ColorBlock()
+        {
+            normalColor = new Color(0.9372f, 0.7607f, 0.5058f, 1f),
+            highlightedColor = new Color(0.1333f, 1f, 0.8941f, 1f),
+            pressedColor = new Color(0.1069f, 0.802f, 0.7170f, 1f),
+            colorMultiplier = 1f,
+            fadeDuration = 0f,
+        };
 
-        internal static TMP_FontAsset Font2 => UIControlManager.Instance.GetTitlePanel().sliderPanel.txt_leveltxt.font;
+        internal static Sprite FillerSprite = AssetBundleHelper.GetAsset<Sprite>("fillersprite");
+        internal static Sprite UsefulSprite = AssetBundleHelper.GetAsset<Sprite>("usefulsprite");
+        internal static Sprite ProgSprite = AssetBundleHelper.GetAsset<Sprite>("progsprite");
 
-        internal static TMP_FontAsset Font3 => UIPopupWindowManager.Instance.popupPanels[(int)UIPopupType.Option].transform.Find("[Text]Title_TextMesh").gameObject.GetComponent<TextMeshProUGUI>().font;
-        internal static Material Font3Material => UIPopupWindowManager.Instance.popupPanels[(int)UIPopupType.Option].transform.Find("[Text]Title_TextMesh").gameObject.GetComponent<TextMeshProUGUI>().fontMaterial;
+        internal static void Setup()
+        {
+
+        }
     }
 
     // Custom class made to access Coroutines without needing to create a new GameObject or search for one
@@ -50,133 +62,4 @@ namespace LORAP.Utils
             return instance.StartCoroutine(Coroutine());
         }
     }
-
-
-    // Custom class made by me to make Transpilers creation easier
-    // Basically a bunch of macros
-    /*internal class CIWriter
-    {
-        public List<CodeInstruction> Instructions { get; private set; }
-        public ILGenerator Generator { get; private set; }
-        public int Pointer { get; private set; }
-        public CodeInstruction Current => Instructions[Pointer] ?? null;
-        public List<Label> Labels => Current.labels;
-        public int Length => Instructions.Count;
-
-        public CIWriter(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
-        {
-            Instructions = instructions.ToList();
-            Generator = generator;
-            Pointer = 0;
-        }
-
-        public bool Next()
-        {
-            if (Pointer + 1 > Length)
-                return false;
-
-            Pointer++;
-
-            return true;
-        }
-
-        public bool Prev()
-        {
-            if (Pointer - 1 < 0)
-                return false;
-
-            Pointer--;
-
-            return true;
-        }
-
-        public bool ToPattern(params OpCode[] opCodes)
-        {
-            List<OpCode> codes = opCodes.ToList();
-
-            for (int i = 0; i < Length; i++)
-            {
-                for (int j = 0; j < codes.Count; j++)
-                {
-                    if (Instructions[i + j].opcode != codes[j])
-                        goto next;
-                }
-
-                Pointer = i;
-                return true;
-
-                next:
-                continue;
-            }
-
-            return false; 
-        }
-
-        public bool To(int Pos)
-        {
-            if (Pos < 0 || Pos > Length)
-                return false;
-
-            Pointer = Pos;
-
-            return true;
-        }
-
-        public CodeInstruction At(int Pos)
-        {
-            if (Pos < 0 || Pos >= Length)
-                return null;
-
-            return Instructions[Pos];
-        }
-
-        // Made specifically to repalce instrcution and retain it's labels, to not waste time copying them and placing onto new instruction. Laziness is my middlename
-        public void Nop()
-        {
-            Instructions[Pointer].opcode = OpCodes.Nop;
-            Instructions[Pointer].operand = null;
-            Next();
-        }
-
-        public void Remove(int Amount = 1)
-        {
-            Instructions.RemoveRange(Pointer, Amount);
-        }
-
-        public void Add(CodeInstruction instruction)
-        {
-            Instructions.Insert(Pointer, instruction);
-            Next();
-        }
-
-        public void Insert(CodeInstruction instruction)
-        {
-            Instructions.Insert(Pointer, instruction);
-        }
-
-        public void AddLabel(Label label)
-        {
-            Current.WithLabels(label);
-        }
-
-        public Label AddLabel()
-        {
-            Label label = Generator.DefineLabel();
-            Current.WithLabels(label);
-            return label;
-        }
-
-        public Label NewLabel()
-        {
-            return Generator.DefineLabel();
-        }
-
-        public void Dump()
-        {
-            UnityEngine.Debug.Log("------------------------------");
-            UnityEngine.Debug.Log($"Dump of Transpiler patch '{new StackFrame(1, true).GetMethod().Name}':\n");
-            Instructions.ForEach(i => UnityEngine.Debug.Log($"{i.ToString()}"));
-            UnityEngine.Debug.Log("\n------------------------------");
-        }
-    }*/
 }
