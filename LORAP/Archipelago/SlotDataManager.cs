@@ -1,10 +1,8 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using LORAP.Gameplay;
 using Newtonsoft.Json.Linq;
-using UnityEngine;
 
 namespace LORAP.Archipelago
 {
@@ -19,7 +17,7 @@ namespace LORAP.Archipelago
     internal enum AbnoPageShuffle
     {
         None,
-        InFloorShufflee,
+        InFloorShuffle,
         Shuffle
     }
 
@@ -28,7 +26,7 @@ namespace LORAP.Archipelago
         None,
         VanillaLike,
         Guarantee,
-        Random
+        Randomized
     }
 
     internal enum EgoPageShuffle
@@ -59,6 +57,18 @@ namespace LORAP.Archipelago
         Books,
     }
 
+    internal enum FillerItems
+    {
+        BookOfEverything,
+        BoosterPacks,
+    }
+
+    internal enum DeckProgression
+    {
+        ProgressBased,
+        CompletelyRandom,
+    }
+
     internal static class SlotDataManager
     {
         internal static int Seed;
@@ -72,6 +82,8 @@ namespace LORAP.Archipelago
         internal static AbnoPageRandomization AbnoPageRandomization;
 
         internal static bool ExodiaGuarantee;
+
+        internal static bool PreserveSets;
 
         internal static EgoPageShuffle EgoPageShuffle;
 
@@ -89,15 +101,21 @@ namespace LORAP.Archipelago
 
         internal static bool RandomizeBlackSilencePage;
 
+        internal static FillerItems FillerItems;
+
+        internal static DeckProgression DeckProgression;
+
         internal static int FirstReception;
 
         internal static int LastReception;
 
         internal static Dictionary<int, List<int>> ReceptionBookRequirements;
 
+        internal static ReceptionTree ReceptionTree;
+
         internal static Dictionary<SephirahType, List<List<int>>> AbnoBookRequirements;
 
-        internal static ReceptionTree ReceptionTree;
+        internal static Dictionary<SephirahType, List<int>> AbnoFightOrder;
 
         internal static void Parse(Dictionary<string, object> slotData)
         {
@@ -112,6 +130,8 @@ namespace LORAP.Archipelago
             AbnoPageRandomization = (AbnoPageRandomization)(long)slotData["abno_page_randomization"];
 
             ExodiaGuarantee = (long)slotData["exodia_guaratnee"] == 1;
+
+            PreserveSets = (long)slotData["preserve_sets"] == 1;
 
             EgoPageShuffle = (EgoPageShuffle)(long)slotData["ego_page_shuffle"];
 
@@ -129,6 +149,12 @@ namespace LORAP.Archipelago
 
             RandomizeBlackSilencePage = (long)slotData["randomize_black_silence_page"] == 1;
 
+            FillerItems = (FillerItems)(long)slotData["filler_items"];
+
+            DeckProgression = (DeckProgression)(long)slotData["deck_progression"];
+
+
+
             ReceptionBookRequirements = new Dictionary<int, List<int>>();
             foreach (var o in (JObject)slotData["reception_book_requirements"])
             {
@@ -142,8 +168,13 @@ namespace LORAP.Archipelago
                 AbnoBookRequirements[(SephirahType)(i + 1)] = abnoBooks[i].Select(j => j.Select(k => (int)k.Value<long>()).ToList()).ToList();
             }
 
+            AbnoFightOrder = new Dictionary<SephirahType, List<int>>();
+            var abnoOrder = (JArray)slotData["abno_fight_order"];
+            for (int i = 0; i < 10; i++)
+            {
+                AbnoFightOrder[(SephirahType)(i + 1)] = abnoOrder[i].Select(j => (int)j.Value<long>()).ToList();
+            }
 
-            // Abno order here TODO
 
 
             ReceptionTree = new ReceptionTree();

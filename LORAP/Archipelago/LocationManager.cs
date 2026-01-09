@@ -127,7 +127,7 @@ namespace LORAP.Archipelago
             });
         }
 
-        internal static void CompleteLocation(long id)
+        internal static void CompleteLocation(long id) // TODO: Make a queue so that if connection to the server is unstable, the checks aren't lost
         {
             SessionManager.Locations.CompleteLocationChecks(id);
         }

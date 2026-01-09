@@ -1,5 +1,6 @@
 ﻿using LORAP.Archipelago;
 using LORAP.CustomUI;
+using LORAP.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -214,6 +215,60 @@ namespace LORAP.Gameplay
             }
 
 
+            // Setup randomized Abno/EGO pages
+            Random = new System.Random(SlotDataManager.Seed); // Reset random
+            // Randomize Abno Pages' floors
+            // Pool of pages that contains only floors' abno pages
+            List<EmotionCardXmlInfo> abnoPagePool = AbnoPageInitialList.Where(x => x.Sephirah != SephirahType.None && x.Sephirah != SephirahType.ETC).ToList();
+
+            // If it's none, we skip this step TODO: Preserve sets
+            List<EmotionCardXmlInfo> abnoPages = new List<EmotionCardXmlInfo>();
+            if (SlotDataManager.AbnoPageShuffle == AbnoPageShuffle.InFloorShuffle)
+            {
+                foreach (SephirahType seph in Enum.GetValues(typeof(SephirahType)))
+                {
+                    List<EmotionCardXmlInfo> pages = abnoPagePool.Where(p => p.Sephirah == seph).ToList();
+                    
+                    for (int i = 0; i < 5; i++)
+                    {
+                        for (int j = 0; j < 3; j++)
+                        {
+                            EmotionCardXmlInfo card = pages.PopRandom(Random);
+
+                            card.Level = i;
+                            abnoPages.Add(card);
+                        }
+                    }
+                }
+            }
+            else if (SlotDataManager.AbnoPageShuffle == AbnoPageShuffle.Shuffle)
+            {
+                foreach (SephirahType seph in Enum.GetValues(typeof(SephirahType)))
+                {
+                    for (int i = 0; i < 5; i++)
+                    {
+                        for (int j = 0; j < 3; j++)
+                        {
+                            EmotionCardXmlInfo card = abnoPagePool.PopRandom(Random);
+
+                            card.Level = i;
+                            card.Sephirah = seph;
+                            abnoPages.Add(card);
+                        }
+                    }
+                }
+            }
+
+            // Randomize Abno Pages' emotion state, level and rate, skip if set to none
+            if (SlotDataManager.AbnoPageRandomization != AbnoPageRandomization.None)
+            {
+
+            }
+
+
+
+            EmotionCardXmlList.Instance._list = abnoPages;
+
 
             /*
 
@@ -309,6 +364,10 @@ namespace LORAP.Gameplay
         {
             Debug.Log("[LORAP] Custom Content Init!");
 
+            // backup vanilla Abno/EGO page list to modify later on
+            AbnoPageInitialList = EmotionCardXmlList.Instance._list.ToList();
+            EGOPageInitialList = EmotionEgoXmlList.Instance._list.ToList();
+
             // Init some custom UI
             APConnectWindow.Init();
             MessagePopup.Init();
@@ -401,12 +460,12 @@ namespace LORAP.Gameplay
             PlaceReceptionOnMap(100019, UIStoryLine.Bayyard, new Vector3(900, 5550, 0));  // Bayard
 
 
-            // Backup vanilla map icons (we restore them if reception tree is not randomized)
             foreach (var icon in MapPanel.iconList)
             {
                 icon.SetActiveStory(false);
             }
 
+            // Backup vanilla map icons (we restore them if reception tree is not randomized)
             VanillaIconsBackup = MapPanel.iconList;
             MapPanel.iconList = new List<UIStoryProgressIconSlot>();
 

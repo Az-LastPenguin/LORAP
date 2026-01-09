@@ -1,13 +1,8 @@
 ﻿using System;
 using System.Collections;
-using HarmonyLib;
 using System.Collections.Generic;
-using TMPro;
-using UI;
-using UnityEngine;
-using System.Reflection.Emit;
 using System.Linq;
-using System.Diagnostics;
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace LORAP.Utils
@@ -60,6 +55,17 @@ namespace LORAP.Utils
             };
 
             return instance.StartCoroutine(Coroutine());
+        }
+    }
+
+    internal static class ListExtensions
+    {
+        internal static T PopRandom<T>(this List<T> list, System.Random random)
+        {
+            int rng = random.Next(list.Count);
+            T element = list.ElementAt(rng);
+            list.RemoveAt(rng);
+            return element;
         }
     }
 }
