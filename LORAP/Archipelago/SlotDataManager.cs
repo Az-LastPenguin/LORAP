@@ -17,8 +17,9 @@ namespace LORAP.Archipelago
     internal enum AbnoPageShuffle
     {
         None,
-        InFloorShuffle,
-        Shuffle
+        InFloor,
+        Sets,
+        Pages,
     }
 
     internal enum AbnoPageRandomization
@@ -83,8 +84,6 @@ namespace LORAP.Archipelago
 
         internal static bool ExodiaGuarantee;
 
-        internal static bool PreserveSets;
-
         internal static EgoPageShuffle EgoPageShuffle;
 
         internal static bool RandomizeReceptionTree;
@@ -130,8 +129,6 @@ namespace LORAP.Archipelago
             AbnoPageRandomization = (AbnoPageRandomization)(long)slotData["abno_page_randomization"];
 
             ExodiaGuarantee = (long)slotData["exodia_guaratnee"] == 1;
-
-            PreserveSets = (long)slotData["preserve_sets"] == 1;
 
             EgoPageShuffle = (EgoPageShuffle)(long)slotData["ego_page_shuffle"];
 

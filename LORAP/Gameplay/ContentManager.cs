@@ -4,6 +4,7 @@ using LORAP.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using TMPro;
 using UI;
 using UnityEngine;
@@ -106,168 +107,14 @@ namespace LORAP.Gameplay
             return icon;
         }
 
+
         internal static void SetupRunContent()
         {
-            var Random = new System.Random(SlotDataManager.Seed);
+            RandomizeReceptionTree();
 
-            // Setup Reception Tree
-            UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
-            if (SlotDataManager.RandomizeReceptionTree && (SlotDataManager.ReceptionsProgression == ReceptionsProgression.Progressive || SlotDataManager.ReceptionsProgression == ReceptionsProgression.ProgressiveBooks))
-            {
-                Dictionary<int, List<int>> Depths = SlotDataManager.ReceptionTree.NodesOfDepth;
+            ShuffleAbnoPages();
 
-                Dictionary<string, UIStoryLine> storylines = Enum.GetValues(typeof(UIStoryLine)).Cast<UIStoryLine>().ToDictionary(e => e.ToString(), e => e);
-
-                Dictionary<int, UIStoryProgressIconSlot> icons = new Dictionary<int, UIStoryProgressIconSlot>();
-                foreach (var pair in Depths)
-                {
-                    int cur_depth = pair.Key;
-                    int nodes_num = pair.Value.Count;
-                    int cur_node = 1;
-                    foreach (int id in pair.Value)
-                    {
-                        StageClassInfo info = StageClassInfoList.Instance.GetData(id);
-                        UIStoryLine storyline = storylines.Where(p => p.Key == info.storyType).First().Value;
-
-                        icons[id] = PlaceReceptionOnMap(id, storyline, new Vector3(-(240 * (nodes_num - 1)) / 2 + (240 * (cur_node - 1)), -220 + cur_depth * 220, 0));
-
-                        // Add recipes
-                        info.invitationInfo.needsBooks = SlotDataManager.ReceptionBookRequirements[id].Select(b => new LorId(b)).ToList();
-
-                        cur_node++;
-                    }
-                }
-
-                foreach (var pair in icons)
-                {
-                    int id = pair.Key;
-                    UIStoryProgressIconSlot icon = pair.Value;
-                    icon.connectLineList.Clear();
-                    // Create Paths
-                    foreach (int next in SlotDataManager.ReceptionTree.GetNode(id).next)
-                    {
-                        UIStoryProgressIconSlot nextIcon = icons[next];
-                        var line = UnityEngine.Object.Instantiate(LineTemplate, icon.transform.Find("[Rect]Lines"));
-                        line.transform.localPosition = (nextIcon.transform.localPosition - icon.transform.localPosition)/2;
-                        line.transform.right = (nextIcon.transform.localPosition - icon.transform.localPosition).normalized;
-                        line.transform.localScale = new Vector3((nextIcon.transform.localPosition - icon.transform.localPosition).magnitude / 220, 1,1);
-                        line.SetActive(true);
-
-                        icon.connectLineList.Add(line);
-                    }
-                }
-
-                // TODO Place endgoals after Oliver
-            }
-            else if (SlotDataManager.ReceptionsProgression == ReceptionsProgression.Unlocked || SlotDataManager.ReceptionsProgression == ReceptionsProgression.Books)
-            {
-                // Place receptions randomly on the map
-                // To do this we select same amount of points as there are receptions and randomly place them on the map,
-                // also move them far enough from eachother
-                int TotalReceptions = SlotDataManager.ReceptionTree.Nodes.Count;
-                List<Vector2> points = new List<Vector2>();
-
-                for (int i = 0; i < TotalReceptions; i++)
-                {
-                    points.Add(new Vector2(Random.Next(-1000, 1000), Random.Next(-220, 3000)));
-                }
-
-                for (int k = 0; k < 10; k++)
-                {
-                    for (int i = 0; i < TotalReceptions; i++)
-                    {
-                        // Check every point that it's more than 220 units further than any other point
-                        for (int j = 0; j < TotalReceptions; j++)
-                        {
-                            if (i == j) continue;
-                            var point = points[i];
-                            var point2 = points[j];
-
-                            if ((point2 - point).magnitude < 220f)
-                            {
-                                float coef = 1f - (point2 - point).magnitude / 219f;
-                                Vector2 dir = point2 - point;
-                                point2 += dir * coef/2;
-                                point -= dir * coef/2;
-
-                                points[i] = point;
-                                points[j] = point2;
-                            }
-                        }
-                    }
-                }
-
-                Dictionary<string, UIStoryLine> storylines = Enum.GetValues(typeof(UIStoryLine)).Cast<UIStoryLine>().ToDictionary(e => e.ToString(), e => e);
-                for (int i = 0; i < TotalReceptions; i++)
-                {
-                    ReceptionNode node = SlotDataManager.ReceptionTree.Nodes[i];
-                    Vector2 vector = points[i];
-
-                    StageClassInfo info = StageClassInfoList.Instance.GetData(node.id);
-                    UIStoryLine storyline = storylines.Where(p => p.Key == info.storyType).First().Value;
-
-                    PlaceReceptionOnMap(node.id, storyline, new Vector3(vector.x, vector.y, 0));
-                }
-            }
-            else
-            {
-                MapPanel.iconList = VanillaIconsBackup;
-            }
-
-
-            // Setup randomized Abno/EGO pages
-            Random = new System.Random(SlotDataManager.Seed); // Reset random
-            // Randomize Abno Pages' floors
-            // Pool of pages that contains only floors' abno pages
-            List<EmotionCardXmlInfo> abnoPagePool = AbnoPageInitialList.Where(x => x.Sephirah != SephirahType.None && x.Sephirah != SephirahType.ETC).ToList();
-
-            // If it's none, we skip this step TODO: Preserve sets
-            List<EmotionCardXmlInfo> abnoPages = new List<EmotionCardXmlInfo>();
-            if (SlotDataManager.AbnoPageShuffle == AbnoPageShuffle.InFloorShuffle)
-            {
-                foreach (SephirahType seph in Enum.GetValues(typeof(SephirahType)))
-                {
-                    List<EmotionCardXmlInfo> pages = abnoPagePool.Where(p => p.Sephirah == seph).ToList();
-                    
-                    for (int i = 0; i < 5; i++)
-                    {
-                        for (int j = 0; j < 3; j++)
-                        {
-                            EmotionCardXmlInfo card = pages.PopRandom(Random);
-
-                            card.Level = i;
-                            abnoPages.Add(card);
-                        }
-                    }
-                }
-            }
-            else if (SlotDataManager.AbnoPageShuffle == AbnoPageShuffle.Shuffle)
-            {
-                foreach (SephirahType seph in Enum.GetValues(typeof(SephirahType)))
-                {
-                    for (int i = 0; i < 5; i++)
-                    {
-                        for (int j = 0; j < 3; j++)
-                        {
-                            EmotionCardXmlInfo card = abnoPagePool.PopRandom(Random);
-
-                            card.Level = i;
-                            card.Sephirah = seph;
-                            abnoPages.Add(card);
-                        }
-                    }
-                }
-            }
-
-            // Randomize Abno Pages' emotion state, level and rate, skip if set to none
-            if (SlotDataManager.AbnoPageRandomization != AbnoPageRandomization.None)
-            {
-
-            }
-
-
-
-            EmotionCardXmlList.Instance._list = abnoPages;
+            RandomizeAbnoPages();
 
 
             /*
@@ -360,11 +207,293 @@ namespace LORAP.Gameplay
             */
         }
     
+        private static void RandomizeReceptionTree()
+        {
+            var Random = new System.Random(SlotDataManager.Seed);
+
+            // Setup Reception Tree
+            UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
+            if (SlotDataManager.RandomizeReceptionTree && (SlotDataManager.ReceptionsProgression == ReceptionsProgression.Progressive || SlotDataManager.ReceptionsProgression == ReceptionsProgression.ProgressiveBooks))
+            {
+                Dictionary<int, List<int>> Depths = SlotDataManager.ReceptionTree.NodesOfDepth;
+
+                Dictionary<string, UIStoryLine> storylines = Enum.GetValues(typeof(UIStoryLine)).Cast<UIStoryLine>().ToDictionary(e => e.ToString(), e => e);
+
+                Dictionary<int, UIStoryProgressIconSlot> icons = new Dictionary<int, UIStoryProgressIconSlot>();
+                foreach (var pair in Depths)
+                {
+                    int cur_depth = pair.Key;
+                    int nodes_num = pair.Value.Count;
+                    int cur_node = 1;
+                    foreach (int id in pair.Value)
+                    {
+                        StageClassInfo info = StageClassInfoList.Instance.GetData(id);
+                        UIStoryLine storyline = storylines.Where(p => p.Key == info.storyType).First().Value;
+
+                        icons[id] = PlaceReceptionOnMap(id, storyline, new Vector3(-(240 * (nodes_num - 1)) / 2 + (240 * (cur_node - 1)), -220 + cur_depth * 220, 0));
+
+                        // Add recipes
+                        info.invitationInfo.needsBooks = SlotDataManager.ReceptionBookRequirements[id].Select(b => new LorId(b)).ToList();
+
+                        cur_node++;
+                    }
+                }
+
+                foreach (var pair in icons)
+                {
+                    int id = pair.Key;
+                    UIStoryProgressIconSlot icon = pair.Value;
+                    icon.connectLineList.Clear();
+                    // Create Paths
+                    foreach (int next in SlotDataManager.ReceptionTree.GetNode(id).next)
+                    {
+                        UIStoryProgressIconSlot nextIcon = icons[next];
+                        var line = UnityEngine.Object.Instantiate(LineTemplate, icon.transform.Find("[Rect]Lines"));
+                        line.transform.localPosition = (nextIcon.transform.localPosition - icon.transform.localPosition) / 2;
+                        line.transform.right = (nextIcon.transform.localPosition - icon.transform.localPosition).normalized;
+                        line.transform.localScale = new Vector3((nextIcon.transform.localPosition - icon.transform.localPosition).magnitude / 220, 1, 1);
+                        line.SetActive(true);
+
+                        icon.connectLineList.Add(line);
+                    }
+                }
+
+                // TODO Place endgoals after Oliver
+            }
+            else if (SlotDataManager.ReceptionsProgression == ReceptionsProgression.Unlocked || SlotDataManager.ReceptionsProgression == ReceptionsProgression.Books)
+            {
+                // Place receptions randomly on the map
+                // To do this we select same amount of points as there are receptions and randomly place them on the map,
+                // also move them far enough from eachother
+                int TotalReceptions = SlotDataManager.ReceptionTree.Nodes.Count;
+                List<Vector2> points = new List<Vector2>();
+
+                for (int i = 0; i < TotalReceptions; i++)
+                {
+                    points.Add(new Vector2(Random.Next(-1000, 1000), Random.Next(-220, 3000)));
+                }
+
+                for (int k = 0; k < 10; k++)
+                {
+                    for (int i = 0; i < TotalReceptions; i++)
+                    {
+                        // Check every point that it's more than 220 units further than any other point
+                        for (int j = 0; j < TotalReceptions; j++)
+                        {
+                            if (i == j) continue;
+                            var point = points[i];
+                            var point2 = points[j];
+
+                            if ((point2 - point).magnitude < 220f)
+                            {
+                                float coef = 1f - (point2 - point).magnitude / 219f;
+                                Vector2 dir = point2 - point;
+                                point2 += dir * coef / 2;
+                                point -= dir * coef / 2;
+
+                                points[i] = point;
+                                points[j] = point2;
+                            }
+                        }
+                    }
+                }
+
+                Dictionary<string, UIStoryLine> storylines = Enum.GetValues(typeof(UIStoryLine)).Cast<UIStoryLine>().ToDictionary(e => e.ToString(), e => e);
+                for (int i = 0; i < TotalReceptions; i++)
+                {
+                    ReceptionNode node = SlotDataManager.ReceptionTree.Nodes[i];
+                    Vector2 vector = points[i];
+
+                    StageClassInfo info = StageClassInfoList.Instance.GetData(node.id);
+                    UIStoryLine storyline = storylines.Where(p => p.Key == info.storyType).First().Value;
+
+                    PlaceReceptionOnMap(node.id, storyline, new Vector3(vector.x, vector.y, 0));
+                }
+            }
+            else // Vanilla tree
+            {
+                MapPanel.iconList = VanillaIconsBackup;
+            }
+        }
+
+        private static void ShuffleAbnoPages()
+        {
+            // If we don't wanna shuffle pages, just ensure that list is same as vanilla
+            if (SlotDataManager.AbnoPageShuffle == AbnoPageShuffle.None)
+            {
+                EmotionCardXmlList.Instance._list = AbnoPageInitialList;
+
+                return;
+            }
+
+
+            // Randomize Abno Pages' floors
+            var Random = new System.Random(SlotDataManager.Seed);
+
+            // List of ACTUALLY IMPORTANT SEPHIRAHS BECAUSE THE IT'S THE BEST WAY TO DO IT
+            List<SephirahType> sephirahs = new List<SephirahType>()
+            {
+                SephirahType.Malkuth,
+                SephirahType.Yesod,
+                SephirahType.Hod,
+                SephirahType.Netzach,
+                SephirahType.Tiphereth,
+                SephirahType.Gebura,
+                SephirahType.Chesed,
+                SephirahType.Binah,
+                SephirahType.Hokma,
+                SephirahType.Keter,
+            };
+
+            // Pool of pages that contains only relevant sephirahs abno pages (aka all sephirahs, but the game has other non relevant values)
+            List<EmotionCardXmlInfo> abnoPagePool = AbnoPageInitialList.Where(x => sephirahs.Contains(x.Sephirah)).ToList();
+
+            // Resulting list of abno pages
+            List<EmotionCardXmlInfo> abnoPages = AbnoPageInitialList.Where(p => !sephirahs.Contains(p.Sephirah)).ToList();
+
+            // If we randomize in same floor, just shuffle them around, it's good enough, no need to ensure anything else
+            if (SlotDataManager.AbnoPageShuffle == AbnoPageShuffle.InFloor)
+            {
+                foreach (var seph in sephirahs)
+                {
+                    List<EmotionCardXmlInfo> sephPages = AbnoPageInitialList.Where(p => p.Sephirah == seph).ToList();
+
+                    for (int i = 2; i < 7; i++)
+                    {
+                        for (int j = 0; j < 3; j++)
+                        {
+                            EmotionCardXmlInfo page = sephPages.PopRandom(Random);
+
+                            page.Level = i;
+                            abnoPages.Add(page);
+                        }
+                    }
+                }
+
+                EmotionCardXmlList.Instance._list = abnoPages;
+
+                return;
+            }
+
+
+
+            
+
+            // If Exodia Guarantee is true, put Exodia pages onto a random floor.
+            // After that, if AbnoPageShuffle is set to Sets, put other pages from the same set there
+            // Then randomize every other page/set
+            Dictionary<SephirahType, List<int>> exodiaPages = new Dictionary<SephirahType, List<int>>()
+            {
+                [SephirahType.Tiphereth] = new List<int>() { 3, 5, 9, 10, 15 },
+                [SephirahType.Binah] = new List<int>() { 10, 11, 12, 13 },
+                [SephirahType.Hokma] = new List<int>() { 11, 12, 15 },
+            };
+
+            // Make a base dict where pages of certain levels will be saved
+            Dictionary<SephirahType, List<List<EmotionCardXmlInfo>>> floorAbnoPages = new Dictionary<SephirahType, List<List<EmotionCardXmlInfo>>>()
+            {
+                [SephirahType.Malkuth] = new List<List<EmotionCardXmlInfo>>(),
+                [SephirahType.Yesod] = new List<List<EmotionCardXmlInfo>>(),
+                [SephirahType.Hod] = new List<List<EmotionCardXmlInfo>>(),
+                [SephirahType.Netzach] = new List<List<EmotionCardXmlInfo>>(),
+                [SephirahType.Tiphereth] = new List<List<EmotionCardXmlInfo>>(),
+                [SephirahType.Gebura] = new List<List<EmotionCardXmlInfo>>(),
+                [SephirahType.Chesed] = new List<List<EmotionCardXmlInfo>>(),
+                [SephirahType.Binah] = new List<List<EmotionCardXmlInfo>>(),
+                [SephirahType.Hokma] = new List<List<EmotionCardXmlInfo>>(),
+                [SephirahType.Keter] = new List<List<EmotionCardXmlInfo>>(),
+            };
+
+            // Fill each with 5 lists that correspond to each level
+            for (int i = 0; i < 5; i++)
+            {
+                foreach (var item in floorAbnoPages)
+                {
+                    item.Value.Add(new List<EmotionCardXmlInfo>());
+                }
+            }
+
+            // Guarantee placement of certain exodia abno pages in the same floor
+            if (SlotDataManager.ExodiaGuarantee)
+            {
+                foreach ((SephirahType seph, List<int> pages) in exodiaPages.Select(x => (x.Key, x.Value)))
+                {
+                    // Select which seph to put exodias to
+                    SephirahType targetSeph = sephirahs.Where(s => floorAbnoPages[s].Where(l => l.Count <= 2).Count() >= pages.Count).ToList().PopRandom(Random); // That's a copy so it doesn't matter if we pop
+
+                    foreach (int pid in pages)
+                    {
+                        EmotionCardXmlInfo exPage = abnoPagePool.FirstOrDefault(p => p.Sephirah == seph && p.id == pid);
+
+                        if (exPage == null)
+                            continue;
+
+                        var vacantLevels = floorAbnoPages[targetSeph].Where(l => l.Count <= 2).ToList(); // NOTE: Possible error, if so, remove .ToList()
+                        var levelList = vacantLevels.PopRandom(Random); //.ElementAt(Random.Next(0, vacantLevels.Count()));
+
+                        abnoPagePool.Remove(exPage);
+                        levelList.Add(exPage);
+
+                        // If pages are randomized by sets, get other pages from same set and place them in same level
+                        if (SlotDataManager.AbnoPageShuffle != AbnoPageShuffle.Sets)
+                            continue;
+
+                        foreach (var page in abnoPagePool.Where(p => p.Sephirah == seph && p.Level == exPage.Level).ToList())
+                        {
+                            abnoPagePool.Remove(page);
+                            levelList.Add(page);
+                        }
+                    }
+                }
+            }
+
+            // Place every other abno page
+            while (abnoPagePool.Count > 0)
+            {
+                var vacantLevels = floorAbnoPages.Values.SelectMany(l => l.Where(ll => ll.Count <= 2)).ToList(); // NOTE: Possible error
+                var levelList = vacantLevels.PopRandom(Random);
+
+                EmotionCardXmlInfo exPage = abnoPagePool.PopRandom(Random);
+
+                levelList.Add(exPage);
+
+                if (SlotDataManager.AbnoPageShuffle != AbnoPageShuffle.Sets)
+                    continue;
+
+                foreach (var page in abnoPagePool.Where(p => p.Sephirah == exPage.Sephirah && p.Level == exPage.Level).ToList())
+                {
+                    abnoPagePool.Remove(page);
+                    levelList.Add(page);
+                }
+            }
+
+            foreach (var (seph, list) in floorAbnoPages.Select(l => (l.Key, l.Value)))
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    foreach (var page in list[i])
+                    {
+                        page.Level = i + 2;
+                        page.Sephirah = seph;
+                        abnoPages.Add(page);
+                    }
+                }
+            }
+
+            EmotionCardXmlList.Instance._list = abnoPages;
+        }
+
+        private static void RandomizeAbnoPages()
+        {
+
+        }
+
+
         internal static void Init()
         {
             Debug.Log("[LORAP] Custom Content Init!");
 
-            // backup vanilla Abno/EGO page list to modify later on
+            // Save vanilla lists of Abno and EGO Pages to return or modify later on
             AbnoPageInitialList = EmotionCardXmlList.Instance._list.ToList();
             EGOPageInitialList = EmotionEgoXmlList.Instance._list.ToList();
 

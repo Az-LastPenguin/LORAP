@@ -134,7 +134,7 @@ namespace LORAP.Patches
             return DataModel;
         }
 
-        [HarmonyPatch(typeof(EntryScene), nameof(EntryScene.SetCG))] // TODO: Refactor
+        [HarmonyPatch(typeof(EntryScene), nameof(EntryScene.SetCG))] // TODO: Refactor // NOTE: This shit still crashes sometimes!
         [HarmonyPrefix]
         static bool SelectCGPatch(EntryScene __instance)
         {

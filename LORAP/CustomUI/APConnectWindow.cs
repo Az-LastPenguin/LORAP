@@ -87,7 +87,12 @@ namespace LORAP.CustomUI
                 SetInfoText(e.Message);
 
                 SessionManager.EndSession();
+
+                Debug.LogException(e);
+                //Debug.LogError(e.StackTrace);
                 return;
+
+                //throw e;
             }
         }
 
