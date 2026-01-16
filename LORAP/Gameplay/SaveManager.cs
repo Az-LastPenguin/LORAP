@@ -1,7 +1,6 @@
 ﻿using Archipelago.MultiClient.Net.Enums;
 using GameSave;
 using LORAP.Archipelago;
-using LORAP.CustomUI;
 using LORAP.Playthru;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -12,7 +11,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
-using System.Threading.Tasks;
 using UI;
 using UnityEngine;
 
@@ -50,7 +48,7 @@ namespace LORAP.Gameplay
             }
         }
 
-        internal static void SaveGame()
+        internal static void SaveGame() // TODO: Maybe save data in different datastore keys? Maybe that will allow for same slot coop at the same time?
         {
             Debug.Log("[LORAP] Saving the game...");
 

@@ -63,7 +63,6 @@ namespace LORAP.Utils
         internal static T PopRandom<T>(this List<T> list, System.Random random)
         {
             int rng = random.Next(list.Count);
-            Debug.Log($"POPRANDOM {list.Count} {rng}");
             T element = list.ElementAt(rng);
             list.RemoveAt(rng);
             return element;

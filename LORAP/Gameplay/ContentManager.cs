@@ -1,5 +1,6 @@
 ﻿using LORAP.Archipelago;
 using LORAP.CustomUI;
+using LORAP.Playthru;
 using LORAP.Utils;
 using System;
 using System.Collections.Generic;
@@ -70,6 +71,20 @@ namespace LORAP.Gameplay
         private static GameObject LineTemplate;
         private static GameObject CheckmarkIconTemplate = UICardListDetailFilterPopup.Instance.transform.Find("[Image]Frame/Scroll View/Viewport/Content/RarityGroup/Group/[Toggle]DetailSlot/[Toggle]SelectableToggle/[Image]IconGlow").gameObject;
 
+        private static List<SephirahType> GameplaySephirahs = new List<SephirahType>()
+            {
+                SephirahType.Malkuth,
+                SephirahType.Yesod,
+                SephirahType.Hod,
+                SephirahType.Netzach,
+                SephirahType.Tiphereth,
+                SephirahType.Gebura,
+                SephirahType.Chesed,
+                SephirahType.Binah,
+                SephirahType.Hokma,
+                SephirahType.Keter,
+            };
+
         private static DropBookXmlInfo CreateCustomBook(int id, string name, int dropNum, List<BookDropItemInfo> dropList)
         {
             var Book = new DropBookXmlInfo();
@@ -116,95 +131,7 @@ namespace LORAP.Gameplay
 
             RandomizeAbnoPages();
 
-
-            /*
-
-            // Save vanilla lists of abno and ego pages to randomize them every run open
-            // .ToList() is a hacky way to create a clone of the list
-            if (AbnoPageInitialList == null)
-                AbnoPageInitialList = EmotionCardXmlList.Instance._list.ToList();
-            if (EGOPageInitialList == null)
-                EGOPageInitialList = EmotionEgoXmlList.Instance._list.ToList();
-
-            //Debug.Log($"INIT: {AbnoPageInitialList.Count}, {EGOPageInitialList.Count}");
-
-            // Randomize Abno Pages
-            List<EmotionCardXmlInfo> abnoPages = AbnoPageInitialList;
-
-            // Make a list without Non-sephirah abno pages
-            List<EmotionCardXmlInfo> sephPages = abnoPages.Where(x => x.Sephirah != SephirahType.None && x.Sephirah != SephirahType.ETC).ToList();
-            //Debug.Log($"SEPH: {sephPages.Count}");
-
-            // Shuffle Abno Pages
-            List<EmotionCardXmlInfo> shuffledAbno = new List<EmotionCardXmlInfo>();
-            var Random = new System.Random(PlaythruManager.Seed);
-            for (int seph = 1; seph <= 10; seph++)
-            {
-                // Fill a pool of emotion levels abno pages should be, based on the selected page balance setting
-                List<int> ELevelsPool = new List<int>();
-                switch (PlaythruManager.AbnoPageBalance)
-                {
-                    case AbnoPagesBalance.Vanilla:
-                        ELevelsPool = new List<int>() {1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3};
-                        break;
-                    case AbnoPagesBalance.Balanced:
-                        ELevelsPool = new List<int>() { 1, 1, 1, 2, 2, 2, 3, 3, 3 };
-                        for (int p = 0; p < 6; p++)
-                            ELevelsPool.Add(Random.Next(1, 4));
-                        break;
-                    case AbnoPagesBalance.Unbalanced:
-                        for (int p = 0; p < 15; p++)
-                            ELevelsPool.Add(Random.Next(1, 4));
-                        break;
-                }
-
-                for (int i = 0; i < 15; i++)
-                {
-                    int lv = 2 + i / 3;
-
-                    var rng = Random.Next(sephPages.Count);
-                    var card = sephPages.ElementAt(rng);
-                    sephPages.RemoveAt(rng);
-
-                    rng = Random.Next(ELevelsPool.Count);
-                    var ELV = ELevelsPool.ElementAt(rng);
-                    ELevelsPool.RemoveAt(rng);
-
-                    card.Sephirah = (SephirahType)seph;
-                    card.Level = lv;
-                    card.EmotionLevel = ELV;
-                    card.State = Random.Next(2) == 1 ? MentalState.Positive : MentalState.Negative;
-                    card.EmotionRate = Random.Next(4) * (card.State == MentalState.Positive ? 1 : -1);
-                    shuffledAbno.Add(card);
-                }
-            }
-            // Return Non-sephirah abno pages
-            shuffledAbno.AddRange(abnoPages.Where(x => x.Sephirah == SephirahType.None).ToList());
-
-            EmotionCardXmlList.Instance._list = shuffledAbno;
-
-
-            // Randomize EGO Pages
-            List<EmotionEgoXmlInfo> EGOPages = EGOPageInitialList.ToList();
-            List<EmotionEgoXmlInfo> shuffledEGO = new List<EmotionEgoXmlInfo>();
-            Random = new System.Random(PlaythruManager.Seed);
-
-            for (int seph = 1; seph <= 10; seph++)
-            {
-                for (int i = 0; i < 5; i++)
-                {
-                    var rng = Random.Next(EGOPages.Count);
-                    var card = EGOPages.ElementAt(rng);
-                    EGOPages.RemoveAt(rng);
-
-                    card.Sephirah = (SephirahType)seph;
-                    shuffledEGO.Add(card);
-                }
-            }
-
-            EmotionEgoXmlList.Instance._list = shuffledEGO;
-
-            */
+            RandomizeEGOPages();
         }
     
         private static void RandomizeReceptionTree()
@@ -321,42 +248,50 @@ namespace LORAP.Gameplay
             // If we don't wanna shuffle pages, just ensure that list is same as vanilla
             if (SlotDataManager.AbnoPageShuffle == AbnoPageShuffle.None)
             {
-                EmotionCardXmlList.Instance._list = AbnoPageInitialList;
+                EmotionCardXmlList.Instance._list = AbnoPageInitialList.ToList();
 
                 return;
             }
 
+            foreach (var item in AbnoPageInitialList)
+            {
+                Debug.Log($"{item.Name} {item.Sephirah}");
+            }
 
             // Randomize Abno Pages' floors
             var Random = new System.Random(SlotDataManager.Seed);
 
-            // List of ACTUALLY IMPORTANT SEPHIRAHS BECAUSE THE IT'S THE BEST WAY TO DO IT
-            List<SephirahType> sephirahs = new List<SephirahType>()
+            // Deep copy of the initial list
+            List<EmotionCardXmlInfo> allPages = AbnoPageInitialList.ConvertAll(p =>
             {
-                SephirahType.Malkuth,
-                SephirahType.Yesod,
-                SephirahType.Hod,
-                SephirahType.Netzach,
-                SephirahType.Tiphereth,
-                SephirahType.Gebura,
-                SephirahType.Chesed,
-                SephirahType.Binah,
-                SephirahType.Hokma,
-                SephirahType.Keter,
-            };
+                var page = new EmotionCardXmlInfo();
+                page.id = p.id;
+                page.Name = p.Name;
+                page._artwork = p._artwork;
+                page.State = p.State;
+                page.TargetType = p.TargetType;
+                page.Level = p.Level;
+                page.EmotionLevel = p.EmotionLevel;
+                page.EmotionRate = p.EmotionRate;
+                page.Locked = p.Locked;
+                page.Sephirah = p.Sephirah;
+                page.Script = p.Script;
+
+                return page;
+            });
 
             // Pool of pages that contains only relevant sephirahs abno pages (aka all sephirahs, but the game has other non relevant values)
-            List<EmotionCardXmlInfo> abnoPagePool = AbnoPageInitialList.Where(x => sephirahs.Contains(x.Sephirah)).ToList();
+            List<EmotionCardXmlInfo> abnoPagePool = allPages.Where(x => GameplaySephirahs.Contains(x.Sephirah)).ToList();
 
             // Resulting list of abno pages
-            List<EmotionCardXmlInfo> abnoPages = AbnoPageInitialList.Where(p => !sephirahs.Contains(p.Sephirah)).ToList();
+            List<EmotionCardXmlInfo> abnoPages = allPages.Where(p => !GameplaySephirahs.Contains(p.Sephirah)).ToList();
 
             // If we randomize in same floor, just shuffle them around, it's good enough, no need to ensure anything else
             if (SlotDataManager.AbnoPageShuffle == AbnoPageShuffle.InFloor)
             {
-                foreach (var seph in sephirahs)
+                foreach (var seph in GameplaySephirahs)
                 {
-                    List<EmotionCardXmlInfo> sephPages = AbnoPageInitialList.Where(p => p.Sephirah == seph).ToList();
+                    List<EmotionCardXmlInfo> sephPages = abnoPagePool.Where(p => p.Sephirah == seph).ToList();
 
                     for (int i = 2; i < 7; i++)
                     {
@@ -375,9 +310,6 @@ namespace LORAP.Gameplay
                 return;
             }
 
-
-
-            
 
             // If Exodia Guarantee is true, put Exodia pages onto a random floor.
             // After that, if AbnoPageShuffle is set to Sets, put other pages from the same set there
@@ -419,7 +351,7 @@ namespace LORAP.Gameplay
                 foreach ((SephirahType seph, List<int> pages) in exodiaPages.Select(x => (x.Key, x.Value)))
                 {
                     // Select which seph to put exodias to
-                    SephirahType targetSeph = sephirahs.Where(s => floorAbnoPages[s].Where(l => l.Count <= 2).Count() >= pages.Count).ToList().PopRandom(Random); // That's a copy so it doesn't matter if we pop
+                    SephirahType targetSeph = GameplaySephirahs.Where(s => floorAbnoPages[s].Where(l => l.Count <= 2).Count() >= pages.Count).ToList().PopRandom(Random); // That's a copy so it doesn't matter if we pop
 
                     foreach (int pid in pages)
                     {
@@ -428,8 +360,8 @@ namespace LORAP.Gameplay
                         if (exPage == null)
                             continue;
 
-                        var vacantLevels = floorAbnoPages[targetSeph].Where(l => l.Count <= 2).ToList(); // NOTE: Possible error, if so, remove .ToList()
-                        var levelList = vacantLevels.PopRandom(Random); //.ElementAt(Random.Next(0, vacantLevels.Count()));
+                        var vacantLevels = floorAbnoPages[targetSeph].Where(l => l.Count <= 2).ToList();
+                        var levelList = vacantLevels.PopRandom(Random);
 
                         abnoPagePool.Remove(exPage);
                         levelList.Add(exPage);
@@ -450,7 +382,7 @@ namespace LORAP.Gameplay
             // Place every other abno page
             while (abnoPagePool.Count > 0)
             {
-                var vacantLevels = floorAbnoPages.Values.SelectMany(l => l.Where(ll => ll.Count <= 2)).ToList(); // NOTE: Possible error
+                var vacantLevels = floorAbnoPages.Values.SelectMany(l => l.Where(ll => ll.Count <= 2)).ToList();
                 var levelList = vacantLevels.PopRandom(Random);
 
                 EmotionCardXmlInfo exPage = abnoPagePool.PopRandom(Random);
@@ -485,9 +417,86 @@ namespace LORAP.Gameplay
 
         private static void RandomizeAbnoPages()
         {
+            if (SlotDataManager.AbnoPageRandomization == AbnoPageRandomization.None)
+                return;
 
+            var Random = new System.Random(SlotDataManager.Seed);
+
+            foreach (SephirahType seph in GameplaySephirahs)
+            {
+                // Pool of Levels & States
+                List<MentalState> statesPool = new List<MentalState>();
+                List<int> levelsPool = new List<int>();
+
+                if (SlotDataManager.AbnoPageRandomization == AbnoPageRandomization.Guarantee)
+                {
+                    // Guarantee 4 of Positive and 4 of Negative pages
+                    statesPool.AddRange(new List<MentalState>()
+                    {
+                        MentalState.Positive, MentalState.Positive, MentalState.Positive, MentalState.Positive,
+                        MentalState.Negative, MentalState.Negative, MentalState.Negative, MentalState.Negative,
+                    });
+
+                    // Guarantee 3 pages of each emtoion level
+                    levelsPool.AddRange(new List<int>()
+                    {
+                        1, 1, 1,
+                        2, 2, 2,
+                        3, 3, 3,
+                    });
+                }
+
+                // Get all the pages for this floor
+                List<EmotionCardXmlInfo> pages = EmotionCardXmlList.Instance._list.Where(p => p.Sephirah == seph).ToList();
+
+                // Fill up the pools
+                while (statesPool.Count < pages.Count)
+                {
+                    statesPool.Add(Random.Next(2) == 0 ? MentalState.Negative : MentalState.Positive);
+                }
+
+                while (levelsPool.Count < pages.Count)
+                {
+                    levelsPool.Add(Random.Next(1, 4));
+                }
+
+                // Distribute everything
+                foreach (EmotionCardXmlInfo page in pages)
+                {
+                    page.State = statesPool.PopRandom(Random);
+                    page.EmotionLevel = levelsPool.PopRandom(Random);
+                    page.EmotionRate = Random.Next(4) * (page.State == MentalState.Positive ? 1 : -1);
+                }
+            }
         }
 
+        private static void RandomizeEGOPages()
+        {
+            if (SlotDataManager.EgoPageShuffle == false)
+            {
+                EmotionEgoXmlList.Instance._list = EGOPageInitialList;
+
+                return;
+            }
+
+            var Random = new System.Random(SlotDataManager.Seed);
+
+            List<EmotionEgoXmlInfo> EGOPages = EGOPageInitialList.ToList();
+            List<EmotionEgoXmlInfo> shuffledEGO = new List<EmotionEgoXmlInfo>();
+
+            foreach (SephirahType seph in GameplaySephirahs)
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    EmotionEgoXmlInfo card = EGOPages.PopRandom(Random);
+
+                    card.Sephirah = seph;
+                    shuffledEGO.Add(card);
+                }
+            }
+
+            EmotionEgoXmlList.Instance._list = shuffledEGO;
+        }
 
         internal static void Init()
         {

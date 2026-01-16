@@ -25,16 +25,8 @@ namespace LORAP.Archipelago
     internal enum AbnoPageRandomization
     {
         None,
-        VanillaLike,
         Guarantee,
-        Randomized
-    }
-
-    internal enum EgoPageShuffle
-    {
-        None,
-        InFloorShuffle,
-        Shuffle
+        Unbound
     }
 
     internal enum ReceptionsProgression
@@ -84,7 +76,7 @@ namespace LORAP.Archipelago
 
         internal static bool ExodiaGuarantee;
 
-        internal static EgoPageShuffle EgoPageShuffle;
+        internal static bool EgoPageShuffle;
 
         internal static bool RandomizeReceptionTree;
 
@@ -116,7 +108,7 @@ namespace LORAP.Archipelago
 
         internal static Dictionary<SephirahType, List<int>> AbnoFightOrder;
 
-        internal static void Parse(Dictionary<string, object> slotData)
+        internal static void Parse(Dictionary<string, object> slotData) // TODO: Generalize it & if slot data doesn't match, warn the player
         {
             Seed = (int)(long)slotData["random_seed"];
 
@@ -130,7 +122,7 @@ namespace LORAP.Archipelago
 
             ExodiaGuarantee = (long)slotData["exodia_guaratnee"] == 1;
 
-            EgoPageShuffle = (EgoPageShuffle)(long)slotData["ego_page_shuffle"];
+            EgoPageShuffle = (long)slotData["ego_page_shuffle"] == 1;
 
             RandomizeReceptionTree = (long)slotData["randomize_reception_tree"] == 1;
 
