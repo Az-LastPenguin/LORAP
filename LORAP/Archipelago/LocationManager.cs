@@ -61,6 +61,8 @@ namespace LORAP.Archipelago
 
         internal static void Init()
         {
+            Debug.Log("[LORAP] Initializing AP Location Manager");
+
             KnownPairs.Clear();
             KnownHints.Clear();
 

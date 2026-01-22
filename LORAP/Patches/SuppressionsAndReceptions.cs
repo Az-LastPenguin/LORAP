@@ -10,7 +10,6 @@ using UnityEngine;
 using TMPro;
 using static StageController;
 using Archipelago.MultiClient.Net.Enums;
-using Archipelago.MultiClient.Net.Models;
 using LORAP.Gameplay;
 using LORAP.Utils;
 using LORAP.CustomUI;
@@ -348,7 +347,7 @@ namespace LORAP.Patches
 
             BattleEmotionRewardSlotUI slot = __instance.slots.First();
 
-            slot.txt_Name.text = locations.Count > 0 ? $"Checks remaining: {locations.Count}" : "All checks collected!";
+            slot.txt_Name.text = locations.Count > 0 ? $"Items remaining: {locations.Count}" : "All items collected!";
             slot.img_emotionlevel.sprite = UISpriteDataManager.instance.EmotionLevelIcon[locations.Count < 6 ? locations.Count : 5];
 
             // Set texts
@@ -928,7 +927,7 @@ namespace LORAP.Patches
 
 
         // Make receptions without book requirements be able to be started  // TODO: Disallow starting reception without completing atleast one of previous receptions
-        [HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.GetBookRecipe))]
+        [HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.GetBookRecipe))] // TODO: Disable showing reception by putting books without completing one of previous receptions
         [HarmonyPrefix]
         static bool FakeBooks(UIInvitationRightMainPanel __instance, ref StageClassInfo __result)
         {
@@ -941,6 +940,15 @@ namespace LORAP.Patches
             }
 
             return true;
+        }
+
+
+        // Make amount of books for invitations show as infinite
+        [HarmonyPatch(typeof(UIInvitationDropBookSlot), nameof(UIInvitationDropBookSlot.SetData_DropBook))]
+        [HarmonyPostfix]
+        static void FakeInfBooksForInvitation(UIInvitationDropBookSlot __instance, LorId bookId)
+        {
+            __instance.txt_bookNum.text = "∞";
         }
     }
 }

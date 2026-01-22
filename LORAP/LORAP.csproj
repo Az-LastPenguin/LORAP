@@ -11,6 +11,7 @@
     <RootNamespace>LORAP</RootNamespace>
     <AssemblyName>LORAP</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+	  <LangVersion>8.0</LangVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <NuGetPackageImportStamp>
@@ -125,6 +126,7 @@
     <Compile Include="CustomUI\Components\BasicButtonScript.cs" />
     <Compile Include="CustomUI\Components\CustomSelectable.cs" />
     <Compile Include="CustomUI\MessagePopup.cs" />
+    <Compile Include="Gameplay\BookDropManager.cs" />
     <Compile Include="Gameplay\ContentManager.cs" />
     <Compile Include="Gameplay\PlaythruManager.cs" />
     <Compile Include="Gameplay\SaveManager.cs" />

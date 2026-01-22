@@ -57,6 +57,8 @@ namespace LORAP.Archipelago
                 {
                     LORItemInfo item = ConvertItemInfo(SessionManager.Items.DequeueItem());
 
+                    bool newItems = false;
+
                     if (ItemsReceived < TotalItemsReceived) // Means this item was received before, so we silently receive (restore) it
                     {
                         if (item.ItemType != APItemType.Book) // Unless it's a book. We don't want copies, that's cheating
@@ -68,13 +70,14 @@ namespace LORAP.Archipelago
                     {
                         ParseAndGiveItem(item);
 
+                        newItems = true;
                         TotalItemsReceived++;
                         yield return new WaitForSeconds(0.1f);
                     }
 
                     ItemsReceived++;
 
-                    if (!SessionManager.Items.Any())
+                    if (!SessionManager.Items.Any() && newItems)
                         Gameplay.SaveManager.SaveGame();
 
                     continue;
@@ -86,6 +89,8 @@ namespace LORAP.Archipelago
 
         internal static void Init()
         {
+            Debug.Log("[LORAP] Initializing AP Item Manager");
+
             ItemsReceived = 0;
             TotalItemsReceived = 0;
         }
@@ -115,7 +120,7 @@ namespace LORAP.Archipelago
 
         internal static void ParseAndGiveItem(LORItemInfo item, bool silent = false)
         {
-            Debug.Log($"Receiving Item {item.Id} ({item.ItemType}:{item.RealId})");
+            Debug.Log($"[LORAP] Receiving Item {item.Id} ({item.ItemType}:{item.RealId})");
 
             switch (item.ItemType)
             {

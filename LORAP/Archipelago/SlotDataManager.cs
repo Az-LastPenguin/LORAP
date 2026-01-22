@@ -44,22 +44,10 @@ namespace LORAP.Archipelago
         Shuffle,
     }
 
-    internal enum FloorProgression
-    {
-        AlwaysOpen,
-        Books,
-    }
-
     internal enum FillerItems
     {
         BookOfEverything,
         BoosterPacks,
-    }
-
-    internal enum DeckProgression
-    {
-        ProgressBased,
-        CompletelyRandom,
     }
 
     internal static class SlotDataManager
@@ -88,13 +76,13 @@ namespace LORAP.Archipelago
 
         internal static bool ShuffleRealizations;
 
-        internal static FloorProgression FloorProgression;
+        internal static bool FloorsRequireBooks;
 
         internal static bool RandomizeBlackSilencePage;
 
         internal static FillerItems FillerItems;
 
-        internal static DeckProgression DeckProgression;
+        internal static bool BalanceBookContents;
 
         internal static int FirstReception;
 
@@ -108,9 +96,9 @@ namespace LORAP.Archipelago
 
         internal static Dictionary<SephirahType, List<int>> AbnoFightOrder;
 
-        internal static void Parse(Dictionary<string, object> slotData) // TODO: Generalize it & if slot data doesn't match, warn the player
+        internal static void Parse(Dictionary<string, object> slotData) // TODO: Generalize the code & if slot data doesn't match, warn the player
         {
-            Seed = (int)(long)slotData["random_seed"];
+            Seed = (int)(long)slotData["random_seed"]; // TODO: Somehow add verification for APWorld version and everything so runs don't brick in case of a version mismatch
 
             Endgoals = ((JArray)slotData["endgoals"]).Select(i => (Endgoal)Enum.Parse(typeof(Endgoal), i.Value<string>().Replace(" ", ""))).ToList();
 
@@ -134,13 +122,13 @@ namespace LORAP.Archipelago
 
             ShuffleRealizations = (long)slotData["shuffle_realizations"] == 1;
 
-            FloorProgression = (FloorProgression)(long)slotData["floor_progression"];
+            FloorsRequireBooks = (long)slotData["floors_require_books"] == 1;
 
             RandomizeBlackSilencePage = (long)slotData["randomize_black_silence_page"] == 1;
 
             FillerItems = (FillerItems)(long)slotData["filler_items"];
 
-            DeckProgression = (DeckProgression)(long)slotData["deck_progression"];
+            BalanceBookContents = (long)slotData["balance_book_contents"] == 1;
 
 
 

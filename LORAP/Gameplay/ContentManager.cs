@@ -1,11 +1,9 @@
 ﻿using LORAP.Archipelago;
 using LORAP.CustomUI;
-using LORAP.Playthru;
 using LORAP.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 using TMPro;
 using UI;
 using UnityEngine;
@@ -85,14 +83,14 @@ namespace LORAP.Gameplay
                 SephirahType.Keter,
             };
 
-        private static DropBookXmlInfo CreateCustomBook(int id, string name, int dropNum, List<BookDropItemInfo> dropList)
+        private static DropBookXmlInfo CreateCustomBook(int id, string name/*, int dropNum, List<BookDropItemInfo> dropList*/)
         {
             var Book = new DropBookXmlInfo();
             Book._id = id;
             Book.workshopName = name;
             Book.workshopID = "lorap";
-            Book.DropNum = dropNum;
-            Book.DropItemList = dropList;
+            //Book.DropNum = dropNum;
+            //Book.DropItemList = dropList;
             Singleton<DropBookXmlList>.Instance._list.Add(Book);
             Singleton<DropBookXmlList>.Instance._dict.Add(Book.id, Book);
 
@@ -125,17 +123,21 @@ namespace LORAP.Gameplay
 
         internal static void SetupRunContent()
         {
+            Debug.Log("[LORAP] Initializing Run");
+
             RandomizeReceptionTree();
 
             ShuffleAbnoPages();
 
             RandomizeAbnoPages();
 
-            RandomizeEGOPages();
+            ShuffleEGOPages();
         }
     
         private static void RandomizeReceptionTree()
         {
+            Debug.Log("[LORAP] Randomizing Reception Tree");
+
             var Random = new System.Random(SlotDataManager.Seed);
 
             // Setup Reception Tree
@@ -245,17 +247,14 @@ namespace LORAP.Gameplay
 
         private static void ShuffleAbnoPages()
         {
+            Debug.Log("[LORAP] Shuffling Abno Pages");
+
             // If we don't wanna shuffle pages, just ensure that list is same as vanilla
             if (SlotDataManager.AbnoPageShuffle == AbnoPageShuffle.None)
             {
                 EmotionCardXmlList.Instance._list = AbnoPageInitialList.ToList();
 
                 return;
-            }
-
-            foreach (var item in AbnoPageInitialList)
-            {
-                Debug.Log($"{item.Name} {item.Sephirah}");
             }
 
             // Randomize Abno Pages' floors
@@ -417,6 +416,8 @@ namespace LORAP.Gameplay
 
         private static void RandomizeAbnoPages()
         {
+            Debug.Log("[LORAP] Randomizing Abno Pages");
+
             if (SlotDataManager.AbnoPageRandomization == AbnoPageRandomization.None)
                 return;
 
@@ -470,8 +471,10 @@ namespace LORAP.Gameplay
             }
         }
 
-        private static void RandomizeEGOPages()
+        private static void ShuffleEGOPages()
         {
+            Debug.Log("[LORAP] Shuffling EGO Pages");
+
             if (SlotDataManager.EgoPageShuffle == false)
             {
                 EmotionEgoXmlList.Instance._list = EGOPageInitialList;
@@ -500,16 +503,39 @@ namespace LORAP.Gameplay
 
         internal static void Init()
         {
-            Debug.Log("[LORAP] Custom Content Init!");
+            Debug.Log("[LORAP] Initializing Custom Content");
 
             // Save vanilla lists of Abno and EGO Pages to return or modify later on
             AbnoPageInitialList = EmotionCardXmlList.Instance._list.ToList();
             EGOPageInitialList = EmotionEgoXmlList.Instance._list.ToList();
 
-            // Init some custom UI
+
+            // Initialize Custom UI
             APConnectWindow.Init();
             MessagePopup.Init();
             AbnoEgoPagePopup.Init();
+
+
+            ApplyUIChanges();
+
+            ApplyMapChanges();
+
+            // Add BOE and Booster Pack to book list
+            CreateCustomBook(123456, "Book of Everything");
+            CreateCustomBook(123457, "Booster Pack");
+
+
+            // Add Keter Realization stages to FloorLevelXmlList TODO: You know.
+            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 5, stageId = 210005, sephirahType = SephirahType.Keter });
+            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 6, stageId = 210006, sephirahType = SephirahType.Keter });
+            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 7, stageId = 210007, sephirahType = SephirahType.Keter });
+            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 8, stageId = 210008, sephirahType = SephirahType.Keter });
+            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 9, stageId = 210009, sephirahType = SephirahType.Keter });
+        }
+    
+        private static void ApplyUIChanges()
+        {
+            Debug.Log("[LORAP] Applying UI Changes");
 
             // Make Esc menu above everything else
             GameObject.Find("[Canvas][Script]PopupCanvas").GetComponent<Canvas>().sortingOrder = 90;
@@ -539,13 +565,23 @@ namespace LORAP.Gameplay
                 floorPanel.questPanel.questSlotList = floorPanel.questPanel.questSlotList.ToList().Append(slot).ToArray();
             }
 
+            // Hide amount of pages from burning books
+            UIBookPanel bookPanel = UI.UIController.Instance.GetUIPanel(UIPanelType.Book) as UIBookPanel;
+            foreach (UIRewardEquipPageSlot slot in bookPanel.DropBookInfoPanel.rewardItemList.equipPageSlotList)
+            {
+                slot.ob_PerAlarm.SetActive(false);
+            }
+            foreach (UIRewardCardSlot slot in bookPanel.DropBookInfoPanel.rewardItemList.cardSlotList)
+            {
+                slot.ob_peralarm.SetActive(false);
+            }
 
-            // Add Keter Realization stages to FloorLevelXmlList TODO: You know.
-            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 5, stageId = 210005, sephirahType = SephirahType.Keter });
-            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 6, stageId = 210006, sephirahType = SephirahType.Keter });
-            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 7, stageId = 210007, sephirahType = SephirahType.Keter });
-            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 8, stageId = 210008, sephirahType = SephirahType.Keter });
-            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 9, stageId = 210009, sephirahType = SephirahType.Keter });
+            // TODO: Change Icon for the library level in the level progress bar to AP icon
+        }
+    
+        private static void ApplyMapChanges()
+        {
+            Debug.Log("[LORAP] Applying Map Changes");
 
             // Make map bigger
             UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
@@ -616,64 +652,6 @@ namespace LORAP.Gameplay
                 check.name = "Checkmark";
                 check.transform.SetSiblingIndex(2);
             }
-
-
-            return;
-
-            // Custom Books ( maybe move that to the respective drop system? )
-            // Get all the possible drops
-            List<BookDropItemInfo> allDrops = new List<BookDropItemInfo>();
-
-            // Add pages that drop from completing certain receptions (yay wall of text)
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(408013), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(408012), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704008), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704003), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704002), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704018), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704005), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704016), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704006), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704015), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704007), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704004), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704011), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704012), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704013), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704014), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704001), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704009), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(704010), itemType = DropItemType.Card });
-            // Post Game
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705002), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705003), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705004), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705010), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705011), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705013), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705014), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705015), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705016), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705017), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705018), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705019), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705020), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705021), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705031), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705032), itemType = DropItemType.Card });
-            allDrops.Add(new BookDropItemInfo() { id = new LorId(705033), itemType = DropItemType.Card });
-
-            // I decided to let this comically large one-liner be just because it's silly
-            var EveryEnemyDropAndReward = MapPanel.iconList.Where(i => i.storyData != null).SelectMany(i => i._storyData).SelectMany(s => s.rewardList).Concat(Enum.GetValues(typeof(UIStoryLine)).Cast<UIStoryLine>().ToList().SelectMany(e => StageClassInfoList.Instance.recipeCondList.FindAll(i => i.storyType == e.ToString()).SelectMany(s => s.waveList).SelectMany(w => w.enemyUnitIdList).SelectMany(uid => EnemyUnitClassInfoList.Instance.GetData(uid).dropTableList).SelectMany(t => t.dropItemList).SelectMany(i => DropBookXmlList.Instance.GetData(i.bookId).DropItemList))).ToList();
-
-            foreach (var drop in EveryEnemyDropAndReward)
-            {
-                if (allDrops.Exists(d => d.id == drop.id)) continue;
-                //Debug.Log($"Drop: {drop.id} - {(drop.itemType == DropItemType.Card ? ItemXmlDataList.instance.GetCardItem(drop.id).Name : BookXmlList.Instance.GetData(drop.id).Name)}");
-                allDrops.Add(drop);
-            }
-             
-            CreateCustomBook(123456, "Book of Everything", 16, allDrops);
         }
     }
 }

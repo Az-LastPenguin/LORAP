@@ -16,7 +16,7 @@ using UnityEngine;
 
 namespace LORAP.Gameplay
 {
-    internal static class SaveManager
+    internal static class SaveManager // TODO: Maybe save version number to make migrating possible in case i change saving?
     {
         internal static string CurrentSaveFile;
 
@@ -50,7 +50,7 @@ namespace LORAP.Gameplay
 
         internal static void SaveGame() // TODO: Maybe save data in different datastore keys? Maybe that will allow for same slot coop at the same time?
         {
-            Debug.Log("[LORAP] Saving the game...");
+            Debug.Log("[LORAP] Saving AP Run");
 
             // Save Last Session Data
             SaveLastSessionData();
@@ -79,6 +79,8 @@ namespace LORAP.Gameplay
 
         internal static void LoadGame()
         {
+            Debug.Log("[LORAP] Loading AP Run");
+
             // Get the save file
             // Init as empty object if there is no save file yet so that game knows
             SessionManager.DataStorage[Scope.Slot, "SaveData"].Initialize("");
@@ -185,7 +187,7 @@ namespace LORAP.Gameplay
             }
         }
 
-        internal static void SaveLastSessionData() // And this too
+        internal static void SaveLastSessionData() // TODO: Make this shorter too
         {
             SessionManager.sessionData.Progress = (float)LocationManager.CheckedLocations.Count / LocationManager.AllLocations.Count;
             SessionManager.sessionData.Password = "";

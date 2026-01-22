@@ -30,7 +30,7 @@ namespace LORAP.Patches
 
 
 
-        // StageLibraryFloorModel patches. For modified abno and ego pages selection. //
+        // StageLibraryFloorModel patches. For modified abno and ego pages selection. // TODO: Make a transpiler. Again.
         // Due to PM quantum coding, i'm replacing this method with itself with few changes. Mostly to show abno pages of the level you have
         [HarmonyPatch(typeof(StageLibraryFloorModel), nameof(StageLibraryFloorModel.CreateSelectableList))]
         [HarmonyPrefix]
@@ -164,7 +164,7 @@ namespace LORAP.Patches
 
 
 
-        // UIAbnormalityCategoryPanel patch. Hide name of the abno since abno pages are from different abnos 99.9% of the time. //
+        // UIAbnormalityCategoryPanel patch. Hide name of the abno. //
         [HarmonyPatch(typeof(UIAbnormalityCategoryPanel), nameof(UIAbnormalityCategoryPanel.SetData))]
         [HarmonyPostfix]
         static void AbnoCardsName(UIAbnormalityCategoryPanel __instance) => __instance.txt_Title.text = "";

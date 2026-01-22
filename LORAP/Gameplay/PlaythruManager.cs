@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UI;
+using UnityEngine;
 
 namespace LORAP.Playthru
 {
@@ -36,6 +37,8 @@ namespace LORAP.Playthru
 
         internal static void StartGame()
         {
+            Debug.Log("[LORAP] Starting Game");
+
             // Create list of floor infos to keep track of every floors state by our own
             Floors = Enum.GetValues(typeof(SephirahType)).Cast<SephirahType>().ToDictionary(k => k, v => new FloorInfo());
 
@@ -63,6 +66,9 @@ namespace LORAP.Playthru
 
             // Setup run content
             ContentManager.SetupRunContent();
+
+            // Init book dropp manager
+            BookDropManager.Init();
 
             // Load Save
             Gameplay.SaveManager.LoadGame();
@@ -136,6 +142,8 @@ namespace LORAP.Playthru
 
             APConnectWindow.Close();
             APLog.Show();
+
+            Debug.Log("[LORAP] Game Started");
         }
 
         // Saving/loading game state

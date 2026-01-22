@@ -312,7 +312,7 @@ namespace LORAP.Patches
                 return false;
             }
 
-            txt_leveltxt.text = "Lv" + num + "/Lv" + num2;
+            txt_leveltxt.text = $"{num}/{num2}";
             img_SliderMaskGauge.rectTransform.sizeDelta = new Vector2(x, img_SliderMaskGauge.rectTransform.sizeDelta.y);
 
             return false;
