@@ -1,14 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using LORAP.Playthru;
 
 namespace LORAP.Utils
 {
     internal static class ClassExtensions
     {
+        internal static bool IsOpen(this SephirahType seph)
+        {
+            return PlaythruManager.Floors[seph].Open;
+        }
+
+        internal static int GetCurrentAbnoStage(this SephirahType seph)
+        {
+            return PlaythruManager.Floors[seph].AbnoStage;
+        }
+
         internal static int GetCurrentAbnoStage(this LibraryFloorModel floor)
         {
             return PlaythruManager.Floors[floor.Sephirah].AbnoStage;
@@ -24,25 +31,40 @@ namespace LORAP.Utils
             return PlaythruManager.Floors[floor.Sephirah].AbnoPages;
         }
 
-        private static List<string> FloorNames = new List<string>() 
-        {
-            "", // None
-            "Floor of History",
-            "Floor of Technological Sciences",
-            "Floor of Literature",
-            "Floor of Art",
-            "Floor of Natural Sciences",
-            "Floor of Language",
-            "Floor of Social Sciences",
-            "Floor of Philosophy",
-            "Floor of Religion",
-            "Floor of General Works",
-            "", // ETC
-        };
-
         internal static string FloorName(this SephirahType seph)
         {
-            return FloorNames[(int)seph];
+            return seph switch
+            {
+                SephirahType.Malkuth => "Floor of History",
+                SephirahType.Yesod => "Floor of Technological Sciences",
+                SephirahType.Hod => "Floor of Literature",
+                SephirahType.Netzach => "Floor of Art",
+                SephirahType.Tiphereth => "Floor of Natural Sciences",
+                SephirahType.Gebura => "Floor of Language",
+                SephirahType.Chesed => "Floor of Social Sciences",
+                SephirahType.Binah => "Floor of Philosophy",
+                SephirahType.Hokma => "Floor of Religion",
+                SephirahType.Keter => "Floor of General Works",
+                _ => "",
+            };
+        }
+
+        internal static string FloorTextId(this SephirahType seph)
+        {
+            return seph switch
+            {
+                SephirahType.Malkuth => "ui_malkuthfloor",
+                SephirahType.Yesod => "ui_yesodfloor",
+                SephirahType.Hod => "ui_hodfloor",
+                SephirahType.Netzach => "ui_netzachfloor",
+                SephirahType.Tiphereth => "ui_tipherethfloor",
+                SephirahType.Gebura => "ui_chesedfloor",
+                SephirahType.Chesed => "ui_geburafloor",
+                SephirahType.Binah => "ui_hokmafloor",
+                SephirahType.Hokma => "ui_binahfloor",
+                SephirahType.Keter => "ui_keterfloor",
+                _ => "",
+            };
         }
 
         internal static LibraryFloorModel FloorModel(this SephirahType seph)

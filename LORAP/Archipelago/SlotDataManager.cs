@@ -29,27 +29,6 @@ namespace LORAP.Archipelago
         Unbound
     }
 
-    internal enum ReceptionsProgression
-    {
-        Unlocked,
-        Progressive,
-        Books,
-        ProgressiveBooks
-    }
-
-    internal enum AbnoRandomization
-    {
-        None,
-        InFloorShuffle,
-        Shuffle,
-    }
-
-    internal enum FillerItems
-    {
-        BookOfEverything,
-        BoosterPacks,
-    }
-
     internal static class SlotDataManager
     {
         internal static int Seed;
@@ -68,11 +47,11 @@ namespace LORAP.Archipelago
 
         internal static bool RandomizeReceptionTree;
 
-        internal static ReceptionsProgression ReceptionsProgression;
+        internal static bool ReceptionsRequireBooks;
 
         internal static bool EnemiesTurnIntoChecks;
 
-        internal static AbnoRandomization AbnoRandomization;
+        internal static bool ShuffleAbnos;
 
         internal static bool ShuffleRealizations;
 
@@ -80,13 +59,7 @@ namespace LORAP.Archipelago
 
         internal static bool RandomizeBlackSilencePage;
 
-        internal static FillerItems FillerItems;
-
         internal static bool BalanceBookContents;
-
-        internal static int FirstReception;
-
-        internal static int LastReception;
 
         internal static Dictionary<int, List<int>> ReceptionBookRequirements;
 
@@ -114,11 +87,11 @@ namespace LORAP.Archipelago
 
             RandomizeReceptionTree = (long)slotData["randomize_reception_tree"] == 1;
 
-            ReceptionsProgression = (ReceptionsProgression)(long)slotData["receptions_progression"];
+            ReceptionsRequireBooks = (long)slotData["receptions_require_books"] == 1;
 
             EnemiesTurnIntoChecks = (long)slotData["enemies_turn_into_checks"] == 1;
 
-            AbnoRandomization = (AbnoRandomization)(long)slotData["abno_randomization"];
+            ShuffleAbnos = (long)slotData["shuffle_abnos"] == 1;
 
             ShuffleRealizations = (long)slotData["shuffle_realizations"] == 1;
 
@@ -126,11 +99,7 @@ namespace LORAP.Archipelago
 
             RandomizeBlackSilencePage = (long)slotData["randomize_black_silence_page"] == 1;
 
-            FillerItems = (FillerItems)(long)slotData["filler_items"];
-
             BalanceBookContents = (long)slotData["balance_book_contents"] == 1;
-
-
 
             ReceptionBookRequirements = new Dictionary<int, List<int>>();
             foreach (var o in (JObject)slotData["reception_book_requirements"])

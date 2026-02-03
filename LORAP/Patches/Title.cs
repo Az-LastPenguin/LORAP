@@ -134,14 +134,14 @@ namespace LORAP.Patches
             return DataModel;
         }
 
-        [HarmonyPatch(typeof(EntryScene), nameof(EntryScene.SetCG))] // TODO: Refactor // NOTE: This shit still crashes sometimes!
+        [HarmonyPatch(typeof(EntryScene), nameof(EntryScene.SetCG))] // TODO: Remake // NOTE: This shit still crashes sometimes!
         [HarmonyPrefix]
         static bool SelectCGPatch(EntryScene __instance)
         {
-            Debug.Log("Loading CG");
+            Debug.Log("[LORAP] Loading CG");
             // Generate random data and load effectfile from it
             LatestDataModel Data = GenerateRandomLatestData();
-            Debug.Log($"Selected Random Chapter: {Data.LatestStorychapter}-{Data.LatestStorygroup}-{Data.LatestStoryepisode}");
+            Debug.Log($"[LORAP] Selected Random Chapter: {Data.LatestStorychapter}-{Data.LatestStorygroup}-{Data.LatestStoryepisode}");
             StorySerializer.LoadEffectFile(Data.LatestStorychapter, Data.LatestStorygroup, Data.LatestStoryepisode);
 
             // Gather all CGs from effectfile and filter them
@@ -167,7 +167,7 @@ namespace LORAP.Patches
 
                 CGs.Add(d.bg.src);
             }
-            Debug.Log($"Found CGs: {CGs.Count}");
+            Debug.Log($"[LORAP] Found CGs: {CGs.Count}");
             Sprite sprite;
             if (CGs.Count == 0)
             {

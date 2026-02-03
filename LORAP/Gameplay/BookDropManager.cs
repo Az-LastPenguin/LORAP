@@ -81,8 +81,8 @@ namespace LORAP.Gameplay
             // Decide of what chapter each book will be
             Dictionary<LorId, int> bookChapters = new Dictionary<LorId, int>();
 
-            // Reception Requirements
-            if (SlotDataManager.ReceptionsProgression == ReceptionsProgression.Books || SlotDataManager.ReceptionsProgression == ReceptionsProgression.ProgressiveBooks)
+            // Reception Requirements 
+            if (SlotDataManager.ReceptionsRequireBooks)
             {
                 foreach (var pair in SlotDataManager.ReceptionBookRequirements)
                 {
@@ -104,7 +104,7 @@ namespace LORAP.Gameplay
                 [SephirahType.Netzach] = new List<int>() { 3, 3, 4, 5, 5 },
                 [SephirahType.Tiphereth] = new List<int>() { 4, 4, 5, 6, 6 },
                 [SephirahType.Gebura] = new List<int>() { 5, 5, 6, 6, 6 },
-                [SephirahType.Chesed] = new List<int>() { 5, 5, 6 ,6 ,6 },
+                [SephirahType.Chesed] = new List<int>() { 5, 5, 6, 6, 6 },
                 [SephirahType.Binah] = new List<int>() { 6, 6, 7, 7 },
                 [SephirahType.Hokma] = new List<int>() { 6, 6, 7, 7 },
                 [SephirahType.Keter] = new List<int>() { 1, 3, 5, 6, 7 },
@@ -211,6 +211,8 @@ namespace LORAP.Gameplay
                     // If we can have more of those create a keypage and store the instanceid to show in the result screen
                     if (BookInventoryModel.Instance.GetBookCount(drop.id) < keyLimit)
                         dropResult.bookInstanceId = BookInventoryModel.Instance.CreateBook(drop.id).instanceId;
+                    else
+                        continue; // Can't give, skip
                 }
                 else // Don't add result into the table if we didn't give player anything
                 {

@@ -144,17 +144,16 @@ namespace LORAP.Archipelago
             //SessionManager.SetGoalAchieved();
         }
 
-
-        internal static void SendReceptionChecks(int id)
+        internal static void SendStageChecks(int id)
         {
-            List<long> checks = LocationManager.UncheckedLocations.Where(l => (int)(l & 0x0FFFFFFF) == id).ToList();
+            List<long> checks = UncheckedLocations.Where(l => (int)(l & 0x0FFFFFFF) == id).ToList();
 
             CompleteLocations(checks);
         }
 
         internal static string SendRandomReceptionCheck(int id)
         {
-            List<long> checks = LocationManager.UncheckedLocations.Where(l => (int)(l & 0x0FFFFFFF) == id).ToList();
+            List<long> checks = UncheckedLocations.Where(l => (int)(l & 0x0FFFFFFF) == id).ToList();
 
             if (checks.Count == 0)
                 return "";
@@ -175,20 +174,10 @@ namespace LORAP.Archipelago
             return KnownPairs.Where(p => p.Item.Id == id && KnownHints.Any(h => h.LocationId == p.Location.Id && (!ignoreFound || !h.Found))).ToList();
         }
 
-        /*internal static ItemLocationPair GetPairWithItemAndHint(long id, bool ignoreFound = false)
-        {
-            return GetPairsWithItemAndHint(id, ignoreFound).First();
-        }*/
-
         internal static List<ItemLocationPair> GetPairsWithItem(long id)
         {
             return KnownPairs.Where(p => p.Item.Id == id).ToList();
         }
-
-        /*internal static ItemLocationPair GetPairWithItem(long id)
-        {
-            return GetPairsWithItem(id).First();
-        }*/
 
         internal static ItemLocationPair GetLocationPair(long id)
         {

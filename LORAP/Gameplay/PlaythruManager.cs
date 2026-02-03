@@ -200,6 +200,7 @@ namespace LORAP.Playthru
             if (LibraryModel.Instance.IsOpenedSephirah(seph)) return;
 
             LibraryModel.Instance.OpenSephirah(seph);
+            Floors[seph].Open = true;
 
             if (seph == SephirahType.Binah)
             {

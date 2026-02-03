@@ -18,8 +18,6 @@ namespace LORAP.Gameplay
 {
     internal static class SaveManager // TODO: Maybe save version number to make migrating possible in case i change saving?
     {
-        internal static string CurrentSaveFile;
-
         internal static string CompressString(string str)
         {
             var bytes = Encoding.UTF8.GetBytes(str);

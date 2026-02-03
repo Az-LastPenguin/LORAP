@@ -369,7 +369,7 @@ namespace LORAP.Patches
                 return;
 
             UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
-            if (SlotDataManager.RandomizeReceptionTree || SlotDataManager.ReceptionsProgression == ReceptionsProgression.Progressive || SlotDataManager.ReceptionsProgression == ReceptionsProgression.ProgressiveBooks)
+            if (SlotDataManager.RandomizeReceptionTree)
             {
                 foreach (var icon in MapPanel.iconList)
                 {

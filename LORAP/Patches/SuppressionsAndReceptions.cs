@@ -95,11 +95,9 @@ namespace LORAP.Patches
                         case 210009:
                         // Every other Suppression/Realization
                         default:
-                            //CheckManager.ClearCheck(stageId);
-                            //CheckManager.AbnoChecks(currentFloor.Sephirah); // Remove in v0.4
-                            PlaythruManager.ReceptionsCompleted.Add(stageId); // Update in v0.4 (?)
+                            LocationManager.SendStageChecks(stageId);
 
-                            PlaythruManager.CheckEndConditions();
+                            // PlaythruManager.CheckEndConditions();
 
                             controller.battleState = BattleState.None;
                             GameSceneManager.Instance.ActivateUIController();
@@ -197,7 +195,7 @@ namespace LORAP.Patches
                     PlaythruManager.ReceptionsCompleted.Add(stageModel.ClassInfo._id);
 
                     if (!SlotDataManager.EnemiesTurnIntoChecks)
-                        LocationManager.SendReceptionChecks(stageModel.ClassInfo._id);
+                        LocationManager.SendStageChecks(stageModel.ClassInfo._id);
 
                     //PlaythruManager.CheckEndConditions();
                 }
@@ -267,7 +265,7 @@ namespace LORAP.Patches
 
 
 
-        // Disable giving Book of Distortion, Book of LC, Searing Sword and Feather Shield
+        // Disable giving Book of Distortion, Book of LC, Searing Sword and Feather Shield and maybe other stuff that might be given out
         [HarmonyPatch(typeof(StageController), nameof(StageController.BonusRewardWithPopup))]
         [HarmonyPrefix]
         static bool ResolveableRewardsPatch() => false;
@@ -462,54 +460,24 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool ClickSuppression(UIMainPanel __instance, int index)
         {
-            LibraryFloorModel floor = LibraryModel.Instance.GetFloor((SephirahType)(index + 1));
-            FloorLevelXmlInfo data = FloorLevelXmlList.Instance.GetData(floor.Sephirah, floor.GetCurrentAbnoStage());
+            SephirahType seph = (SephirahType)(index + 1);
+
+            FloorLevelXmlInfo data = FloorLevelXmlList.Instance.GetData(seph, seph.GetCurrentAbnoStage());
 
             if (data == null)
                 return false;
 
+            List<int> bossStages = new List<int>()
+            {
+                201005, 202005, 203005, 204005, 205005, 206005, 207005, 208005, 209005, 210005, 210006, 210007, 210008, 210009
+            };
+
             string stageName = "";
             UIAlarmType alarmtype = UIAlarmType.StartCreatureBattle;
-            if ((floor.Sephirah == SephirahType.Binah || floor.Sephirah == SephirahType.Hokma) && floor.GetCurrentAbnoStage() >= 4 || floor.GetCurrentAbnoStage() >= 5)
+
+            if (bossStages.Contains(data.stageId))
             {
-                string id = "";
-                switch (floor.Sephirah)
-                {
-                    case SephirahType.None:
-                        id = "";
-                        break;
-                    case SephirahType.Malkuth:
-                        id = "ui_malkuthfloor";
-                        break;
-                    case SephirahType.Yesod:
-                        id = "ui_yesodfloor";
-                        break;
-                    case SephirahType.Hod:
-                        id = "ui_hodfloor";
-                        break;
-                    case SephirahType.Netzach:
-                        id = "ui_netzachfloor";
-                        break;
-                    case SephirahType.Tiphereth:
-                        id = "ui_tipherethfloor";
-                        break;
-                    case SephirahType.Chesed:
-                        id = "ui_chesedfloor";
-                        break;
-                    case SephirahType.Gebura:
-                        id = "ui_geburafloor";
-                        break;
-                    case SephirahType.Hokma:
-                        id = "ui_hokmafloor";
-                        break;
-                    case SephirahType.Binah:
-                        id = "ui_binahfloor";
-                        break;
-                    case SephirahType.Keter:
-                        id = "ui_keterfloor";
-                        break;
-                }
-                stageName = TextDataModel.GetText(id);
+                stageName = TextDataModel.GetText(seph.FloorTextId());
                 alarmtype = UIAlarmType.StartCreatureBattleInBoss;
             }
             else
@@ -519,7 +487,7 @@ namespace LORAP.Patches
                     stageName = StageNameXmlList.Instance.GetName(data2);
             }
 
-            UIAlarmPopup.instance.SetAlarmText(alarmtype, UIAlarmButtonType.YesNo, delegate (bool b)
+            UIAlarmPopup.instance.SetAlarmText(alarmtype, UIAlarmButtonType.YesNo, delegate (bool b) // TODO: Refactor?
             {
                 if (!b)
                     return;
@@ -527,7 +495,7 @@ namespace LORAP.Patches
                 UI.UIController UIController = UI.UIController.Instance;
                 StageController StageController = StageController.Instance;
 
-                UI.UIController.Instance.SetCurrentSephirah(floor.Sephirah);
+                UI.UIController.Instance.SetCurrentSephirah(seph);
 
                 if (data.stageId >= 210005 && data.stageId <= 210009)
                 {
@@ -544,7 +512,7 @@ namespace LORAP.Patches
                     StageController.firstStartState = true;
                     StageController._isEndContentsStage = true;
 
-                    StageLibraryFloorModel _floor = StageController._stageModel.GetFloor(floor.Sephirah);
+                    StageLibraryFloorModel _floor = StageController._stageModel.GetFloor(seph);
                     if (_floor == null)
                         return;
 
@@ -567,7 +535,7 @@ namespace LORAP.Patches
                 else
                 {
                     // OnClickStartCreatureStage
-                    StageController.SetCurrentSephirah(floor.Sephirah);
+                    StageController.SetCurrentSephirah(seph);
 
                     StageClassInfo stageInfo = StageClassInfoList.Instance.GetData(data.stageId);
 
@@ -578,7 +546,7 @@ namespace LORAP.Patches
 
                     foreach (UnitBattleDataModel unitBattleData in StageController.GetCurrentStageFloorModel().GetUnitBattleDataList())
                     {
-                        if (floor.Sephirah == SephirahType.Binah && LibraryModel.Instance.IsBinahLockedInLibrary() && unitBattleData.unitData.isSephirah)
+                        if (seph == SephirahType.Binah && LibraryModel.Instance.IsBinahLockedInLibrary() && unitBattleData.unitData.isSephirah)
                         {
                             unitBattleData.IsAddedBattle = false;
                         }
@@ -597,23 +565,10 @@ namespace LORAP.Patches
 
 
 
-        // Limit books given from crying children reception. TODO Change?
+        // Don't give crying children books after the reception
         [HarmonyPatch(typeof(EnemyTeamStageManager_TheCrying), nameof(EnemyTeamStageManager_TheCrying.OnStageClear))]
         [HarmonyPrefix]
-        static bool CryingChildrenBooks(EnemyTeamStageManager_TheCrying __instance)
-        {
-            /*if (PlaythruManager.FoundBooks.Contains(240023))
-                return false;
-
-            DropBookDataForAddedReward drop = new DropBookDataForAddedReward(240023);
-
-            // Also mark the book as found
-            PlaythruManager.FoundBooks.Add(drop.id.id);
-
-            StageController.Instance.OnEnemyDropBookForAdded(drop);
-            */
-            return false;
-        }
+        static bool CryingChildrenBooks() => false;
 
 
 
@@ -622,7 +577,32 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool CheckRealization(LibraryModel __instance, LibraryFloorModel floor, ref bool __result)
         {
-            __result = (floor.Sephirah == SephirahType.Binah || floor.Sephirah == SephirahType.Hokma) && floor.GetCurrentAbnoStage() >= 4 || floor.GetCurrentAbnoStage() >= 5;
+            __result = false;
+
+            if (!floor.Sephirah.IsOpen())
+                return false;
+
+            List<int> bossStages = new List<int>()
+            {
+                201005, 202005, 203005, 204005, 205005, 206005, 207005, 208005, 209005, 210005, 210006, 210007, 210008, 210009
+            };
+
+            FloorLevelXmlInfo data = FloorLevelXmlList.Instance.GetData(floor.Sephirah, floor.GetCurrentAbnoStage());
+
+            // Check if player has all the required books
+            List<int> books = SlotDataManager.AbnoBookRequirements[floor.Sephirah][floor.GetCurrentAbnoStage() - 1];
+            bool hasBooks = true;
+
+            foreach (int book in books)
+            {
+                if (DropBookInventoryModel.Instance.GetBookCount(book) == 0)
+                {
+                    hasBooks = false;
+                    break;
+                }
+            }
+
+            __result = bossStages.Contains(data.stageId) && hasBooks;
 
             return false;
         }
@@ -636,10 +616,23 @@ namespace LORAP.Patches
         {
             __result = false;
 
-            if (!__instance._openedSephirah.Contains(sep)) 
+            if (!sep.IsOpen()) 
                 return false;
 
-            __result = FloorLevelXmlList.Instance.GetData(sep.FloorModel().Sephirah, sep.FloorModel().GetCurrentAbnoStage()) != null;
+            // Check if player has all the required books
+            List<int> books = SlotDataManager.AbnoBookRequirements[sep][sep.GetCurrentAbnoStage() - 1];
+            bool hasBooks = true;
+
+            foreach (int book in books)
+            {
+                if (DropBookInventoryModel.Instance.GetBookCount(book) == 0)
+                {
+                    hasBooks = false;
+                    break;
+                }
+            }
+
+            __result = FloorLevelXmlList.Instance.GetData(sep, sep.GetCurrentAbnoStage()) != null && hasBooks;
 
             return false;
         }
@@ -647,17 +640,17 @@ namespace LORAP.Patches
 
 
         // Make UI show what abno/realization is to fight.
-        [HarmonyPatch(typeof(UI.UIController), nameof(UI.UIController.OnClickStartCreatureStage))]
-        [HarmonyTranspiler]
-        static IEnumerable<CodeInstruction> UIAbnoOrRealizationPatch(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
-        {
-            var codeMatcher = new CodeMatcher(instructions, generator);
-
-            codeMatcher.MatchStartForward(OpCodes.Callvirt, OpCodes.Stloc_0, OpCodes.Call, OpCodes.Ldarg_1)
-                .SetInstruction(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ClassExtensions), nameof(ClassExtensions.GetCurrentAbnoStage))));
-
-            return codeMatcher.Instructions();
-        }
+        //[HarmonyPatch(typeof(UI.UIController), nameof(UI.UIController.OnClickStartCreatureStage))]
+        //[HarmonyTranspiler]
+        //static IEnumerable<CodeInstruction> UIAbnoOrRealizationPatch(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+        //{
+        //    var codeMatcher = new CodeMatcher(instructions, generator);
+        //
+        //    codeMatcher.MatchStartForward(OpCodes.Callvirt, OpCodes.Stloc_0, OpCodes.Call, OpCodes.Ldarg_1)
+        //        .SetInstruction(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ClassExtensions), nameof(ClassExtensions.GetCurrentAbnoStage))));
+        //
+        //    return codeMatcher.Instructions();
+        //}
 
 
 
@@ -755,13 +748,6 @@ namespace LORAP.Patches
         {
             __result = StoryState.Close;
 
-            // If receptions are not progressive, show it
-            if (SlotDataManager.ReceptionsProgression == ReceptionsProgression.Unlocked || SlotDataManager.ReceptionsProgression == ReceptionsProgression.Books)
-            {
-                __result = StoryState.Clear;
-                return false;
-            }
-
             // If there is any hint for this location, show it
             if (LocationManager.KnownHints.Any(h => LocationManager.GetReceptionIdFromLocationId(h.LocationId) == __instance.id.id))
                 __result = StoryState.Clear;
@@ -789,7 +775,7 @@ namespace LORAP.Patches
             __instance.blockChapterList.ForEach(b => b.root.gameObject.SetActive(false)); // Hide all chapter block things
             __instance.chapterList.ForEach(c => c.SetActive(true)); // Show all chapters (groups of receptions)
 
-            if (SlotDataManager.RandomizeReceptionTree || SlotDataManager.ReceptionsProgression == ReceptionsProgression.Progressive || SlotDataManager.ReceptionsProgression == ReceptionsProgression.ProgressiveBooks) // For randomized reception tree or Unlocked/Books progression
+            if (SlotDataManager.RandomizeReceptionTree) // For randomized reception tree or Unlocked/Books progression
             {
                 // Hide all chapter lines
                 foreach (var chapter in __instance.chapterIconList)
@@ -840,7 +826,7 @@ namespace LORAP.Patches
             }
 
 
-            // TODO: Find a better way
+            // TODO: Find a better way?
             foreach (UIStoryProgressIconSlot chapterIcon in __instance.chapterIconList) // Make chapter buttons not interactable (and some other default stuff)
             {
                 chapterIcon.SetChapterStoryIcon();
@@ -863,7 +849,7 @@ namespace LORAP.Patches
             List<long> receptionLocations = LocationManager.GetUncheckedReceptionLocations(stage._id);
             List<long> locationsWithHints = receptionLocations.Where(l => LocationManager.KnownHints.Any(h => !h.Found && h.LocationId == l)).ToList();
 
-            // Scout all unchecked locations (they're already known, but this time we scout for hints.)
+            // Scout all unchecked locations (they're already known, but this time we scout for hints.) // TODO: Make an option to toggle the hint scouting
             // If this recepion is visible because of a hint, don't scout.
             if (locationsWithHints.Count == 0)
                 SessionManager.Locations.ScoutLocationsAsync(HintCreationPolicy.CreateAndAnnounceOnce, receptionLocations.ToArray());
@@ -885,6 +871,7 @@ namespace LORAP.Patches
                 if (i == 7 && receptionLocations.Count > 8)
                 {
                     slot.BookName.text = $"+{receptionLocations.Count - 7} more items!";
+                    slot.Icon.sprite = UIUtils.FillerSprite;
                 }
                 else
                 {
