@@ -918,15 +918,16 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool FakeBooks(UIInvitationRightMainPanel __instance, ref StageClassInfo __result)
         {
+            __result = null;
             var cur = __instance.invPanel.CurrentStage;
-            if (cur != null && __instance.invPanel.currentSelectedStorySlot != null && cur == __instance.invPanel.currentSelectedStorySlot.storyData[__instance.invPanel.currentStoryidx] && cur.invitationInfo.needsBooks.Count == 0)
+            if (cur != null && __instance.invPanel.currentSelectedStorySlot != null && cur == __instance.invPanel.currentSelectedStorySlot.storyData[__instance.invPanel.currentStoryidx] /*&& cur.invitationInfo.needsBooks.Count == 0*/)
             {
                 __result = cur;
 
-                return false;
+                //return false;
             }
 
-            return true;
+            return false;//true;
         }
 
 

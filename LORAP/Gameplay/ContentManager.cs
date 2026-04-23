@@ -162,7 +162,7 @@ namespace LORAP.Gameplay
                 int cur_depth = pair.Key;
                 int nodes_num = pair.Value.Count;
                 int cur_node = 1;
-                foreach (int id in pair.Value)
+                foreach (int id in pair.Value) 
                 {
                     StageClassInfo info = StageClassInfoList.Instance.GetData(id);
                     UIStoryLine storyline = storylines.Where(p => p.Key == info.storyType).First().Value;
