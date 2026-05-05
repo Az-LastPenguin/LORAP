@@ -1,9 +1,10 @@
-﻿using LORAP.Archipelago;
+using LORAP.Archipelago;
 using LORAP.CustomUI;
 using LORAP.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using TMPro;
 using UI;
 using UnityEngine;
@@ -11,50 +12,6 @@ using UnityEngine.UI;
 
 namespace LORAP.Gameplay
 {
-    internal class ReceptionNode
-    {
-        public int id;
-
-        public List<int> next;
-
-        public int y;
-    }
-
-    internal class ReceptionTree
-    {
-        public List<ReceptionNode> Nodes = new List<ReceptionNode>();
-
-        public Dictionary<int, List<int>> NodesOfDepth {
-            get
-            {
-                Dictionary<int, List<int>> result = new Dictionary<int, List<int>>();
-
-                foreach (var node in Nodes) 
-                {
-                    if (!result.ContainsKey(node.y))
-                        result[node.y] = new List<int>();
-
-                    result[node.y].Add(node.id);
-                }
-
-                return result;
-            }
-            set 
-            {
-                NodesOfDepth = value;
-            } 
-        }
-
-        public int First;
-
-        public int Last;
-
-        
-        public ReceptionNode GetNode(int id) => Nodes.Find(n => n.id == id);
-
-        public List<ReceptionNode> GetPrevNodes(int id) => Nodes.Where(n => n.next.Contains(id)).ToList();
-    }
-
     internal static class ContentManager
     {
         internal static Dictionary<int, DropBookXmlInfo> CustomBooks = new Dictionary<int, DropBookXmlInfo>();
@@ -99,7 +56,7 @@ namespace LORAP.Gameplay
             return Book;
         }
 
-        private static UIStoryProgressIconSlot PlaceReceptionOnMap(int id, UIStoryLine story, Vector3 position)
+        private static UIStoryProgressIconSlot PlaceBattleNodeOnMap(int id, UIStoryLine story, Vector3 position, SephirahType assignedFloor = SephirahType.None)
         {
             UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
 
@@ -110,14 +67,131 @@ namespace LORAP.Gameplay
             icon.storyData = new List<StageClassInfo>() { StageClassInfoList.Instance.GetData(id) };
             icon.currentStory = story;
 
+            if (assignedFloor != SephirahType.None)
+                ApplyFloorIcon(icon, assignedFloor);
+
             var check = UnityEngine.Object.Instantiate(CheckmarkIconTemplate, icon.transform);
             check.transform.localPosition = new Vector3(30, 100, 0);
             check.name = "Checkmark";
             check.transform.SetSiblingIndex(2);
+            check.SetActive(false);
 
             MapPanel.iconList.Add(icon);
 
             return icon;
+        }
+
+        internal static void ApplyFloorIcon(UIStoryProgressIconSlot icon, SephirahType floor)
+        {
+            Sprite contentSprite;
+            Sprite glowSprite;
+            TryGetFloorSprites(floor, out contentSprite, out glowSprite);
+            if (contentSprite == null)
+                return;
+
+            SetStoryIconSet(icon, "closeIconset", contentSprite, glowSprite, Color.white, Color.clear);
+            SetStoryIconSet(icon, "openIconset", contentSprite, glowSprite, Color.white, Color.clear);
+        }
+
+        internal static void ConfigureBattleNodeLevelIcons(UIStoryProgressIconSlot icon, bool isRevealed)
+        {
+            if (icon == null || icon.IconLevels == null)
+                return;
+
+            for (int i = 0; i < icon.IconLevels.Length; i++)
+            {
+                storyIconLevel levelIcon = icon.IconLevels[i];
+                if (levelIcon.root == null)
+                    continue;
+
+                levelIcon.root.SetActive(isRevealed && i == 0);
+            }
+        }
+
+        private static void SetStoryIconSet(UIStoryProgressIconSlot icon, string fieldName, Sprite content, Sprite glow, Color contentColor, Color glowColor)
+        {
+            FieldInfo iconSetField = typeof(UIStoryProgressIconSlot).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            object iconSet = iconSetField?.GetValue(icon);
+            if (iconSet == null)
+                return;
+
+            Image contentImage = GetImageField(iconSet, "img_iconContent") ?? GetImageField(iconSet, "img_icon");
+            Image bgImage = GetImageField(iconSet, "img_iconbg");
+            Image frameImage = GetImageField(iconSet, "img_iconFrame");
+
+            if (contentImage != null)
+            {
+                if (content != null)
+                {
+                    contentImage.sprite = content;
+                    contentImage.SetNativeSize();
+                }
+                contentImage.color = contentColor;
+            }
+
+            if (bgImage != null)
+            {
+                if (glow != null)
+                {
+                    bgImage.sprite = glow;
+                    bgImage.SetNativeSize();
+                }
+                bgImage.color = glowColor;
+            }
+
+            if (frameImage != null)
+            {
+                if (glow != null)
+                {
+                    frameImage.sprite = glow;
+                    frameImage.SetNativeSize();
+                }
+                frameImage.color = glowColor;
+            }
+        }
+
+        private static Image GetImageField(object target, string fieldName)
+        {
+            return target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.GetValue(target) as Image;
+        }
+
+        private static void TryGetFloorSprites(SephirahType floor, out Sprite content, out Sprite glow)
+        {
+            content = null;
+            glow = null;
+
+            try
+            {
+                string spriteName = GetFloorIconSpriteName(floor);
+                if (string.IsNullOrEmpty(spriteName))
+                    return;
+
+                content = Resources.FindObjectsOfTypeAll<Sprite>().FirstOrDefault(s => s != null && s.name == spriteName);
+                glow = null;
+            }
+            catch
+            {
+                content = null;
+                glow = null;
+            }
+        }
+
+        private static string GetFloorIconSpriteName(SephirahType floor)
+        {
+            switch (floor)
+            {
+                case SephirahType.Keter: return "Icon_Sephirah_0";
+                case SephirahType.Malkuth: return "Icon_Sephirah_1";
+                case SephirahType.Yesod: return "Icon_Sephirah_2";
+                case SephirahType.Hod: return "Icon_Sephirah_4";
+                case SephirahType.Netzach: return "Icon_Sephirah_3";
+                case SephirahType.Tiphereth: return "Icon_Sephirah_5";
+                case SephirahType.Gebura: return "Icon_Sephirah_6";
+                case SephirahType.Chesed: return "Icon_Sephirah_7";
+                case SephirahType.Binah: return "Icon_Sephirah_9";
+                case SephirahType.Hokma: return "Icon_Sephirah_8";
+                default: return null;
+            }
         }
 
 
@@ -135,56 +209,60 @@ namespace LORAP.Gameplay
 
             PrepareSuppressions();
         }
-    
+
         private static void RandomizeReceptionTree()
         {
             UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
 
-            if (!SlotDataManager.RandomizeReceptionTree)
+            if (!SlotDataManager.HasBattleTree)
+                throw new Exception("LORAP battle tree data was not parsed.");
+
+            Debug.Log("[LORAP] Drawing Battle Tree");
+
+            Dictionary<string, UIStoryProgressIconSlot> icons = new Dictionary<string, UIStoryProgressIconSlot>();
+            List<BattleNode> nodes = SlotDataManager.BattleTree.Nodes.Values
+                .OrderBy(n => n.VisualY)
+                .ThenBy(n => n.VisualX)
+                .ThenBy(n => n.Id)
+                .ToList();
+
+            foreach (BattleNode node in nodes)
             {
-                MapPanel.iconList = VanillaIconsBackup;
+                StageClassInfo info = StageClassInfoList.Instance.GetData(node.Id);
+                if (info == null)
+                    continue;
 
-                return;
-            }
-
-            Debug.Log("[LORAP] Randomizing Reception Tree");
-
-            var Random = new System.Random(SlotDataManager.Seed);
-
-            // Setup Reception Tree
-            Dictionary<int, List<int>> Depths = SlotDataManager.ReceptionTree.NodesOfDepth;
-
-            Dictionary<string, UIStoryLine> storylines = Enum.GetValues(typeof(UIStoryLine)).Cast<UIStoryLine>().ToDictionary(e => e.ToString(), e => e);
-
-            Dictionary<int, UIStoryProgressIconSlot> icons = new Dictionary<int, UIStoryProgressIconSlot>();
-            foreach (var pair in Depths)
-            {
-                int cur_depth = pair.Key;
-                int nodes_num = pair.Value.Count;
-                int cur_node = 1;
-                foreach (int id in pair.Value) 
+                UIStoryLine storyline = UIStoryLine.Chapter1;
+                if (node.Kind == BattleNodeKind.Reception)
                 {
-                    StageClassInfo info = StageClassInfoList.Instance.GetData(id);
-                    UIStoryLine storyline = storylines.Where(p => p.Key == info.storyType).First().Value;
-
-                    icons[id] = PlaceReceptionOnMap(id, storyline, new Vector3(-(240 * (nodes_num - 1)) / 2 + (240 * (cur_node - 1)), -220 + cur_depth * 220, 0));
-
-                    // Add recipes
-                    info.invitationInfo.needsBooks = SlotDataManager.ReceptionBookRequirements[id].Select(b => new LorId(b)).ToList();
-
-                    cur_node++;
+                    storyline = GetStoryLineForStageInfo(info);
+                    info.invitationInfo.needsBooks = SlotDataManager.ReceptionBookRequirements.ContainsKey(node.Id)
+                        ? SlotDataManager.ReceptionBookRequirements[node.Id].Select(b => new LorId(b)).ToList()
+                        : new List<LorId>();
                 }
+                else
+                {
+                    storyline = GetStoryLineForChapter(Math.Max(1, Math.Min(7, node.Chapter)));
+                }
+
+                Vector3 position = new Vector3(node.VisualX, node.VisualY, 0f);
+                icons[node.Key] = PlaceBattleNodeOnMap(node.Id, storyline, position, node.Kind == BattleNodeKind.Stage ? node.AssignedFloor : SephirahType.None);
             }
 
-            foreach (var pair in icons)
+            foreach (BattleNode node in SlotDataManager.BattleTree.Nodes.Values)
             {
-                int id = pair.Key;
-                UIStoryProgressIconSlot icon = pair.Value;
+                if (!icons.ContainsKey(node.Key))
+                    continue;
+
+                UIStoryProgressIconSlot icon = icons[node.Key];
                 icon.connectLineList.Clear();
-                // Create Paths
-                foreach (int next in SlotDataManager.ReceptionTree.GetNode(id).next)
+
+                foreach (string nextKey in node.Next)
                 {
-                    UIStoryProgressIconSlot nextIcon = icons[next];
+                    if (!icons.ContainsKey(nextKey))
+                        continue;
+
+                    UIStoryProgressIconSlot nextIcon = icons[nextKey];
                     var line = UnityEngine.Object.Instantiate(LineTemplate, icon.transform.Find("[Rect]Lines"));
                     line.transform.localPosition = (nextIcon.transform.localPosition - icon.transform.localPosition) / 2;
                     line.transform.right = (nextIcon.transform.localPosition - icon.transform.localPosition).normalized;
@@ -195,7 +273,50 @@ namespace LORAP.Gameplay
                 }
             }
 
-            // TODO Place endgoals after Oliver
+            ResizeBattleTreeMap(MapPanel, nodes);
+        }
+
+        private static void ResizeBattleTreeMap(UIStoryProgressPanel mapPanel, List<BattleNode> nodes)
+        {
+            if (mapPanel == null || nodes == null || nodes.Count == 0)
+                return;
+
+            float minX = nodes.Min(n => n.VisualX);
+            float maxX = nodes.Max(n => n.VisualX);
+            float minY = nodes.Min(n => n.VisualY);
+            float maxY = nodes.Max(n => n.VisualY);
+
+            float width = Math.Max(5000f, Math.Abs(maxX - minX) + 1800f);
+            float height = Math.Max(9000f, Math.Abs(maxY - minY) + 1800f);
+
+            mapPanel.posRect.sizeDelta = new Vector2(width, height);
+        }
+
+        private static UIStoryLine GetStoryLineForChapter(int chapter)
+        {
+            switch (chapter)
+            {
+                case 1: return UIStoryLine.Chapter1;
+                case 2: return UIStoryLine.Chapter2;
+                case 3: return UIStoryLine.Chapter3;
+                case 4: return UIStoryLine.Chapter4;
+                case 5: return UIStoryLine.Chapter5;
+                case 6: return UIStoryLine.Chapter6;
+                case 7: return UIStoryLine.Chapter7;
+                default: return UIStoryLine.Chapter1;
+            }
+        }
+
+        private static UIStoryLine GetStoryLineForStageInfo(StageClassInfo info)
+        {
+            if (info == null)
+                return UIStoryLine.Chapter1;
+
+            UIStoryLine parsedStoryLine;
+            if (!string.IsNullOrWhiteSpace(info.storyType) && Enum.TryParse(info.storyType, out parsedStoryLine))
+                return parsedStoryLine;
+
+            return GetStoryLineForChapter(Math.Max(1, Math.Min(7, info.chapter)));
         }
 
         private static void ShuffleAbnoPages()
@@ -522,7 +643,7 @@ namespace LORAP.Gameplay
             //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 8, stageId = 210008, sephirahType = SephirahType.Keter });
             //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 9, stageId = 210009, sephirahType = SephirahType.Keter });
         }
-    
+
         private static void ApplyUIChanges()
         {
             Debug.Log("[LORAP] Applying UI Changes");
@@ -568,14 +689,14 @@ namespace LORAP.Gameplay
 
             // TODO: Change Icon for the library level in the level progress bar to AP icon
         }
-    
+
         private static void ApplyMapChanges()
         {
             Debug.Log("[LORAP] Applying Map Changes");
 
             // Make map bigger
             UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
-            MapPanel.posRect.sizeDelta = new Vector2(3600, 7000);
+            MapPanel.posRect.sizeDelta = new Vector2(5000, 9000);
 
             // Move Black Silence and Distorted Ensemble receptions on the map
             var BlackSilence = MapPanel.iconList.Find(i => i.currentStory == UIStoryLine.BlackSilence);
@@ -599,29 +720,29 @@ namespace LORAP.Gameplay
 
             // Adding receptions to the map
             // General Receptions
-            PlaceReceptionOnMap(100001, UIStoryLine.PierresMeatPies, new Vector3(-260, 1880, 0)); // Backstreets Butchers
-            PlaceReceptionOnMap(100002, UIStoryLine.HookOfficeRemnant, new Vector3(-520, 1880, 0)); // Hook Office Remnants
-            PlaceReceptionOnMap(100003, UIStoryLine.Chapter2, new Vector3(260, 1880, 0));  // Urban Myth-class Syndicate
+            PlaceBattleNodeOnMap(100001, UIStoryLine.PierresMeatPies, new Vector3(-260, 1880, 0)); // Backstreets Butchers
+            PlaceBattleNodeOnMap(100002, UIStoryLine.HookOfficeRemnant, new Vector3(-520, 1880, 0)); // Hook Office Remnants
+            PlaceBattleNodeOnMap(100003, UIStoryLine.Chapter2, new Vector3(260, 1880, 0));  // Urban Myth-class Syndicate
 
-            PlaceReceptionOnMap(100004, UIStoryLine.Grade8Fixers, new Vector3(-450, 2900, 0)); // Grade 8 Fixers
-            PlaceReceptionOnMap(100006, UIStoryLine.Grade7Fixers, new Vector3(450, 2900, 0));  // Grade 7 Fixers 
-            PlaceReceptionOnMap(100005, UIStoryLine.Chapter3, new Vector3(0, 2900, 0));    // Urban Legend-class Office
-            PlaceReceptionOnMap(100007, UIStoryLine.Chapter3, new Vector3(-900, 2900, 0)); // Urban Legend-class Syndicate
-            PlaceReceptionOnMap(100008, UIStoryLine.AxeGang, new Vector3(900, 2900, 0));  // Axe Gang
+            PlaceBattleNodeOnMap(100004, UIStoryLine.Grade8Fixers, new Vector3(-450, 2900, 0)); // Grade 8 Fixers
+            PlaceBattleNodeOnMap(100006, UIStoryLine.Grade7Fixers, new Vector3(450, 2900, 0));  // Grade 7 Fixers 
+            PlaceBattleNodeOnMap(100005, UIStoryLine.Chapter3, new Vector3(0, 2900, 0));    // Urban Legend-class Office
+            PlaceBattleNodeOnMap(100007, UIStoryLine.Chapter3, new Vector3(-900, 2900, 0)); // Urban Legend-class Syndicate
+            PlaceBattleNodeOnMap(100008, UIStoryLine.AxeGang, new Vector3(900, 2900, 0));  // Axe Gang
 
-            PlaceReceptionOnMap(100009, UIStoryLine.RustyChainGroup, new Vector3(-450, 3610, 0)); // Rusted Chains
-            PlaceReceptionOnMap(100010, UIStoryLine.WorkshopFixer, new Vector3(0, 3610, 0));    // Workshop-affiliated Fixers
-            PlaceReceptionOnMap(100014, UIStoryLine.Jeong, new Vector3(450, 3610, 0));  // Jeong's Office
+            PlaceBattleNodeOnMap(100009, UIStoryLine.RustyChainGroup, new Vector3(-450, 3610, 0)); // Rusted Chains
+            PlaceBattleNodeOnMap(100010, UIStoryLine.WorkshopFixer, new Vector3(0, 3610, 0));    // Workshop-affiliated Fixers
+            PlaceBattleNodeOnMap(100014, UIStoryLine.Jeong, new Vector3(450, 3610, 0));  // Jeong's Office
 
-            PlaceReceptionOnMap(100011, UIStoryLine.SevenAssociation, new Vector3(-450, 4520, 0)); // Seven Association
-            PlaceReceptionOnMap(100012, UIStoryLine.Sword, new Vector3(450, 4520, 0));  // Blade Lineage
+            PlaceBattleNodeOnMap(100011, UIStoryLine.SevenAssociation, new Vector3(-450, 4520, 0)); // Seven Association
+            PlaceBattleNodeOnMap(100012, UIStoryLine.Sword, new Vector3(450, 4520, 0));  // Blade Lineage
 
-            PlaceReceptionOnMap(100013, UIStoryLine.ClassOneFixer, new Vector3(-450, 5550, 0)); // Dong-hwan the Grade 1 Fixer
-            PlaceReceptionOnMap(100015, UIStoryLine.AwlOfNight, new Vector3(450, 5550, 0));  // Night Awls
-            PlaceReceptionOnMap(100016, UIStoryLine.Usett, new Vector3(0, 5690, 0));    // The Udjat
-            PlaceReceptionOnMap(100017, UIStoryLine.Mirae, new Vector3(0, 5420, 0));    // Mirae Life Insurance
-            PlaceReceptionOnMap(100018, UIStoryLine.Workshop, new Vector3(-900, 5550, 0)); // Leaflet Workshop
-            PlaceReceptionOnMap(100019, UIStoryLine.Bayyard, new Vector3(900, 5550, 0));  // Bayard
+            PlaceBattleNodeOnMap(100013, UIStoryLine.ClassOneFixer, new Vector3(-450, 5550, 0)); // Dong-hwan the Grade 1 Fixer
+            PlaceBattleNodeOnMap(100015, UIStoryLine.AwlOfNight, new Vector3(450, 5550, 0));  // Night Awls
+            PlaceBattleNodeOnMap(100016, UIStoryLine.Usett, new Vector3(0, 5690, 0));    // The Udjat
+            PlaceBattleNodeOnMap(100017, UIStoryLine.Mirae, new Vector3(0, 5420, 0));    // Mirae Life Insurance
+            PlaceBattleNodeOnMap(100018, UIStoryLine.Workshop, new Vector3(-900, 5550, 0)); // Leaflet Workshop
+            PlaceBattleNodeOnMap(100019, UIStoryLine.Bayyard, new Vector3(900, 5550, 0));  // Bayard
 
 
             foreach (var icon in MapPanel.iconList)

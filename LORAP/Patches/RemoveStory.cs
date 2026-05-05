@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using StoryScene;
 using UI;
 using UnityEngine;

@@ -1,4 +1,4 @@
-﻿using GameSave;
+using GameSave;
 using HarmonyLib;
 using LOR_DiceSystem;
 using LORAP.Archipelago;
@@ -84,16 +84,22 @@ namespace LORAP.Patches
 
 
             // Book requirements
-            List<int> books = SlotDataManager.AbnoBookRequirements[seph][floorInfo.AbnoStage - 1];
-            foreach (int book in books)
+            int stageIndex = floorInfo.AbnoStage - 1;
+            if (SlotDataManager.AbnoBookRequirements.ContainsKey(seph) &&
+                stageIndex >= 0 &&
+                stageIndex < SlotDataManager.AbnoBookRequirements[seph].Count)
             {
-                pairs = LocationManager.GetPairsWithItemAndHint(ItemManager.GetItemId(book, APItemType.Book), true);
-                infos.Add(new Tuple<string, string, bool, Sprite>(
-                    $"{DropBookXmlList.Instance.GetData(new LorId(book)).Name}: {(pairs.Count > 0 ? LocationManager.FormatPairLocation(pairs.First()) : "No Hints")}",
-                    $"{DropBookInventoryModel.Instance.GetBookCount(book)}/1",
-                    DropBookInventoryModel.Instance.GetBookCount(book) > 0,
-                    exclamMarkIcon
-                ));
+                List<int> books = SlotDataManager.AbnoBookRequirements[seph][stageIndex];
+                foreach (int book in books)
+                {
+                    pairs = LocationManager.GetPairsWithItemAndHint(ItemManager.GetItemId(book, APItemType.Book), true);
+                    infos.Add(new Tuple<string, string, bool, Sprite>(
+                        $"{DropBookXmlList.Instance.GetData(new LorId(book)).Name}: {(pairs.Count > 0 ? LocationManager.FormatPairLocation(pairs.First()) : "No Hints")}",
+                        $"{DropBookInventoryModel.Instance.GetBookCount(book)}/1",
+                        DropBookInventoryModel.Instance.GetBookCount(book) > 0,
+                        exclamMarkIcon
+                    ));
+                }
             }
 
 
@@ -179,7 +185,7 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool IsBinahLockedInLibrary(LibraryModel __instance, ref bool __result)
         {
-            __result = true; //!PlaythruManager.BinahUnlocked;
+            __result = !PlaythruManager.BinahUnlocked;
 
             return false;
         }
@@ -188,7 +194,7 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool IsBlackSilenceLockedInLibrary(LibraryModel __instance, ref bool __result)
         {
-            __result = true; //!PlaythruManager.BlackSilenceUnlocked;
+            __result = !PlaythruManager.BlackSilenceUnlocked;
 
             return false;
         }
@@ -197,7 +203,7 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool IsBinahLockedInStage(LibraryModel __instance, StageClassInfo stageInfo, ref bool __result)
         {
-            __result = true; //!PlaythruManager.BinahUnlocked;
+            __result = !PlaythruManager.BinahUnlocked;
 
             return false;
         }
@@ -206,7 +212,7 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool IsBlackSilenceLockedInStage(LibraryModel __instance, StageClassInfo stageInfo, ref bool __result)
         {
-            __result = true; //!PlaythruManager.BlackSilenceUnlocked;
+            __result = !PlaythruManager.BlackSilenceUnlocked;
 
             return false;
         }
@@ -300,10 +306,18 @@ namespace LORAP.Patches
             float num = LocationManager.CheckedLocations.Count;
             float num2 = LocationManager.AllLocations.Count;
             float sliderLength = __instance.sliderLength;
-            float x = sliderLength * (num / num2);
 
             var txt_leveltxt = __instance.txt_leveltxt;
             var img_SliderMaskGauge = __instance.img_SliderMaskGauge;
+
+            if (num2 <= 0f)
+            {
+                txt_leveltxt.text = "0/0";
+                img_SliderMaskGauge.rectTransform.sizeDelta = new Vector2(0f, img_SliderMaskGauge.rectTransform.sizeDelta.y);
+                return false;
+            }
+
+            float x = sliderLength * (num / num2);
 
             if (num >= num2)
             {
@@ -369,7 +383,7 @@ namespace LORAP.Patches
                 return;
 
             UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
-            if (SlotDataManager.RandomizeReceptionTree)
+            if (SlotDataManager.HasBattleTree)
             {
                 foreach (var icon in MapPanel.iconList)
                 {

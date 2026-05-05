@@ -1,4 +1,4 @@
-﻿using Archipelago.MultiClient.Net.Enums;
+using Archipelago.MultiClient.Net.Enums;
 using GameSave;
 using LORAP.Archipelago;
 using LORAP.Playthru;
@@ -115,6 +115,12 @@ namespace LORAP.Gameplay
                     num++;
                 }
             }
+
+            if (PlaythruManager.BinahUnlocked)
+                PlaythruManager.UnlockBinah(true);
+
+            if (PlaythruManager.BlackSilenceUnlocked)
+                PlaythruManager.UnlockBlackSilence(true);
         }
 
 
@@ -187,7 +193,12 @@ namespace LORAP.Gameplay
 
         internal static void SaveLastSessionData() // TODO: Make this shorter too
         {
-            SessionManager.sessionData.Progress = (float)LocationManager.CheckedLocations.Count / LocationManager.AllLocations.Count;
+            if (SessionManager.sessionData == null)
+                SessionManager.sessionData = new SessionData();
+
+            int allLocations = LocationManager.AllLocations.Count;
+            int checkedLocations = LocationManager.CheckedLocations.Count;
+            SessionManager.sessionData.Progress = allLocations > 0 ? (float)checkedLocations / allLocations : SessionManager.sessionData.Progress;
             SessionManager.sessionData.Password = "";
 
             if (!Directory.Exists($"{Application.persistentDataPath}/Archipelago"))

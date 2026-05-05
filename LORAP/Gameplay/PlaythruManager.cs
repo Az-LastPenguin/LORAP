@@ -1,4 +1,4 @@
-﻿using GameSave;
+using GameSave;
 using LORAP.Archipelago;
 using LORAP.CustomUI;
 using LORAP.Gameplay;
@@ -41,6 +41,11 @@ namespace LORAP.Playthru
 
             // Create list of floor infos to keep track of every floors state by our own
             Floors = Enum.GetValues(typeof(SephirahType)).Cast<SephirahType>().ToDictionary(k => k, v => new FloorInfo());
+
+            foreach (var floor in LibraryModel.Instance._floorList)
+            {
+                Floors[floor.Sephirah].Open = LibraryModel.Instance.IsOpenedSephirah(floor.Sephirah);
+            }
 
             // Init AP Managers
             ItemManager.Init();
@@ -157,7 +162,11 @@ namespace LORAP.Playthru
             // Save floors data about current stage
             saveData.AddData("floorStages", new SaveData(Floors.Select(p => p.Value.AbnoStage).ToList()));
 
-            // Some other data maybe
+            saveData.AddData("maxAttributionPoints", new SaveData(MaxAttributionPoints));
+            saveData.AddData("maxPassives", new SaveData(MaxPassives));
+            saveData.AddData("maxEmotionLevel", new SaveData(MaxEmotionLevel));
+            saveData.AddData("binahUnlocked", new SaveData(BinahUnlocked ? 1 : 0));
+            saveData.AddData("blackSilenceUnlocked", new SaveData(BlackSilenceUnlocked ? 1 : 0));
 
             return saveData;
         }
@@ -165,6 +174,8 @@ namespace LORAP.Playthru
         internal static void LoadFromSaveData(SaveData saveData)
         {
             ReceptionsCompleted = saveData.GetData("receptionsCompleted")._list.Select(d => d.GetIntSelf()).ToList();
+
+            ReceptionsCompleted = ReceptionsCompleted.Where(IsStageCompleteForProgression).Distinct().ToList();
 
             var floorData = saveData.GetData("floorStages");
             for (int i = 0; i < Floors.Count; i++)
@@ -174,6 +185,26 @@ namespace LORAP.Playthru
 
                 pair.Value.AbnoStage = data.GetIntSelf();
             }
+
+            var maxAttrib = saveData.GetData("maxAttributionPoints");
+            if (maxAttrib != null)
+                MaxAttributionPoints = maxAttrib.GetIntSelf();
+
+            var maxPass = saveData.GetData("maxPassives");
+            if (maxPass != null)
+                MaxPassives = maxPass.GetIntSelf();
+
+            var maxEmotion = saveData.GetData("maxEmotionLevel");
+            if (maxEmotion != null)
+                MaxEmotionLevel = maxEmotion.GetIntSelf();
+
+            var binah = saveData.GetData("binahUnlocked");
+            if (binah != null)
+                BinahUnlocked = binah.GetIntSelf() != 0;
+
+            var blackSilence = saveData.GetData("blackSilenceUnlocked");
+            if (blackSilence != null)
+                BlackSilenceUnlocked = blackSilence.GetIntSelf() != 0;
         }
 
 
@@ -188,16 +219,113 @@ namespace LORAP.Playthru
             UI.UIController.Instance.CallUIPhase(UIPhase.Sephirah);
         }
 
+        internal static bool IsLocationlessEndgoalStage(int stageId)
+        {
+            if (SlotDataManager.Endgoals == null)
+                return false;
+
+            if (stageId >= 70001 && stageId <= 70010)
+                return SlotDataManager.Endgoals.Contains(Endgoal.ReverberationEnsemble);
+
+            switch (stageId)
+            {
+                case 60003:
+                    return SlotDataManager.Endgoals.Contains(Endgoal.BlackSilence);
+                case 210009:
+                    return SlotDataManager.Endgoals.Contains(Endgoal.KeterRealization);
+                case 60004:
+                    return SlotDataManager.Endgoals.Contains(Endgoal.DistortedEnsemble);
+                default:
+                    return false;
+            }
+        }
+
+        internal static bool IsStageCompleteForProgression(int stageId)
+        {
+            int totalLocations = LocationManager.GetReceptionLocations(stageId).Count;
+            if (totalLocations > 0)
+                return LocationManager.GetUncheckedReceptionLocations(stageId).Count == 0;
+
+            return IsLocationlessEndgoalStage(stageId) && ReceptionsCompleted.Contains(stageId);
+        }
+
+        internal static bool MarkReceptionCompletedIfReady(int stageId, bool checkedAllLocationsByThisClear = false, bool wonLocationlessGoal = false)
+        {
+            bool hasLocations = LocationManager.GetReceptionLocations(stageId).Count > 0;
+            bool isComplete = hasLocations
+                ? checkedAllLocationsByThisClear || LocationManager.GetUncheckedReceptionLocations(stageId).Count == 0
+                : wonLocationlessGoal && IsLocationlessEndgoalStage(stageId);
+
+            if (!isComplete)
+                return false;
+
+            if (!ReceptionsCompleted.Contains(stageId))
+                ReceptionsCompleted.Add(stageId);
+
+            return true;
+        }
+
+        internal static bool IsReceptionCompleted(int stageId)
+        {
+            if (ReceptionsCompleted.Contains(stageId))
+                return true;
+
+            int totalLocations = LocationManager.GetReceptionLocations(stageId).Count;
+            return totalLocations > 0 && MarkReceptionCompletedIfReady(stageId);
+        }
+
         internal static void CheckEndConditions()
         {
-            // Check goals
-            //if (GoalsManager.GoalsAchieved())
-              //  SessionManager.AchieveGoal();
+            bool allGoalsComplete = true;
+
+            foreach (Endgoal goal in SlotDataManager.Endgoals)
+            {
+                switch (goal)
+                {
+                    case Endgoal.ReverberationEnsemble:
+                        int completedEnsembleBattles = Enumerable.Range(70001, 10).Count(IsReceptionCompleted);
+                        if (completedEnsembleBattles < SlotDataManager.EnsembleBattles)
+                            allGoalsComplete = false;
+                        break;
+
+                    case Endgoal.BlackSilence:
+                        if (!IsReceptionCompleted(60003))
+                            allGoalsComplete = false;
+                        break;
+
+                    case Endgoal.KeterRealization:
+                        if (!IsReceptionCompleted(210009))
+                            allGoalsComplete = false;
+                        break;
+
+                    case Endgoal.DistortedEnsemble:
+                        if (!IsReceptionCompleted(60004))
+                            allGoalsComplete = false;
+                        break;
+                }
+
+                if (!allGoalsComplete)
+                    break;
+            }
+
+            if (allGoalsComplete)
+                LocationManager.AchieveGoal();
         }
 
         internal static void OpenFloor(SephirahType seph, bool silent = false)
         {
-            if (LibraryModel.Instance.IsOpenedSephirah(seph)) return;
+            if (LibraryModel.Instance.IsOpenedSephirah(seph))
+            {
+                Floors[seph].Open = true;
+
+                if (seph == SephirahType.Binah && Floors[seph].Librarians < 2)
+                {
+                    seph.FloorModel().SetOpenedUnitCount(2);
+                    Floors[seph].Librarians = 2;
+                }
+
+                return;
+            }
 
             LibraryModel.Instance.OpenSephirah(seph);
             Floors[seph].Open = true;
@@ -249,7 +377,10 @@ namespace LORAP.Playthru
 
         internal static void GiveLibrarian(SephirahType seph, bool silent = false)
         {
-            if (Floors[seph].Librarians >= 5) return;
+            if (Floors[seph].Librarians >= 5)
+                return;
+
+            Floors[seph].Librarians++;
 
             var floor = seph.FloorModel();
             floor.SetOpenedUnitCount(Floors[seph].Librarians);
@@ -259,7 +390,10 @@ namespace LORAP.Playthru
                 ChangeUIToFloor(seph);
                 MessagePopup.ShowMessage($"{seph.FloorName()} awoken a Librarian!");
             }
-                
+            else if (UI.UIController.Instance.CurrentUIPhase == UIPhase.Sephirah)
+            {
+                UI.UIController.Instance.CallUIPhase(UIPhase.Sephirah);
+            }
         }
 
         internal static void GiveBook(int id, int num = 1, bool silent = false)

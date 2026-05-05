@@ -1,4 +1,4 @@
-﻿using Archipelago.MultiClient.Net;
+using Archipelago.MultiClient.Net;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Models;
 using Archipelago.MultiClient.Net.Packets;
@@ -40,11 +40,13 @@ namespace LORAP.Archipelago
     {
         // This class manages 3-in-1: Locations, Hints, Scouting.
 
-        internal static ReadOnlyCollection<long> AllLocations => SessionManager.Locations.AllLocations;
+        private static readonly ReadOnlyCollection<long> EmptyLocations = new ReadOnlyCollection<long>(new List<long>());
 
-        internal static ReadOnlyCollection<long> CheckedLocations => SessionManager.Locations.AllLocationsChecked;
+        internal static ReadOnlyCollection<long> AllLocations => SessionManager.IsConnected ? SessionManager.Locations.AllLocations : EmptyLocations;
 
-        internal static ReadOnlyCollection<long> UncheckedLocations => SessionManager.Locations.AllMissingLocations;
+        internal static ReadOnlyCollection<long> CheckedLocations => SessionManager.IsConnected ? SessionManager.Locations.AllLocationsChecked : EmptyLocations;
+
+        internal static ReadOnlyCollection<long> UncheckedLocations => SessionManager.IsConnected ? SessionManager.Locations.AllMissingLocations : EmptyLocations;
 
 
         // All Scouted/Hinted Location-Item pairs
@@ -113,8 +115,8 @@ namespace LORAP.Archipelago
                         Slot = hint.FindingPlayer,
                         Location = new APLocationInfo
                         {
-                            Id = hint.ItemId,
-                            Name = SessionManager.Locations.GetLocationNameFromId(hint.ItemId, LocationGame),
+                            Id = hint.LocationId,
+                            Name = SessionManager.Locations.GetLocationNameFromId(hint.LocationId, LocationGame),
                             Game = LocationGame,
                         },
                         Item = new APItemInfo
@@ -141,7 +143,7 @@ namespace LORAP.Archipelago
 
         internal static void AchieveGoal()
         {
-            //SessionManager.SetGoalAchieved();
+            SessionManager.SetGoalAchieved();
         }
 
         internal static void SendStageChecks(int id)
@@ -158,15 +160,17 @@ namespace LORAP.Archipelago
             if (checks.Count == 0)
                 return "";
 
-            System.Random random = new System.Random(SlotDataManager.Seed/2 + checks.Count);
+            System.Random random = new System.Random(SlotDataManager.Seed / 2 + checks.Count);
 
             long check = checks.ElementAt(random.Next(checks.Count));
 
             CompleteLocation(check);
 
-            ItemLocationPair pair = GetLocationPair(id);
+            ItemLocationPair pair = GetLocationPair(check);
 
-            return pair.Slot == SessionManager.CurrentSlot ? $"Found {pair.Item.Name}!" : $"Sent {pair.Item.Name} to {SessionManager.Players.GetPlayerName(pair.Slot)}!";
+            return pair.Slot == SessionManager.CurrentSlot
+                ? $"Found {pair.Item.Name}!"
+                : $"Sent {pair.Item.Name} to {SessionManager.Players.GetPlayerName(pair.Slot)}!";
         }
 
         internal static List<ItemLocationPair> GetPairsWithItemAndHint(long id, bool ignoreFound = false)
@@ -181,7 +185,30 @@ namespace LORAP.Archipelago
 
         internal static ItemLocationPair GetLocationPair(long id)
         {
-            return KnownPairs.Where(p => p.Location.Id == id).First();
+            var pair = KnownPairs.FirstOrDefault(p => p.Location.Id == id);
+
+            if (pair.Location.Id == 0 && pair.Item.Id == 0)
+            {
+                return new ItemLocationPair
+                {
+                    Slot = SessionManager.CurrentSlot,
+                    Location = new APLocationInfo
+                    {
+                        Id = id,
+                        Name = SessionManager.Locations.GetLocationNameFromId(id, "Library of Ruina"),
+                        Game = "Library of Ruina",
+                    },
+                    Item = new APItemInfo
+                    {
+                        Id = 0,
+                        Name = "Unknown Item",
+                        Game = "",
+                        Flags = ItemFlags.None,
+                    }
+                };
+            }
+
+            return pair;
         }
 
 

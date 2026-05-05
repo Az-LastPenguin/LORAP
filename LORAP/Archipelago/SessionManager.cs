@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -44,10 +44,19 @@ namespace LORAP.Archipelago
 
         internal static IConnectionInfoProvider ConnectionInfo => session.ConnectionInfo;
 
+        internal static bool IsConnected => session != null && session.Socket != null && session.Socket.Connected;
+
+
+        internal static void SetGoalAchieved()
+        {
+            if (IsConnected)
+                session.SetGoalAchieved();
+        }
+
         internal static IPlayerHelper Players => session.Players;
 
 
-        internal static int CurrentSlot => Players.ActivePlayer.Slot;
+        internal static int CurrentSlot => IsConnected ? Players.ActivePlayer.Slot : -1;
 
 
         internal static void CreateSession(string IP)
@@ -68,16 +77,17 @@ namespace LORAP.Archipelago
                 session.Socket.DisconnectAsync();
 
             session = null;
+            sessionData = null;
         }
 
         internal static void TryConnect(string IP, string SlotName, string Password)
         {
+            IP = (IP ?? "").Trim();
+            SlotName = (SlotName ?? "").Trim();
+            Password = (Password ?? "").Trim();
+
             // Create AP session
             CreateSession(IP);
-
-            // Disallow connecting if someone else is already playing on this slot
-            if (session.Players.AllPlayers.Where(p => p.Name == SlotName).Count() > 0)
-                throw new Exception("Can't connect as this slot is currently being used!");
 
             // Connect to AP
             var result = session.TryConnectAndLogin("Library of Ruina", SlotName, ItemsHandlingFlags.AllItems, password: Password, version: new Version(0, 6, 3));
@@ -91,7 +101,7 @@ namespace LORAP.Archipelago
                     text += $"{err}\n";
                 }
 
-                throw new Exception(text);
+                throw new Exception(text.TrimEnd());
             }
 
             // Parse Slot Data

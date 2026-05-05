@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using LORAP.Archipelago;
 using LORAP.Gameplay;
 using System.Collections.Generic; 

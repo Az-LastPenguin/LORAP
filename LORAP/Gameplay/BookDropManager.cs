@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTAI;
@@ -96,31 +96,27 @@ namespace LORAP.Gameplay
             }
 
             // Floor Requirements
-            Dictionary<SephirahType, List<int>> abnoChapters = new Dictionary<SephirahType, List<int>>() 
-            {
-                [SephirahType.Malkuth] = new List<int>() { 1, 3, 4, 5, 5 },
-                [SephirahType.Yesod] = new List<int>() { 2, 3, 4, 5, 5 },
-                [SephirahType.Hod] = new List<int>() { 2, 3, 4, 5, 5 },
-                [SephirahType.Netzach] = new List<int>() { 3, 3, 4, 5, 5 },
-                [SephirahType.Tiphereth] = new List<int>() { 4, 4, 5, 6, 6 },
-                [SephirahType.Gebura] = new List<int>() { 5, 5, 6, 6, 6 },
-                [SephirahType.Chesed] = new List<int>() { 5, 5, 6, 6, 6 },
-                [SephirahType.Binah] = new List<int>() { 6, 6, 7, 7 },
-                [SephirahType.Hokma] = new List<int>() { 6, 6, 7, 7 },
-                [SephirahType.Keter] = new List<int>() { 1, 3, 5, 6, 7 },
-            };
-
             if (SlotDataManager.FloorsRequireBooks)
             {
                 foreach (var item in SlotDataManager.AbnoBookRequirements)
                 {
                     var seph = item.Key;
+                    var stageOrder = SlotDataManager.AbnoFightOrder[seph];
 
                     for (int i = 0; i < item.Value.Count; i++)
                     {
+                        int stageId = stageOrder[i];
+                        int logicalChapter = 1;
+
+                        if (SlotDataManager.AbnoStageChapters != null &&
+                            SlotDataManager.AbnoStageChapters.TryGetValue(stageId, out int parsedChapter))
+                        {
+                            logicalChapter = parsedChapter;
+                        }
+
                         foreach (var book in item.Value[i])
                         {
-                            bookChapters[new LorId(book)] = abnoChapters[seph][i];
+                            bookChapters[new LorId(book)] = logicalChapter;
                         }
                     }
                 }

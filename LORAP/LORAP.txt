@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using LORAP.Patches;
 using LORAP.Utils;
 using System.IO;
