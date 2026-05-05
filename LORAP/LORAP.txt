@@ -1,0 +1,44 @@
+using HarmonyLib;
+using LORAP.Patches;
+using LORAP.Utils;
+using System.IO;
+using System.Numerics;
+using System.Reflection;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+namespace LORAP
+{
+    public class LORAP : ModInitializer
+    {
+        internal static LORAP Instance { get; private set; }
+
+        internal static string ModPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+        internal static string ModVersion = "v1.0-alpha";
+
+        public override void OnInitializeMod()
+        {
+            base.OnInitializeMod();
+
+            Instance = this;
+
+            PatchManager.PatchAll();            
+
+            SceneManager.sceneLoaded += OnSceneLoad;
+
+            Debug.Log($"[LORAP] Loaded!");
+        }
+
+        public void OnSceneLoad(Scene scene, LoadSceneMode mode)
+        {
+            if (scene.name == "Stage_Hod_New")
+            {
+                // Setup Coroutines
+                var gameObject = new GameObject("LORAP Coroutines");
+                gameObject.AddComponent<Timing>();
+                Timing.Setup(gameObject);
+            }
+        }
+    }
+}
