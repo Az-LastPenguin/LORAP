@@ -162,7 +162,7 @@ namespace LORAP.Playthru
             // Save floors data about current stage
             saveData.AddData("floorStages", new SaveData(Floors.Select(p => p.Value.AbnoStage).ToList()));
 
-            saveData.AddData("maxAttributionPoints", new SaveData(MaxAttributionPoints));
+            saveData.AddData("maxAttributionPoints", new SaveData(MaxAttributionPoints)); // TODO: Make those values depend on items received and not saved.
             saveData.AddData("maxPassives", new SaveData(MaxPassives));
             saveData.AddData("maxEmotionLevel", new SaveData(MaxEmotionLevel));
             saveData.AddData("binahUnlocked", new SaveData(BinahUnlocked ? 1 : 0));
@@ -398,10 +398,12 @@ namespace LORAP.Playthru
 
         internal static void GiveBook(int id, int num = 1, bool silent = false)
         {
-            DropBookInventoryModel.Instance.AddBook(new LorId(id), num);
+            LorId lid = id == 123456 || id == 123457 ? new LorId("lorap", id) : new LorId(id);
+
+            DropBookInventoryModel.Instance.AddBook(lid, num);
 
             if (!silent)
-                MessagePopup.ShowMessage($"You received {DropBookXmlList.Instance.GetData(new LorId(id)).Name}!");
+                MessagePopup.ShowMessage($"You received {DropBookXmlList.Instance.GetData(lid).Name}!");
         }
 
         internal static void UpMaxAttributionPoints(bool silent = false)

@@ -441,25 +441,25 @@ namespace LORAP.Patches
 
 
         // Patch Request abno page to not give bonus books.
-        [HarmonyPatch(typeof(EmotionCardAbility_freischutz1), nameof(EmotionCardAbility_freischutz1.OnKill))]
-        [HarmonyTranspiler]
-        static IEnumerable<CodeInstruction> RequestNoBonusBooks(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
-        {
-            var codeMatcher = new CodeMatcher(instructions, generator);
-
-            codeMatcher.MatchStartForward(OpCodes.Ldarg_1, OpCodes.Callvirt, OpCodes.Callvirt, OpCodes.Stloc_0)
-                .SetAndAdvance(OpCodes.Nop, null)
-                .RemoveInstructions(41);
-
-            return codeMatcher.Instructions();
-        }
+        //[HarmonyPatch(typeof(EmotionCardAbility_freischutz1), nameof(EmotionCardAbility_freischutz1.OnKill))]
+        //[HarmonyTranspiler]
+        //static IEnumerable<CodeInstruction> RequestNoBonusBooks(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+        //{
+        //    var codeMatcher = new CodeMatcher(instructions, generator);
+        //
+        //    codeMatcher.MatchStartForward(OpCodes.Ldarg_1, OpCodes.Callvirt, OpCodes.Callvirt, OpCodes.Stloc_0)
+        //        .SetAndAdvance(OpCodes.Nop, null)
+        //        .RemoveInstructions(41);
+        //
+        //    return codeMatcher.Instructions();
+        //}
 
 
 
         // Patch Sentinel abno page to not give bonus books. I HATE free stuff.
-        [HarmonyPatch(typeof(EmotionCardAbility_whitenight2), nameof(EmotionCardAbility_whitenight2.OnBattleEnd_alive))]
-        [HarmonyPrefix]
-        static bool SentinelNoBonusBooks() => false;
+        //[HarmonyPatch(typeof(EmotionCardAbility_whitenight2), nameof(EmotionCardAbility_whitenight2.OnBattleEnd_alive))]
+        //[HarmonyPrefix]
+        //static bool SentinelNoBonusBooks() => false;
 
 
 
@@ -620,10 +620,10 @@ namespace LORAP.Patches
 
 
 
-        // Don't give crying children books after the reception
-        [HarmonyPatch(typeof(EnemyTeamStageManager_TheCrying), nameof(EnemyTeamStageManager_TheCrying.OnStageClear))]
+        // Don't drop books from receptions by any means
+        [HarmonyPatch(typeof(StageController), nameof(StageController.OnEnemyDropBookForAdded))]
         [HarmonyPrefix]
-        static bool CryingChildrenBooks() => false;
+        static bool NoFreeStuff() => false;
 
 
 

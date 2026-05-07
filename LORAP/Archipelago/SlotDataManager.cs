@@ -28,6 +28,13 @@ namespace LORAP.Archipelago
         Unbound
     }
 
+    internal enum BookContentsRandomization
+    {
+        BookChapter,
+        StageChapter,
+        Chaotic
+    }
+
     internal enum BattleNodeKind
     {
         Reception,
@@ -95,7 +102,7 @@ namespace LORAP.Archipelago
 
         internal static bool RandomizeBlackSilencePage;
 
-        internal static bool BalanceBookContents;
+        internal static BookContentsRandomization BookContentsRandomization;
 
         internal static Dictionary<int, List<int>> ReceptionBookRequirements;
 
@@ -143,7 +150,7 @@ namespace LORAP.Archipelago
 
             RandomizeBlackSilencePage = (long)slotData["randomize_black_silence_page"] == 1;
 
-            BalanceBookContents = (long)slotData["balance_book_contents"] == 1;
+            BookContentsRandomization = (BookContentsRandomization)(long)slotData["book_contents_randomization"];
 
             FirstReception = Convert.ToInt32(slotData["first_reception"]);
             LastReception = Convert.ToInt32(slotData["last_reception"]);

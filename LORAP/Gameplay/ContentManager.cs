@@ -46,10 +46,12 @@ namespace LORAP.Gameplay
             Book._id = id;
             Book.workshopName = name;
             Book.workshopID = "lorap";
-            //Book.DropNum = dropNum;
+            //Book.DropNum = dropNum;   
             //Book.DropItemList = dropList;
-            Singleton<DropBookXmlList>.Instance._list.Add(Book);
-            Singleton<DropBookXmlList>.Instance._dict.Add(Book.id, Book);
+            //Singleton<DropBookXmlList>.Instance._list.Add(Book);
+            //Singleton<DropBookXmlList>.Instance._dict.Add(Book.id, Book);
+            //Singleton<DropBookXmlList>.Instance._workshopDict["lorap"].Add(Book);
+            DropBookXmlList.Instance.AddBookByMod("lorap", new List<DropBookXmlInfo>() { Book });
 
             CustomBooks[id] = Book;
 

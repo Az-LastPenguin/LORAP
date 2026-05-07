@@ -1,9 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using BTAI;
+using GameSave;
 using LORAP.Archipelago;
 using LORAP.Utils;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace LORAP.Gameplay
@@ -18,15 +17,40 @@ namespace LORAP.Gameplay
             public bool collectible;
         }
 
-        internal static List<BookDrop> allDrops = new List<BookDrop>();
+        internal static Dictionary<Rarity, int> KeyPageRarityLimits = new Dictionary<Rarity, int>()
+        {
+            [Rarity.Common] = 15,
+            [Rarity.Uncommon] = 12,
+            [Rarity.Rare] = 6,
+            [Rarity.Unique] = 1,
+            [Rarity.Special] = 1
+        };
 
-        internal static Dictionary<LorId, List<BookDrop>> bookDrops = new Dictionary<LorId, List<BookDrop>>();
+        internal static List<BookDrop> AllDrops = new List<BookDrop>();
 
+        internal static Dictionary<LorId, List<BookDrop>> BookDrops = new Dictionary<LorId, List<BookDrop>>();
+
+        internal static int BoosterPacksOpened = 0;
+        internal static Dictionary<Rarity, List<BookDrop>> BoosterPackRarityDrops = new Dictionary<Rarity, List<BookDrop>>()
+        {
+            [Rarity.Common] = new List<BookDrop>(),
+            [Rarity.Uncommon] = new List<BookDrop>(),
+            [Rarity.Rare] = new List<BookDrop>(),
+            [Rarity.Unique] = new List<BookDrop>(),
+        };
+        internal static Dictionary<Rarity, float> BoosterPackRarityWeights = new Dictionary<Rarity, float>() 
+        {
+            //[Rarity.Common] = 16f / 30,
+            [Rarity.Uncommon] = 15f / 30,
+            [Rarity.Rare] = 7f / 30,
+            [Rarity.Unique] = 2f / 30,
+        };
+ 
         internal static void Init()
         {
             Debug.Log("[LORAP] Initializing Book Content Manager");
 
-            allDrops.Clear();
+            AllDrops.Clear();
 
             // Parse every drop table to get every combat page and key ppage that can be acquired from books
             List<LorId> collectiblePages = new List<LorId>();
@@ -52,7 +76,7 @@ namespace LORAP.Gameplay
             // Parse every combat page and save it as a drop
             foreach (var card in ItemXmlDataList.instance._cardInfoList)
             {
-                allDrops.Add(new BookDrop
+                AllDrops.Add(new BookDrop
                 {
                     id = card.id,
                     chapter = card.Chapter,
@@ -64,7 +88,7 @@ namespace LORAP.Gameplay
             // Parse every key page and save it as a drop
             foreach (var book in BookXmlList.Instance._list)
             {
-                allDrops.Add(new BookDrop
+                AllDrops.Add(new BookDrop
                 {
                     id = book.id,
                     chapter = book.Chapter,
@@ -73,11 +97,16 @@ namespace LORAP.Gameplay
                 });
             }
 
+            // Figure out drops & weights for booster packs
+            foreach (var drop in AllDrops.Where(d => d.collectible))
+            {
+                Rarity dropRarity = drop.type == DropItemType.Card ? ItemXmlDataList.instance.GetCardItem(drop.id).Rarity : BookXmlList.Instance.GetData(drop.id).Rarity;
 
-            // Balance book drops if needed
-            if (!SlotDataManager.BalanceBookContents)
-                return;
+                BoosterPackRarityDrops[dropRarity].Add(drop);
+            }
 
+            
+            // Figure out drops for vanilla books
             // Decide of what chapter each book will be
             Dictionary<LorId, int> bookChapters = new Dictionary<LorId, int>();
 
@@ -90,7 +119,10 @@ namespace LORAP.Gameplay
 
                     foreach (var id in pair.Value)
                     {
-                        bookChapters[new LorId(id)] = info.chapter;
+                        if (SlotDataManager.BookContentsRandomization == BookContentsRandomization.BookChapter)
+                            bookChapters[new LorId(id)] = DropBookXmlList.Instance.GetData(id).chapter;
+                        else
+                            bookChapters[new LorId(id)] = info.chapter;
                     }
                 }
             }
@@ -116,109 +148,181 @@ namespace LORAP.Gameplay
 
                         foreach (var book in item.Value[i])
                         {
-                            bookChapters[new LorId(book)] = logicalChapter;
+                            if (SlotDataManager.BookContentsRandomization == BookContentsRandomization.BookChapter)
+                                bookChapters[new LorId(book)] = DropBookXmlList.Instance.GetData(book).chapter;
+                            else
+                                bookChapters[new LorId(book)] = logicalChapter;
                         }
                     }
                 }
             }
 
-            // If there are leftover books, assign them their base chapters
-            foreach (var book in DropBookXmlList.Instance._list.Where(b => b.DropItemList.Count > 0 && !bookChapters.Keys.Contains(b.id)))
-            {
-                bookChapters[book.id] = book.chapter;
-            }
-
-            // Assign drops from that chapter
             var Random = new System.Random(SlotDataManager.Seed);
-            List<BookDrop> allowedDrops = allDrops.Where(d => d.collectible).ToList();
+            List<BookDrop> allowedDrops = AllDrops.Where(d => d.collectible).ToList();
 
-            foreach (int chapter in bookChapters.Values.Distinct())
+            if (SlotDataManager.BookContentsRandomization == BookContentsRandomization.Chaotic)
             {
-                List<BookDrop> chapterDrops = allowedDrops.Where(d => d.chapter == chapter).ToList();
-                List<LorId> chapterBooks = bookChapters.Where(p => p.Value == chapter).Select(p => p.Key).ToList();
-                int dropsPerBook = chapterDrops.Count() / chapterBooks.Count();
-                int diff = chapterDrops.Count() - (dropsPerBook * chapterBooks.Count());
+                List<LorId> books = bookChapters.Select(p => p.Key).ToList();
+                int dropsPerBook = allowedDrops.Count / books.Count;
+                int diff = allowedDrops.Count - (dropsPerBook * books.Count);
 
-                foreach (LorId book in chapterBooks)
+                foreach (LorId book in books)
                 {
                     List<BookDrop> drops = new List<BookDrop>();
 
                     // Get drops for the book. Also adds diff to the last book
-                    for (var i = 0; i < dropsPerBook + (chapterDrops.Count < dropsPerBook ? diff : 0); i++) 
+                    for (var i = 0; i < dropsPerBook + (allowedDrops.Count < dropsPerBook ? diff : 0); i++)
                     {
                         // Failsafe?
-                        if (chapterDrops.Count == 0)
+                        if (allowedDrops.Count == 0)
                             break;
 
-                        BookDrop drop = chapterDrops.PopRandom(Random);
-                        allowedDrops.Remove(drop);
+                        BookDrop drop = allowedDrops.PopRandom(Random);
                         drops.Add(drop);
                     }
 
-                    bookDrops[book] = drops;
+                    BookDrops[book] = drops;
+                }
+            }
+            else
+            {
+                // Assign drops from that chapter
+                foreach (int chapter in bookChapters.Values.Distinct())
+                {
+                    List<BookDrop> chapterDrops = allowedDrops.Where(d => d.chapter == chapter).ToList();
+                    List<LorId> chapterBooks = bookChapters.Where(p => p.Value == chapter).Select(p => p.Key).ToList();
+                    int dropsPerBook = chapterDrops.Count / chapterBooks.Count;
+                    int diff = chapterDrops.Count - (dropsPerBook * chapterBooks.Count);
+
+                    foreach (LorId book in chapterBooks)
+                    {
+                        List<BookDrop> drops = new List<BookDrop>();
+
+                        // Get drops for the book. Also adds diff to the last book
+                        for (var i = 0; i < dropsPerBook + (chapterDrops.Count < dropsPerBook ? diff : 0); i++)
+                        {
+                            // Failsafe?
+                            if (chapterDrops.Count == 0)
+                                break;
+
+                            BookDrop drop = chapterDrops.PopRandom(Random);
+                            allowedDrops.Remove(drop);
+                            drops.Add(drop);
+                        }
+
+                        BookDrops[book] = drops;
+                    }
                 }
             }
         }
 
         internal static List<BookDropResult> GenerateDrops(LorId bookID) // TODO: Maybe add check for package id?
         {
-            //DropBookInventoryModel.Instance.RemoveBook(bookID); // Remove only for filler books
-
-            if (bookID.id == 123456) // TODO: Make it. // TODO: Bias utility combat pages
-            {
-                return new List<BookDropResult>();
-            }
-            if (bookID.id == 123457) // TODO: Make this too.
-            {
-                return new List<BookDropResult>();
-            }
-
-            if (!bookDrops.ContainsKey(bookID))
-                return new List<BookDropResult>();
-
-            List<BookDrop> pool = bookDrops[bookID];
             List<BookDropResult> dropResults = new List<BookDropResult>();
 
-            foreach (BookDrop drop in pool)
+            // Generate Drops
+            if (bookID.id == 123456) // TODO: Make it. Also bias utility combat pages
             {
-                BookDropResult dropResult = new BookDropResult()
-                {
-                    id = drop.id,
-                    itemType = drop.type,
-                    number = drop.type == DropItemType.Card ? 3 : 1,
-                };
 
-                if (drop.type == DropItemType.Card && InventoryModel.Instance.GetCardCount(drop.id) < 150)
+            }
+            else if (bookID.id == 123457)
+            {
+                for (int i = 0; i < 8; i++)
                 {
-                    InventoryModel.Instance.AddCard(drop.id, 3);
-                }
-                else if (drop.type == DropItemType.Equip)
-                {
-                    int keyLimit = BookXmlList.Instance.GetData(drop.id).Rarity switch
+                    var Random = new System.Random(SlotDataManager.Seed + BoosterPacksOpened * 8 + i);
+
+                    float rng = (float)Random.NextDouble();
+                    Rarity dropRarity = Rarity.Common;
+                    foreach (var pair in BoosterPackRarityWeights)
                     {
-                        Rarity.Common => 15,
-                        Rarity.Uncommon => 12,
-                        Rarity.Rare => 6,
-                        Rarity.Unique => 1,
-                        Rarity.Special => 1,
-                        _ => 1,
+                        if (rng <= pair.Value)
+                        {
+                            dropRarity = pair.Key;
+                        }
+                    }
+
+                    List<BookDrop> drops = BoosterPackRarityDrops[dropRarity].Where(
+                                                                                    d => d.type == DropItemType.Card
+                                                                                    ? InventoryModel.Instance.GetCardCount(d.id) < 150
+                                                                                    : BookInventoryModel.Instance.GetBookCount(d.id) < KeyPageRarityLimits[dropRarity]
+                                                                                   ).ToList();
+
+                    BookDrop selectedDrop = drops[Random.Next(0, drops.Count)];
+
+                    BookDropResult dropResult = new BookDropResult()
+                    {
+                        id = selectedDrop.id,
+                        itemType = selectedDrop.type,
+                        number = 1,
                     };
 
-                    // If we can have more of those create a keypage and store the instanceid to show in the result screen
-                    if (BookInventoryModel.Instance.GetBookCount(drop.id) < keyLimit)
-                        dropResult.bookInstanceId = BookInventoryModel.Instance.CreateBook(drop.id).instanceId;
+                    if (selectedDrop.type == DropItemType.Card)
+                    {
+                        InventoryModel.Instance.AddCard(selectedDrop.id, 1);
+                    }
                     else
-                        continue; // Can't give, skip
-                }
-                else // Don't add result into the table if we didn't give player anything
-                {
-                    continue;
+                    {
+                        dropResult.bookInstanceId = BookInventoryModel.Instance.CreateBook(selectedDrop.id).instanceId;
+                    }
+
+                    dropResults.Add(dropResult);
                 }
 
-                dropResults.Add(dropResult);
+                BoosterPacksOpened++;
+
+                DropBookInventoryModel.Instance.RemoveBook(bookID);
+            }
+            else
+            {
+                // Vanilla books
+                List<BookDrop> pool = BookDrops[bookID];
+                foreach (BookDrop drop in pool)
+                {
+                    BookDropResult dropResult = new BookDropResult()
+                    {
+                        id = drop.id,
+                        itemType = drop.type,
+                        number = drop.type == DropItemType.Card ? 3 : 1,
+                    };
+
+                    if (drop.type == DropItemType.Card && InventoryModel.Instance.GetCardCount(drop.id) < 150)
+                    {
+                        InventoryModel.Instance.AddCard(drop.id, 3);
+                    }
+                    else  //if (drop.type == DropItemType.Equip)
+                    {
+                        // If we can have more of those create a keypage and store the instanceid to show in the result screen
+                        if (BookInventoryModel.Instance.GetBookCount(drop.id) < KeyPageRarityLimits[BookXmlList.Instance.GetData(drop.id).Rarity])
+                            dropResult.bookInstanceId = BookInventoryModel.Instance.CreateBook(drop.id).instanceId;
+                        else
+                            continue; // Can't give, skip
+                    }
+                    //else // Don't add result into the table if we didn't give player anything // Why was this check even here in the first place?
+                    //{
+                    //    continue;
+                    //}
+
+                    dropResults.Add(dropResult);
+                }
             }
 
             return dropResults;
+        }
+
+        // Saving/loading game state
+        internal static SaveData GetSaveData()
+        {
+            SaveData saveData = new SaveData();
+
+            // Save how many booster packs opened
+            saveData.AddData("boosterPacksOpened", new SaveData(BoosterPacksOpened));
+
+            return saveData;
+        }
+
+        internal static void LoadFromSaveData(SaveData saveData)
+        {
+            BoosterPacksOpened = saveData.GetInt("boosterPacksOpened");
         }
     }
 }

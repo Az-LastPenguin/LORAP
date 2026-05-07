@@ -1,5 +1,4 @@
 using HarmonyLib;
-using LORAP.Archipelago;
 using LORAP.Gameplay;
 using System.Collections.Generic; 
 using UI;
@@ -67,16 +66,23 @@ namespace LORAP.Patches
             __instance.currentDropBookSlot.SetData_DropBook(dropBookInfo.id);
             __instance.txt_bookName.text = dropBookInfo.Name;
 
-            if (dropBookInfo.id.id == 123456 || !SlotDataManager.BalanceBookContents)
+            if (dropBookInfo.id.id == 123456) // BoE
             {
 
 
                 return false;
             }
 
-            if (BookDropManager.bookDrops.ContainsKey(dropBookInfo.id))
+            if (dropBookInfo.id.id == 123457) // Booster Packs
             {
-                var drops = BookDropManager.bookDrops[dropBookInfo.id];
+
+
+                return false;
+            }
+
+            if (BookDropManager.BookDrops.ContainsKey(dropBookInfo.id))
+            {
+                var drops = BookDropManager.BookDrops[dropBookInfo.id];
 
                 List<UIRewardBookData> list = new List<UIRewardBookData>();
                 List<UIRewardCardData> list2 = new List<UIRewardCardData>();
