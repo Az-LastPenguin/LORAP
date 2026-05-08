@@ -373,15 +373,15 @@ namespace LORAP.Patches
         }
 
 
-
-        // UIBgScreenChangeAnim patch. Disconnect from AP when going to title. Also destroy reception tree if it was randomized //
+        // When going to title: Disconnect from AP; Destroy randomized reception tree;
         [HarmonyPatch(typeof(UIBgScreenChangeAnim), nameof(UIBgScreenChangeAnim.StartBg))]
         [HarmonyPrefix]
-        static void ToTitleDisconnectAP(UIBgScreenChangeAnim __instance, UIScreenChangeType cType)
+        static void ToTitlePatch(UIBgScreenChangeAnim __instance, UIScreenChangeType cType)
         {
             if (cType != UIScreenChangeType.ReturnTitle)
                 return;
 
+            // Clear map
             UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
             if (SlotDataManager.HasBattleTree)
             {
@@ -400,10 +400,9 @@ namespace LORAP.Patches
             }
             MapPanel.iconList.Clear();
 
+            // Stop Item Manager & Disconnect from AP
             ItemManager.Suspended = true;
-
-            if (cType == UIScreenChangeType.ReturnTitle)
-                SessionManager.EndSession();
+            SessionManager.EndSession();
         }
 
 
@@ -443,6 +442,8 @@ namespace LORAP.Patches
 
 
 
+
+
         // GameSceneManager patch. Add custom content when game starts. //
         [HarmonyPatch(typeof(GameSceneManager), nameof(GameSceneManager.Start))]
         [HarmonyPostfix]
@@ -474,7 +475,6 @@ namespace LORAP.Patches
         {
             (__instance.bookSlotList[0] as UIInvenFeedBookSlot).ob_tutorialHighlightFrame.SetActive(false);
         }
-
 
 
         // UIInvenFeedBookList patch. Add "LORAP vX" to version number because why not?. //

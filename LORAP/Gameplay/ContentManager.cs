@@ -42,7 +42,7 @@ namespace LORAP.Gameplay
 
         private static DropBookXmlInfo CreateCustomBook(int id, string name/*, int dropNum, List<BookDropItemInfo> dropList*/)
         {
-            var Book = new DropBookXmlInfo();
+            var Book = new DropBookXmlInfo(); // TODO: AP Icons
             Book._id = id;
             Book.workshopName = name;
             Book.workshopID = "lorap";

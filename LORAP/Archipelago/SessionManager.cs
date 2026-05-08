@@ -1,16 +1,10 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
 using Archipelago.MultiClient.Net;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
-using Archipelago.MultiClient.Net.Models;
 using LORAP.CustomUI;
-using LORAP.Gameplay;
-using LORAP.Playthru;
 using LORAP.Utils;
 using UnityEngine;
 

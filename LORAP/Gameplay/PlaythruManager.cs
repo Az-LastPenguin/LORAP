@@ -39,6 +39,16 @@ namespace LORAP.Playthru
         {
             Debug.Log("[LORAP] Starting Game");
 
+            // Clear PlaythruManager
+            ReceptionsCompleted.Clear();
+            CanAttributePassives = false;
+            MaxAttributionPoints = 0;
+            MaxPassives = 0;
+            MaxEmotionLevel = 0;
+            BinahUnlocked = false;
+            BlackSilenceUnlocked = false;
+
+
             // Create list of floor infos to keep track of every floors state by our own
             Floors = Enum.GetValues(typeof(SephirahType)).Cast<SephirahType>().ToDictionary(k => k, v => new FloorInfo());
 
@@ -72,8 +82,9 @@ namespace LORAP.Playthru
             // Setup run content
             ContentManager.SetupRunContent();
 
-            // Init book dropp manager
+            // Init book drop manager
             BookDropManager.Init();
+
 
             // Load Save
             Gameplay.SaveManager.LoadGame();
@@ -160,13 +171,13 @@ namespace LORAP.Playthru
             saveData.AddData("receptionsCompleted", new SaveData(ReceptionsCompleted));
 
             // Save floors data about current stage
-            saveData.AddData("floorStages", new SaveData(Floors.Select(p => p.Value.AbnoStage).ToList()));
+            //saveData.AddData("floorStages", new SaveData(Floors.Select(p => p.Value.AbnoStage).ToList())); // TODO: Remove
 
-            saveData.AddData("maxAttributionPoints", new SaveData(MaxAttributionPoints)); // TODO: Make those values depend on items received and not saved.
-            saveData.AddData("maxPassives", new SaveData(MaxPassives));
-            saveData.AddData("maxEmotionLevel", new SaveData(MaxEmotionLevel));
-            saveData.AddData("binahUnlocked", new SaveData(BinahUnlocked ? 1 : 0));
-            saveData.AddData("blackSilenceUnlocked", new SaveData(BlackSilenceUnlocked ? 1 : 0));
+            //saveData.AddData("maxAttributionPoints", new SaveData(MaxAttributionPoints)); // TODO: Make those values depend on items received and not saved.
+            //saveData.AddData("maxPassives", new SaveData(MaxPassives));
+            //saveData.AddData("maxEmotionLevel", new SaveData(MaxEmotionLevel));
+            //saveData.AddData("binahUnlocked", new SaveData(BinahUnlocked ? 1 : 0));
+            //saveData.AddData("blackSilenceUnlocked", new SaveData(BlackSilenceUnlocked ? 1 : 0));
 
             return saveData;
         }
@@ -177,34 +188,34 @@ namespace LORAP.Playthru
 
             ReceptionsCompleted = ReceptionsCompleted.Where(IsStageCompleteForProgression).Distinct().ToList();
 
-            var floorData = saveData.GetData("floorStages");
-            for (int i = 0; i < Floors.Count; i++)
-            {
-                var data = floorData._list[i];
-                var pair = Floors.ElementAt(i);
+            ///var floorData = saveData.GetData("floorStages");
+            ///for (int i = 0; i < Floors.Count; i++)
+            ///{
+            ///    var data = floorData._list[i];
+            ///    var pair = Floors.ElementAt(i);
+            ///
+            ///    pair.Value.AbnoStage = data.GetIntSelf();
+            ///}
 
-                pair.Value.AbnoStage = data.GetIntSelf();
-            }
-
-            var maxAttrib = saveData.GetData("maxAttributionPoints");
-            if (maxAttrib != null)
-                MaxAttributionPoints = maxAttrib.GetIntSelf();
-
-            var maxPass = saveData.GetData("maxPassives");
-            if (maxPass != null)
-                MaxPassives = maxPass.GetIntSelf();
-
-            var maxEmotion = saveData.GetData("maxEmotionLevel");
-            if (maxEmotion != null)
-                MaxEmotionLevel = maxEmotion.GetIntSelf();
-
-            var binah = saveData.GetData("binahUnlocked");
-            if (binah != null)
-                BinahUnlocked = binah.GetIntSelf() != 0;
-
-            var blackSilence = saveData.GetData("blackSilenceUnlocked");
-            if (blackSilence != null)
-                BlackSilenceUnlocked = blackSilence.GetIntSelf() != 0;
+            //var maxAttrib = saveData.GetData("maxAttributionPoints"); // TODO: Remove
+            //if (maxAttrib != null)
+            //    MaxAttributionPoints = maxAttrib.GetIntSelf();
+            //
+            //var maxPass = saveData.GetData("maxPassives");
+            //if (maxPass != null)
+            //    MaxPassives = maxPass.GetIntSelf();
+            //
+            //var maxEmotion = saveData.GetData("maxEmotionLevel");
+            //if (maxEmotion != null)
+            //    MaxEmotionLevel = maxEmotion.GetIntSelf();
+            //
+            //var binah = saveData.GetData("binahUnlocked");
+            //if (binah != null)
+            //    BinahUnlocked = binah.GetIntSelf() != 0;
+            //
+            //var blackSilence = saveData.GetData("blackSilenceUnlocked");
+            //if (blackSilence != null)
+            //    BlackSilenceUnlocked = blackSilence.GetIntSelf() != 0;
         }
 
 
@@ -455,9 +466,9 @@ namespace LORAP.Playthru
         }
 
         // Progression
-        internal static void ProgressSuppression(SephirahType seph)
-        {
-            Floors[seph].AbnoStage++;
-        }
+        //internal static void ProgressSuppression(SephirahType seph)
+        //{
+        //    Floors[seph].AbnoStage++;
+        //}
     }
 }

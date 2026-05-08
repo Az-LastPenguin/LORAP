@@ -69,7 +69,13 @@ namespace LORAP.Gameplay
             saveData.AddData("playthrough", PlaythruManager.GetSaveData()); // Playthrough data
             saveData.AddData("itemManager", ItemManager.GetSaveData()); // Item Manager
 
-            // TODO Save package id thing
+            // Save package ids (for modded books & other stuff)
+            SaveData packageSaveData = new SaveData();
+            foreach (KeyValuePair<string, int> item in GameSave.SaveManager.Instance._packageIdTable)
+            {
+                packageSaveData.AddData(item.Key, new SaveData(item.Value));
+            }
+            saveData.AddData("packageIdTable", packageSaveData);
 
             // Save to server
             SessionManager.DataStorage[Scope.Slot, "SaveData"] = CompressString(JsonConvert.SerializeObject(saveData.CustomGetSerializedData()));
@@ -92,6 +98,21 @@ namespace LORAP.Gameplay
             // Decompress and Deserealize data
             SaveData SaveData = new SaveData();
             SaveData.CustomLoadFromSerializedData(JsonConvert.DeserializeObject<JToken>(DecompressString(CompressedSaveData)));
+
+            // Load package ids (for modded books & other stuff)
+            SaveData packageSaveData = SaveData.GetData("packageIdTable");
+            GameSave.SaveManager.Instance._packageIdTableReverse = new Dictionary<int, string>();
+            if (packageSaveData != null)
+            {
+                foreach (KeyValuePair<string, SaveData> item in packageSaveData.GetDictionarySelf())
+                {
+                    int intSelf = item.Value.GetIntSelf();
+                    if (intSelf != 0 && !GameSave.SaveManager.Instance._packageIdTableReverse.ContainsKey(intSelf))
+                    {
+                        GameSave.SaveManager.Instance._packageIdTableReverse.Add(intSelf, item.Key);
+                    }
+                }
+            }
 
             // Load everything
             InventoryModel.Instance.LoadFromSaveData(SaveData.GetData("inventory"));

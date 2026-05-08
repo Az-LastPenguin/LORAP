@@ -753,7 +753,7 @@ namespace LORAP.Patches
 
 
 
-        // Change "Manual" button text to "Forfeit"
+        // Change "Manual" button text to "Forfeit" // TODO: Add the button, not make one button do other thing
         [HarmonyPatch(typeof(UIEscPanel), nameof(UIEscPanel.Open))]
         [HarmonyPostfix]
         static void EscMenuButtonRename(UIEscPanel __instance)
@@ -850,7 +850,19 @@ namespace LORAP.Patches
             return false;
         }
 
+        // When player clicks on stage icon which is Black Silence or Distorted Ensemble, check if we should actually show anything or not
+        [HarmonyPatch(typeof(UIStoryProgressIconSlot), nameof(UIStoryProgressIconSlot.ClickMainIcon))]
+        [HarmonyPrefix]
+        static bool DontShowBSDE(UIStoryProgressIconSlot __instance)
+        {
+            if (__instance.currentStory == UIStoryLine.BlackSilence || __instance.currentStory == UIStoryLine.TwistedBlue)
+            {
+                if (__instance.storyData[0].currentState == StoryState.Close)
+                    return false;
+            }
 
+            return true;
+        }
 
         // UIStoryProgressPanel patch. Update map. //
         [HarmonyPatch(typeof(UIStoryProgressPanel), nameof(UIStoryProgressPanel.SetStoryLine))]
@@ -1117,6 +1129,23 @@ namespace LORAP.Patches
             __instance._workshopInvitationToggle.isOn = false;
         }
 
+        // Disallow manual placement of books in the invitation
+        [HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.SetInvBookApplyState))]
+        [HarmonyPrefix]
+        static bool FakeSelectedBooks(UIInvitationRightMainPanel __instance, ref InvitationApply_State state)
+        {
+            if (state == InvitationApply_State.Normal)
+            {
+                __instance.SetActiveEndEffect(false);
+                __instance.currentinvState = state;
+                __instance.invitationbookSlots.ForEach(s => s.SetDisabledSlot());
+                __instance.SetUpdatePanel();
+
+                return false;
+            }
+
+            return true;
+        }
 
 
         // AP battle-tree fixed receptions use randomized book requirements, so vanilla GetDataFromBooks() must not be used for them.

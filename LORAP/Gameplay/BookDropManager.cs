@@ -216,16 +216,16 @@ namespace LORAP.Gameplay
             }
         }
 
-        internal static List<BookDropResult> GenerateDrops(LorId bookID) // TODO: Maybe add check for package id?
+        internal static List<BookDropResult> GenerateDrops(LorId bookID)
         {
             List<BookDropResult> dropResults = new List<BookDropResult>();
 
             // Generate Drops
-            if (bookID.id == 123456) // TODO: Make it. Also bias utility combat pages
+            if (bookID == new LorId("lorap", 123456)) // TODO: Make it. Also bias utility combat pages
             {
 
             }
-            else if (bookID.id == 123457)
+            else if (bookID == new LorId("lorap", 123457))
             {
                 for (int i = 0; i < 8; i++)
                 {
