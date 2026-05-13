@@ -160,7 +160,7 @@ namespace LORAP.Archipelago
             if (checks.Count == 0)
                 return "";
 
-            System.Random random = new System.Random(SlotDataManager.Seed / 2 + checks.Count);
+            System.Random random = SlotDataManager.CreateRandom("reception_checks", unchecked((int)(id * 397L) ^ checks.Count));
 
             long check = checks.ElementAt(random.Next(checks.Count));
 

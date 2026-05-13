@@ -157,7 +157,7 @@ namespace LORAP.Gameplay
                 }
             }
 
-            var Random = new System.Random(SlotDataManager.Seed);
+            var Random = SlotDataManager.CreateRandom("book_drops");
             List<BookDrop> allowedDrops = AllDrops.Where(d => d.collectible).ToList();
 
             if (SlotDataManager.BookContentsRandomization == BookContentsRandomization.Chaotic)
@@ -229,7 +229,7 @@ namespace LORAP.Gameplay
             {
                 for (int i = 0; i < 8; i++)
                 {
-                    var Random = new System.Random(SlotDataManager.Seed + BoosterPacksOpened * 8 + i);
+                    var Random = SlotDataManager.CreateRandom("booster_packs", BoosterPacksOpened * 8 + i);
 
                     float rng = (float)Random.NextDouble();
                     Rarity dropRarity = Rarity.Common;
