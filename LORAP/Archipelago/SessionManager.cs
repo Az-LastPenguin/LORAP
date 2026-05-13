@@ -84,7 +84,7 @@ namespace LORAP.Archipelago
             CreateSession(IP);
 
             // Connect to AP
-            var result = session.TryConnectAndLogin("Library of Ruina", SlotName, ItemsHandlingFlags.AllItems, password: Password, version: new Version(0, 6, 6));
+            var result = session.TryConnectAndLogin("Library of Ruina", SlotName, ItemsHandlingFlags.AllItems, password: Password, version: new Version(0, 6, 3));
 
             // If not successful, show error
             if (!result.Successful)

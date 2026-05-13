@@ -74,7 +74,9 @@ namespace LORAP.Archipelago
 
     internal static class SlotDataManager
     {
-        internal static int Seed;
+        internal static int ClientSeed;
+
+        internal static string EffectiveLORAPSeed;
 
         internal static List<Endgoal> Endgoals;
 
@@ -120,9 +122,52 @@ namespace LORAP.Archipelago
 
         internal static int LastReception;
 
+
+        internal static int CreateSeed(string stream, int salt = 0)
+        {
+            unchecked
+            {
+                uint hash = 2166136261u;
+                hash = MixHash(hash, ClientSeed);
+                hash = MixHash(hash, salt);
+
+                if (stream != null)
+                {
+                    for (int i = 0; i < stream.Length; i++)
+                        hash = MixHash(hash, stream[i]);
+                }
+
+                int seed = (int)(hash & 0x7FFFFFFF);
+                return seed == 0 ? 1 : seed;
+            }
+        }
+
+        internal static System.Random CreateRandom(string stream, int salt = 0)
+        {
+            return new System.Random(CreateSeed(stream, salt));
+        }
+
+        private static uint MixHash(uint hash, int value)
+        {
+            unchecked
+            {
+                hash ^= (uint)value;
+                hash *= 16777619u;
+                hash ^= (uint)(value >> 8);
+                hash *= 16777619u;
+                hash ^= (uint)(value >> 16);
+                hash *= 16777619u;
+                hash ^= (uint)(value >> 24);
+                hash *= 16777619u;
+                return hash;
+            }
+        }
+
         internal static void Parse(Dictionary<string, object> slotData)
         {
-            Seed = (int)(long)slotData["random_seed"];
+            ClientSeed = Convert.ToInt32(slotData["lorap_client_seed"]);
+            EffectiveLORAPSeed = slotData.ContainsKey("effective_lorap_seed") ? Convert.ToString(slotData["effective_lorap_seed"]) : "unknown";
+            UnityEngine.Debug.Log($"[LORAP] Effective LORAP seed: {EffectiveLORAPSeed}");
 
             Endgoals = ((JArray)slotData["endgoals"]).Select(i => (Endgoal)Enum.Parse(typeof(Endgoal), i.Value<string>().Replace(" ", ""))).ToList();
 
