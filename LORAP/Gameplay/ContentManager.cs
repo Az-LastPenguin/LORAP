@@ -292,8 +292,8 @@ namespace LORAP.Gameplay
             float minY = nodes.Min(n => n.VisualY);
             float maxY = nodes.Max(n => n.VisualY);
 
-            float width = Math.Max(5000f, Math.Abs(maxX - minX) + 1800f);
-            float height = Math.Max(9000f, Math.Abs(maxY - minY) + 1800f);
+            float width = Math.Max(5000f, Math.Max(Math.Abs(minX), Math.Abs(maxX)) * 2f + 1800f);
+            float height = Math.Max(9000f, Math.Max(Math.Abs(minY), Math.Abs(maxY)) * 2f + 1800f);
 
             mapPanel.posRect.sizeDelta = new Vector2(width, height);
         }
@@ -338,7 +338,7 @@ namespace LORAP.Gameplay
             Debug.Log("[LORAP] Shuffling Abno Pages");
 
             // Randomize Abno Pages' floors
-            var Random = new System.Random(SlotDataManager.Seed);
+            var Random = SlotDataManager.CreateRandom("abno_page_shuffle");
 
             // Deep copy of the initial list
             List<EmotionCardXmlInfo> allPages = AbnoPageInitialList.ConvertAll(p =>
@@ -501,7 +501,7 @@ namespace LORAP.Gameplay
 
             Debug.Log("[LORAP] Randomizing Abno Pages");
 
-            var Random = new System.Random(SlotDataManager.Seed);
+            var Random = SlotDataManager.CreateRandom("abno_page_randomization");
 
             foreach (SephirahType seph in GameplaySephirahs)
             {
@@ -562,7 +562,7 @@ namespace LORAP.Gameplay
 
             Debug.Log("[LORAP] Shuffling EGO Pages");
 
-            var Random = new System.Random(SlotDataManager.Seed);
+            var Random = SlotDataManager.CreateRandom("ego_page_shuffle");
 
             List<EmotionEgoXmlInfo> EGOPages = EGOPageInitialList.ToList();
             List<EmotionEgoXmlInfo> shuffledEGO = new List<EmotionEgoXmlInfo>();
