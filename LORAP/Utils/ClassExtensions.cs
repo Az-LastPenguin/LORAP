@@ -1,6 +1,8 @@
 using System;
 using System.Linq;
 using LORAP.Playthru;
+using UnityEngine.Events;
+using UnityEngine.EventSystems;
 
 namespace LORAP.Utils
 {
@@ -79,7 +81,7 @@ namespace LORAP.Utils
             new string[] { "", "X", "XX", "XXX", "XL", "L", "LX", "LXX", "LXXX", "XC" }, // Tens
         };
 
-        public static string ToRoman(this int number)
+        internal static string ToRoman(this int number)
         {
             if (number == 0)
                 return "0";
@@ -97,6 +99,16 @@ namespace LORAP.Utils
             }
 
             return result;
+        }
+
+        internal static void AddCallback(this EventTrigger evt, EventTriggerType type, UnityAction<BaseEventData> action)
+        {
+            EventTrigger.Entry entry = new EventTrigger.Entry()
+            {
+                eventID = type
+            };
+            entry.callback.AddListener(action);
+            evt.triggers.Add(entry);
         }
     }
 }

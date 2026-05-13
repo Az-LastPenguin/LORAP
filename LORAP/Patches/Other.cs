@@ -6,6 +6,7 @@ using LORAP.CustomUI;
 using LORAP.Gameplay;
 using LORAP.Playthru;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
@@ -483,6 +484,26 @@ namespace LORAP.Patches
         static void Version(VersionViewer __instance)
         {
             __instance.GetComponent<Text>().text += $"\nLORAP {LORAP.ModVersion}";
+        }
+
+        // Increase max amount of passive attributed books
+        [HarmonyPatch(typeof(BookModel), nameof(BookModel.IsNotFullEquipPassiveBook))]
+        [HarmonyPrefix]
+        static bool MorePassiveBooks(BookModel __instance, ref bool __result)
+        {
+            __result = __instance.reservedData.equipedBookIdListInPassive.Count < 16;
+            return false;
+        }
+
+        // Testing
+        [HarmonyPatch(typeof(BookModel), nameof(BookModel.TryGainUniquePassive))]
+        [HarmonyPostfix]
+        static void MorePassives(BookModel __instance) // Add 8 + amount of passive limit items?
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                __instance._activatedAllPassives.Add(new PassiveModel(LorId.None, __instance.instanceId, 1));
+            }
         }
     }
 }

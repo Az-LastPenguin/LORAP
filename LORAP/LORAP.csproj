@@ -39,8 +39,8 @@
       <HintPath>packages\HarmonyX.2.9.0\lib\net45\0Harmony.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Archipelago.MultiClient.Net, Version=6.7.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\Archipelago.MultiClient.Net.6.7.0\lib\net45\Archipelago.MultiClient.Net.dll</HintPath>
+    <Reference Include="Archipelago.MultiClient.Net, Version=6.7.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\Archipelago.MultiClient.Net.6.7.1\lib\net45\Archipelago.MultiClient.Net.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>..\DLLs\Assembly-CSharp.dll</HintPath>
@@ -71,7 +71,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\Archipelago.MultiClient.Net.6.7.0\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>packages\Archipelago.MultiClient.Net.6.7.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

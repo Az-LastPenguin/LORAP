@@ -8,6 +8,7 @@ using System.Reflection;
 using TMPro;
 using UI;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace LORAP.Gameplay
@@ -210,6 +211,9 @@ namespace LORAP.Gameplay
             ShuffleEGOPages();
 
             PrepareSuppressions();
+
+            // Create passive slots the exact amount that you can get in this run
+
         }
 
         private static void RandomizeReceptionTree()
@@ -615,6 +619,7 @@ namespace LORAP.Gameplay
             FloorLevelXmlList.Instance._list = floorLevels;
         }
 
+
         internal static void Init()
         {
             Debug.Log("[LORAP] Initializing Custom Content");
@@ -628,7 +633,7 @@ namespace LORAP.Gameplay
             MessagePopup.Init();
             AbnoEgoPagePopup.Init();
 
-
+            // Do Stuff
             ApplyUIChanges();
 
             ApplyMapChanges();
@@ -636,14 +641,6 @@ namespace LORAP.Gameplay
             // Add BOE and Booster Pack to book list
             CreateCustomBook(123456, "Book of Everything");
             CreateCustomBook(123457, "Booster Pack");
-
-
-            // Add Keter Realization stages to FloorLevelXmlList TODO: You know.
-            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 5, stageId = 210005, sephirahType = SephirahType.Keter });
-            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 6, stageId = 210006, sephirahType = SephirahType.Keter });
-            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 7, stageId = 210007, sephirahType = SephirahType.Keter });
-            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 8, stageId = 210008, sephirahType = SephirahType.Keter });
-            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 9, stageId = 210009, sephirahType = SephirahType.Keter });
         }
 
         private static void ApplyUIChanges()
@@ -689,10 +686,51 @@ namespace LORAP.Gameplay
                 slot.ob_peralarm.SetActive(false);
             }
 
+            // Add more slots (4 -> 16) for books in the passive succession menu
+            UIPassiveSuccessionEquipBookList passiveBookList = UIPassiveSuccessionPopup.Instance.equipBookList;
+
+            // Enable masking for left book panel
+            passiveBookList.rect_ViewPort.GetComponent<Mask>().enabled = true;
+
+            // Add slots to left book panel
+            for (int i = 0; i < 12; i++)
+            {
+                GameObject copy = GameObject.Instantiate(passiveBookList.bookslotlist[0].gameObject, passiveBookList.bookslotlist[0].transform.parent);
+                passiveBookList.bookslotlist[0].transform.parent.GetComponent<RectTransform>().sizeDelta += new Vector2(0, 28);
+                passiveBookList.bookslotlist.Add(copy.GetComponent<UIPassiveSuccessionEquipBookSlot>());
+            }
+
+            // Add event to left book slots for scrolling to pass it through to the scrollrect
+            ScrollRect bookListRect = passiveBookList.rect_ViewPort.parent.GetComponent<ScrollRect>();
+            foreach (var slot in passiveBookList.bookslotlist)
+            {
+                EventTrigger evt = slot.GetComponentInChildren<EventTrigger>();
+
+                evt.AddCallback(EventTriggerType.Scroll, (data) => { bookListRect.OnScroll((PointerEventData)data); });
+            }
+
+            // Add slots to center bool panel
+            UIPassiveSuccessionCenterPanel centerBookList = UIPassiveSuccessionPopup.Instance.centerBookListPanel;
+            for (int i = 0; i< 12; i++)
+            {
+                GameObject slot = centerBookList.rect_bookSlotsLayout.GetChild(0).gameObject;
+                GameObject copy = GameObject.Instantiate(slot, slot.transform.parent);
+                //copy.GetComponent<UIPassiveSuccessionCenterEquipBookSlot>().Init();
+                //centerBookList.equipBookSlotList.Add(copy.GetComponent<UIPassiveSuccessionCenterEquipBookSlot>());
+            }
+
+            // Disable passive slots to later tamper with them on run connect
+            UIPassiveSuccessionList passiveList = UIPassiveSuccessionPopup.Instance.equipPassiveList;
+            foreach (Transform child in passiveList.rect_slotsLayout.transform)
+            {
+                child.gameObject.SetActive(false);
+            }
+
+
             // TODO: Change Icon for the library level in the level progress bar to AP icon
         }
 
-        private static void ApplyMapChanges()
+        private static void ApplyMapChanges() // TODO: Check if we still need most of this stuff
         {
             Debug.Log("[LORAP] Applying Map Changes");
 
