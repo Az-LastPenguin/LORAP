@@ -70,7 +70,8 @@ namespace LORAP.Gameplay
                 new LorId(704008), new LorId(704003), new LorId(704018), new LorId(704005), new LorId(704016), new LorId(704006), new LorId(704015), new LorId(704007), new LorId(705032), new LorId(705033),
                 new LorId(704004), new LorId(704011), new LorId(704012), new LorId(704013), new LorId(704014), new LorId(704001), new LorId(704009), new LorId(704010), new LorId(705002), new LorId(705003),
                 new LorId(705004), new LorId(705010), new LorId(705011), new LorId(705013), new LorId(705014), new LorId(705015), new LorId(705016), new LorId(705017), new LorId(705018), new LorId(705019),
-                new LorId(705020), new LorId(705021), new LorId(705031),
+                new LorId(705020), new LorId(705021), new LorId(705031), new LorId(260005), new LorId(260006), new LorId(260007), new LorId(260008), new LorId(260009), new LorId(260010), new LorId(260011),
+                new LorId(260012), new LorId(260013), new LorId(260014),
             });
 
             // Parse every combat page and save it as a drop

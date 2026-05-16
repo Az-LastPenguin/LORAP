@@ -8,7 +8,9 @@ using System.Reflection;
 using TMPro;
 using UI;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using static BattleUnitInformationUI_PassiveList;
 
 namespace LORAP.Gameplay
 {
@@ -689,10 +691,90 @@ namespace LORAP.Gameplay
                 slot.ob_peralarm.SetActive(false);
             }
 
+            // Add more slots (4 -> 16) for books in the passive succession menu
+            UIPassiveSuccessionEquipBookList passiveBookList = UIPassiveSuccessionPopup.Instance.equipBookList;
+
+            // Enable masking for left book panel
+            passiveBookList.rect_ViewPort.GetComponent<Mask>().enabled = true;
+
+            // Add slots to left book panel
+            for (int i = 0; i < 12; i++)
+            {
+                GameObject copy = GameObject.Instantiate(passiveBookList.bookslotlist[0].gameObject, passiveBookList.bookslotlist[0].transform.parent);
+                passiveBookList.bookslotlist[0].transform.parent.GetComponent<RectTransform>().sizeDelta += new Vector2(0, 28);
+                passiveBookList.bookslotlist.Add(copy.GetComponent<UIPassiveSuccessionEquipBookSlot>());
+            }
+
+            // Add event to left book slots for scrolling to pass it through to the scrollrect
+            ScrollRect bookListRect = passiveBookList.rect_ViewPort.parent.GetComponent<ScrollRect>();
+            foreach (var slot in passiveBookList.bookslotlist)
+            {
+                EventTrigger evt = slot.GetComponentInChildren<EventTrigger>();
+
+                evt.AddCallback(EventTriggerType.Scroll, (data) => { bookListRect.OnScroll((PointerEventData)data); });
+            }
+
+            // Add slots to center bool panel
+            UIPassiveSuccessionCenterPanel centerBookList = UIPassiveSuccessionPopup.Instance.centerBookListPanel;
+            for (int i = 0; i < 12; i++)
+            {
+                GameObject slot = centerBookList.rect_bookSlotsLayout.GetChild(0).gameObject;
+                GameObject.Instantiate(slot, slot.transform.parent);
+            }
+
+            // Add more left panel passive slots
+            UIPassiveSuccessionList passiveList = UIPassiveSuccessionPopup.Instance.equipPassiveList;
+            for (int i = 0; i < 40; i++)
+            {
+                GameObject slot = passiveList.rect_slotsLayout.transform.GetChild(0).gameObject;
+                GameObject.Instantiate(slot, slot.transform.parent);
+            }
+
+            // Add slots to library unit info
+            UICardPanel cardPanel = UI.UIController.Instance.GetUIPanel(UIPanelType.Page) as UICardPanel;
+            UISetInfoSlotListSc charPassiveSlotList = cardPanel.librarianInfoPanel.passiveSlotsPanel;
+            for (int i = 0; i < 46; i++)
+            {
+                GameObject slot = charPassiveSlotList._slotList[0].gameObject;
+                GameObject copy = GameObject.Instantiate(slot, slot.transform.parent);
+                charPassiveSlotList._slotList.Add(copy.GetComponent<UILibrarianEquipInfoSlot>());
+            }
+
+            // Add slots to enemy and library unit passive list in battle
+            BattleUnitInformationUI_PassiveList enemyPassive = BattleManagerUI.Instance.ui_unitInformation.passivelistManager;
+            for (int i = 0; i < 46; i++) // I HATE PROJECT MOON CODING
+            {
+                GameObject slot = enemyPassive.passiveSlotList[0].Rect.gameObject;
+                GameObject copy = GameObject.Instantiate(slot, slot.transform.parent);
+
+                BattleUnitInformationPassiveSlot ps = new BattleUnitInformationPassiveSlot();
+                ps.Rect = copy.GetComponent<RectTransform>();
+                ps.txt_PassiveDesc = copy.GetComponentInChildren<TextMeshProUGUI>();
+                ps.img_Icon = copy.transform.Find("[Image]Icon").GetComponent<Image>();
+                ps.img_IconGlow = copy.transform.Find("[Image]IconGlow").GetComponent<Image>();
+
+                enemyPassive.passiveSlotList.Add(ps);
+            }
+
+            BattleUnitInformationUI_PassiveList playerPassive = BattleManagerUI.Instance.ui_unitInformationPlayer.passivelistManager;
+            for (int i = 0; i < 46; i++) // I FUCKING HATE IT
+            {
+                GameObject slot = playerPassive.passiveSlotList[0].Rect.gameObject;
+                GameObject copy = GameObject.Instantiate(slot, slot.transform.parent);
+
+                BattleUnitInformationPassiveSlot ps = new BattleUnitInformationPassiveSlot();
+                ps.Rect = copy.GetComponent<RectTransform>();
+                ps.txt_PassiveDesc = copy.GetComponentInChildren<TextMeshProUGUI>();
+                ps.img_Icon = copy.transform.Find("[Image]Icon").GetComponent<Image>();
+                ps.img_IconGlow = copy.transform.Find("[Image]IconGlow").GetComponent<Image>();
+
+                playerPassive.passiveSlotList.Add(ps);
+            }
+
             // TODO: Change Icon for the library level in the level progress bar to AP icon
         }
 
-        private static void ApplyMapChanges()
+        private static void ApplyMapChanges() // Check if we still need most of this stuff
         {
             Debug.Log("[LORAP] Applying Map Changes");
 

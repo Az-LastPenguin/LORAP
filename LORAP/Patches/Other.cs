@@ -6,6 +6,7 @@ using LORAP.CustomUI;
 using LORAP.Gameplay;
 using LORAP.Playthru;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
@@ -139,7 +140,7 @@ namespace LORAP.Patches
 
 
 
-        // ItemXmlDataList patch. Remove combat page exclusiveness. //
+        // Remove combat page exclusiveness // TODO: Make work with an item
         [HarmonyPatch(typeof(ItemXmlDataList), nameof(ItemXmlDataList.InitCardInfo))]
         [HarmonyPrefix]
         static void RemoveCombatPageExclusiveness(ItemXmlDataList __instance, ref List<DiceCardXmlInfo> list)
@@ -149,7 +150,7 @@ namespace LORAP.Patches
 
 
 
-        // StageClearInfoListModel patch. Force game to think every reception was cleared once. //
+        // Force game to think every reception was cleared once
         [HarmonyPatch(typeof(StageClearInfoListModel), nameof(StageClearInfoListModel.GetClearCount), typeof(LorId))]
         [HarmonyPrefix]
         static bool FakeClear(StageClearInfoListModel __instance, LorId stageId, ref int __result)
@@ -166,7 +167,6 @@ namespace LORAP.Patches
 
 
 
-        // LibraryModel patches. Black Silence and Binah unlocks. //
         // Stop library from opening Keter floor from the start.
         [HarmonyPatch(typeof(LibraryModel), nameof(LibraryModel.Init))]
         [HarmonyTranspiler]
@@ -180,6 +180,8 @@ namespace LORAP.Patches
 
             return codeMatcher.Instructions();
         }
+
+
 
         [HarmonyPatch(typeof(LibraryModel), nameof(LibraryModel.IsBinahLockedInLibrary))]
         [HarmonyPrefix]
@@ -218,7 +220,8 @@ namespace LORAP.Patches
         }
 
 
-        // LibraryFloorModel patch. Custom unlocked units amount. //
+
+        // Custom unlocked units amount
         [HarmonyPatch(typeof(LibraryFloorModel), nameof(LibraryFloorModel.UpdateOpenedCount), typeof(int))]
         [HarmonyPrefix]
         static bool UpdateOpenedCountPrefix(LibraryFloorModel __instance)
@@ -229,19 +232,21 @@ namespace LORAP.Patches
         }
 
 
-        // UIMainPanel patch. Fake last selectable sephirah to be hokma
+
+        // Fake last selectable sephirah to be hokma
         [HarmonyPatch(typeof(UIMainPanel), nameof(UIMainPanel.GetLastSelectableSephirah))]
         [HarmonyPrefix]
-        static bool FakeTransformInfo(UIMainPanel __instance, ref SephirahType __result)
+        static bool FakeLastSelectable(UIMainPanel __instance, ref SephirahType __result)
         {
             __result = SephirahType.Hokma;
 
             return false;
         }
 
+        // Make it so keter floor is always left sided
         [HarmonyPatch(typeof(UIMainPanel), nameof(UIMainPanel.SetKetherTransform))]
         [HarmonyPrefix]
-        static bool IsBinahLockedInLibrary(UIMainPanel __instance, KetherTransformInfo info, bool isRight)
+        static bool FakeKeterTransform(UIMainPanel __instance, KetherTransformInfo info, bool isRight)
         {
             isRight = false;
 
@@ -258,7 +263,7 @@ namespace LORAP.Patches
 
 
 
-        // UIController patch. Change position of AP messages when changing ui screens. //
+        // Change position of AP messages when changing ui screens. // TODO: Remove after making in-game client
         [HarmonyPatch(typeof(UI.UIController), nameof(UI.UIController.CallUIPhase), typeof(UIPhase))]
         [HarmonyPrefix]
         static void APMessagesPosition(UIController __instance, UIPhase phase)
@@ -294,7 +299,7 @@ namespace LORAP.Patches
 
 
 
-        // UILibrarySliderPanel patch. Replace library level with the AP Progress. //
+        // Replace library level with the AP Progress
         [HarmonyPatch(typeof(UILibrarySliderPanel), nameof(UILibrarySliderPanel.SetData))]
         [HarmonyPrefix]
         static bool APProgressBar(UILibrarySliderPanel __instance)
@@ -332,9 +337,7 @@ namespace LORAP.Patches
             return false;
         }
 
-
-
-        // UITitlePanel patch. Replace library level text with the AP Progress. //
+        // Replace library level text with the AP Progress
         [HarmonyPatch(typeof(UITitlePanel), nameof(UITitlePanel.SetMainTitle))]
         [HarmonyTranspiler]
         static IEnumerable<CodeInstruction> APProgressText(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
@@ -350,19 +353,7 @@ namespace LORAP.Patches
 
 
 
-        // BookModel patch. Custom max Passive Cost. //
-        [HarmonyPatch(typeof(BookModel), nameof(BookModel.GetMaxPassiveCost))]
-        [HarmonyPrefix]
-        static bool CustomMaxPassiveCost(DropBookXmlInfo __instance, ref int __result)
-        {
-            __result = PlaythruManager.MaxAttributionPoints;
-
-            return false;
-        }
-
-
-
-        // SaveManager patch. When game tries to save, instead save the game with custom save system. //
+        // When game tries to save, instead save the game with custom save system
         [HarmonyPatch(typeof(GameSave.SaveManager), nameof(GameSave.SaveManager.SavePlayData))]
         [HarmonyPrefix]
         static bool SaveGame(GameSave.SaveManager __instance)
@@ -407,7 +398,7 @@ namespace LORAP.Patches
 
 
 
-        // PassiveModel patch. Fix saving passive attribution because PM Code. //
+        // Fix saving passive attribution because PM Code // TODO: Check if this is still needed
         [HarmonyPatch(typeof(PassiveModel), nameof(PassiveModel.LoadFromSaveData))]
         [HarmonyPrefix]
         static bool WhyDoesItEvenBreakBruh(PassiveModel __instance, SaveData data)
@@ -435,16 +426,14 @@ namespace LORAP.Patches
 
 
 
-        // UIFloorPanel patch. Remove binah and black silence open messages and floor stories on open and etc. //
+        // Remove binah and black silence open messages and floor stories on open and etc
         [HarmonyPatch(typeof(UIFloorPanel), nameof(UIFloorPanel.CheckOpenFloor))]
         [HarmonyPrefix]
         static bool CheckOpenFloorPatch() => false;
 
 
 
-
-
-        // GameSceneManager patch. Add custom content when game starts. //
+        // Add custom content when game starts
         [HarmonyPatch(typeof(GameSceneManager), nameof(GameSceneManager.Start))]
         [HarmonyPostfix]
         static void AddCustomContent()
@@ -454,21 +443,19 @@ namespace LORAP.Patches
 
 
 
-        // PlatformManager patch. Make game unable to grant steam achievements. //
+        // Make game unable to grant steam achievements
         [HarmonyPatch(typeof(PlatformManager), nameof(PlatformManager.UnlockAchievement))]
         [HarmonyPrefix]
         static bool DisableAchievements() => false;
 
 
 
-        // UIMainAutoTooltipManager patch. Remove tutorial tooltips. //
+        // Remove tutorial tooltips
         [HarmonyPatch(typeof(UIMainAutoTooltipManager), nameof(UIMainAutoTooltipManager.OpenTooltip))]
         [HarmonyPrefix]
         static bool DisableTooltips() => false;
 
-
-
-        // UIInvenFeedBookList patch. Remove the tutorial highlight of "none" book in feed book menu. //
+        // Remove the tutorial highlight of "none" book in feed book menu
         [HarmonyPatch(typeof(UIInvenFeedBookList), nameof(UIInvenFeedBookList.OnOpen))]
         [HarmonyPostfix]
         static void NoFeedBookHighlight(UIInvenFeedBookList __instance)
@@ -477,12 +464,64 @@ namespace LORAP.Patches
         }
 
 
-        // UIInvenFeedBookList patch. Add "LORAP vX" to version number because why not?. //
+
+        // Add "LORAP vX" to version number because why not?
         [HarmonyPatch(typeof(VersionViewer), nameof(VersionViewer.Start))]
         [HarmonyPostfix]
         static void Version(VersionViewer __instance)
         {
             __instance.GetComponent<Text>().text += $"\nLORAP {LORAP.ModVersion}";
+        }
+
+
+
+        // Custom max Passive Cost
+        [HarmonyPatch(typeof(BookModel), nameof(BookModel.GetMaxPassiveCost))]
+        [HarmonyPrefix]
+        static bool CustomMaxPassiveCost(DropBookXmlInfo __instance, ref int __result)
+        {
+            __result = PlaythruManager.MaxAttributionPoints;
+
+            return false;
+        }
+
+        // Increase max amount of passive attributed books
+        [HarmonyPatch(typeof(BookModel), nameof(BookModel.IsNotFullEquipPassiveBook))]
+        [HarmonyPrefix]
+        static bool MorePassiveBooks(BookModel __instance, ref bool __result)
+        {
+            __result = __instance.reservedData.equipedBookIdListInPassive.Count < 16;
+            return false;
+        }
+
+        // Remove code that automatically fills keypages with empty passives
+        [HarmonyPatch(typeof(BookModel), nameof(BookModel.TryGainUniquePassive))]
+        [HarmonyTranspiler]
+        static IEnumerable<CodeInstruction> NoAutoEmptyPassives(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+        {
+            var codeMatcher = new CodeMatcher(instructions, generator);
+
+            codeMatcher.MatchStartForward(OpCodes.Ldloc_1, OpCodes.Callvirt, OpCodes.Ldarg_0, OpCodes.Call, OpCodes.Ldfld)
+                .RemoveInstructions(32)
+                .Advance(3)
+                .RemoveInstructions(31);
+
+            return codeMatcher.Instructions();
+        }
+
+        // Prefix ensuring that when you open the attrib window keypage has enough empty passives
+        [HarmonyPatch(typeof(UIPassiveSuccessionPopup), nameof(UIPassiveSuccessionPopup.SetData))]
+        [HarmonyPrefix]
+        static bool EnsureEmptyPassives(UIPassiveSuccessionPopup __instance, UnitDataModel unit)
+        {
+            // Get the amount of empty passives already on the keypages
+            int emptyCount = unit._bookItem._activatedAllPassives.Count(p => p.originpassive.CanReceivePassive);
+
+            for (int i = 0; i < PlaythruManager.MaxPassives-emptyCount; i++) {
+                unit._bookItem._activatedAllPassives.Add(new PassiveModel(LorId.None, unit._bookItem.instanceId, 1));
+            }
+
+            return true;
         }
     }
 }
