@@ -57,6 +57,9 @@ namespace LORAP.Gameplay
 
             foreach (var info in DropBookXmlList.Instance._list)
             {
+                if (info.id.packageId != "")
+                    continue;
+
                 foreach (var page in info.DropItemList)
                 {
                     if (!collectiblePages.Contains(page.id))

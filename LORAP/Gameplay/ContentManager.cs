@@ -630,7 +630,6 @@ namespace LORAP.Gameplay
             MessagePopup.Init();
             AbnoEgoPagePopup.Init();
 
-
             ApplyUIChanges();
 
             ApplyMapChanges();
@@ -638,14 +637,6 @@ namespace LORAP.Gameplay
             // Add BOE and Booster Pack to book list
             CreateCustomBook(123456, "Book of Everything");
             CreateCustomBook(123457, "Booster Pack");
-
-
-            // Add Keter Realization stages to FloorLevelXmlList TODO: You know.
-            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 5, stageId = 210005, sephirahType = SephirahType.Keter });
-            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 6, stageId = 210006, sephirahType = SephirahType.Keter });
-            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 7, stageId = 210007, sephirahType = SephirahType.Keter });
-            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 8, stageId = 210008, sephirahType = SephirahType.Keter });
-            //FloorLevelXmlList._instance._list.Add(new FloorLevelXmlInfo() { level = 9, stageId = 210009, sephirahType = SephirahType.Keter });
         }
 
         private static void ApplyUIChanges()
