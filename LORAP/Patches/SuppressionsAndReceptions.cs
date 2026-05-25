@@ -821,6 +821,8 @@ namespace LORAP.Patches
 
         private static bool IsBattleNodeRevealed(int stageId)
         {
+            return true; // TODO: REMOVE AFTER DEGGING!
+
             BattleNode battleNode = SlotDataManager.BattleTree?.GetNodeById(stageId);
             if (!SlotDataManager.RandomizeReceptionTree || battleNode == null)
                 return PlaythruManager.IsReceptionCompleted(stageId);

@@ -178,7 +178,7 @@ namespace LORAP.Gameplay
                         if (allowedDrops.Count == 0)
                             break;
 
-                        BookDrop drop = allowedDrops.PopRandom(Random);
+                        BookDrop drop = allowedDrops.TakeRandom(Random);
                         drops.Add(drop);
                     }
 
@@ -206,7 +206,7 @@ namespace LORAP.Gameplay
                             if (chapterDrops.Count == 0)
                                 break;
 
-                            BookDrop drop = chapterDrops.PopRandom(Random);
+                            BookDrop drop = chapterDrops.TakeRandom(Random);
                             allowedDrops.Remove(drop);
                             drops.Add(drop);
                         }

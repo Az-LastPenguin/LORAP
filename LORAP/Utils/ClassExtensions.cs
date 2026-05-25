@@ -1,5 +1,6 @@
 using LORAP.Playthru;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
@@ -109,6 +110,34 @@ namespace LORAP.Utils
             };
             entry.callback.AddListener(action);
             evt.triggers.Add(entry);
+        }
+
+        /// <summary>
+        /// Take out a random element from this list
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="random"></param>
+        /// <returns></returns>
+        internal static T TakeRandom<T>(this List<T> list, System.Random random)
+        {
+            int rng = random.Next(list.Count);
+            T element = list.ElementAt(rng);
+            list.RemoveAt(rng);
+            return element;
+        }
+
+        /// <summary>
+        /// Take an element at index 0 from this list (Pop from the bottom of the stack).
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <returns></returns>
+        internal static T Pop<T>(this List<T> list)
+        {
+            T element = list.ElementAt(0);
+            list.RemoveAt(0);
+            return element;
         }
     }
 }
