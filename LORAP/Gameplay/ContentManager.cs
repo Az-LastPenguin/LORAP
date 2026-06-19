@@ -19,28 +19,28 @@ namespace LORAP.Gameplay
         private class MapNode
         {
             public string Key = "";
-            public MapGraph Graph;
+            //public MapGraph Graph;
             public List<MapNode> Next = new List<MapNode>();
             public List<MapNode> Prev = new List<MapNode>();
             public float X = 0;
             public float Y = 0;
         }
 
-        private class MapGraph
-        {
-            public MapNode FirstNode;
-            public List<MapNode> Nodes = new List<MapNode>();
-            public List<MapGraph> NextGraphs = new List<MapGraph>();
-            public List<MapGraph> PrevGraphs = new List<MapGraph>();
-            public int Level = 0;
-        }
+        //private class MapGraph
+        //{
+        //    public MapNode FirstNode;
+        //    public List<MapNode> Nodes = new List<MapNode>();
+        //    public List<MapGraph> NextGraphs = new List<MapGraph>();
+        //    public List<MapGraph> PrevGraphs = new List<MapGraph>();
+        //    public int Level = 0;
+        //}
 
         private static UIStoryProgressIconSlot MapIconTemplate;
         private static GameObject LineTemplate;
         private static GameObject CheckmarkIconTemplate = UICardListDetailFilterPopup.Instance.transform.Find("[Image]Frame/Scroll View/Viewport/Content/RarityGroup/Group/[Toggle]DetailSlot/[Toggle]SelectableToggle/[Image]IconGlow").gameObject;
 
         private static List<MapNode> MapNodes = new List<MapNode>();
-        private static List<MapGraph> MapGraphs = new List<MapGraph>();
+        //private static List<MapGraph> MapGraphs = new List<MapGraph>();
         private static List<GameObject> NodeLines = new List<GameObject>();
 
 
@@ -219,79 +219,41 @@ namespace LORAP.Gameplay
             // TODO: Change Icon for the library level in the level progress bar to AP icon
         }
 
-        private static void ApplyMapChanges() // Check if we still need most of this stuff
+        private static void ApplyMapChanges()
         {
             Debug.Log("[LORAP] Applying Map Changes");
 
-            // Save a "Template" for a map icon & lines
             UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
+
+            // Save an icon to later use as a template and hide it
             MapIconTemplate = MapPanel.iconList.First();
             LineTemplate = MapIconTemplate.connectLineList.First();
+            MapPanel.iconList.Remove(MapIconTemplate);
+            MapIconTemplate.SetActiveStory(false);
 
-            // Hide vanilla map
-            foreach (var icon in MapPanel.iconList)
+            // Clear vanilla map
+            foreach (UIStoryProgressIconSlot icon in MapPanel.iconList)
             {
-                icon.SetActiveStory(false);
+                foreach (var line in icon.connectLineList)
+                {
+                    GameObject.Destroy(line);
+                }
+
+                GameObject.Destroy(icon.gameObject);
+                GameObject.Destroy(icon);
             }
 
-            // Backup vanilla map icons (we restore them if reception tree is not randomized)
-            //VanillaIconsBackup = MapPanel.iconList;
-            MapPanel.iconList = new List<UIStoryProgressIconSlot>();
-
-
-
-            return; // TODO: remove vanilla map things?
-
-            // Make map bigger
-            MapPanel.posRect.sizeDelta = new Vector2(5000, 9000);
-
-            // Move Black Silence and Distorted Ensemble receptions on the map
-            var BlackSilence = MapPanel.iconList.Find(i => i.currentStory == UIStoryLine.BlackSilence);
-            BlackSilence.transform.localPosition = new Vector3(-200, 6915, 0);
-            BlackSilence.connectLineList.First().transform.localPosition = new Vector3(-100, -40, 0);
-            BlackSilence.connectLineList.First().transform.eulerAngles = new Vector3(0, 0, 310);
-
-            var Distorted = MapPanel.iconList.Find(i => i.currentStory == UIStoryLine.TwistedBlue);
-            Distorted.transform.localPosition = new Vector3(200, 6915, 0);
-            Distorted.connectLineList.First().transform.localPosition = new Vector3(100, -40, 0);
-            Distorted.connectLineList.First().transform.eulerAngles = new Vector3(0, 0, 230);
-
-
-            // Adding receptions to the map
-            // General Receptions
-            PlaceBattleNodeOnMap(100001, UIStoryLine.PierresMeatPies, new Vector3(-260, 1880, 0)); // Backstreets Butchers
-            PlaceBattleNodeOnMap(100002, UIStoryLine.HookOfficeRemnant, new Vector3(-520, 1880, 0)); // Hook Office Remnants
-            PlaceBattleNodeOnMap(100003, UIStoryLine.Chapter2, new Vector3(260, 1880, 0));  // Urban Myth-class Syndicate
-
-            PlaceBattleNodeOnMap(100004, UIStoryLine.Grade8Fixers, new Vector3(-450, 2900, 0)); // Grade 8 Fixers
-            PlaceBattleNodeOnMap(100006, UIStoryLine.Grade7Fixers, new Vector3(450, 2900, 0));  // Grade 7 Fixers 
-            PlaceBattleNodeOnMap(100005, UIStoryLine.Chapter3, new Vector3(0, 2900, 0));    // Urban Legend-class Office
-            PlaceBattleNodeOnMap(100007, UIStoryLine.Chapter3, new Vector3(-900, 2900, 0)); // Urban Legend-class Syndicate
-            PlaceBattleNodeOnMap(100008, UIStoryLine.AxeGang, new Vector3(900, 2900, 0));  // Axe Gang
-
-            PlaceBattleNodeOnMap(100009, UIStoryLine.RustyChainGroup, new Vector3(-450, 3610, 0)); // Rusted Chains
-            PlaceBattleNodeOnMap(100010, UIStoryLine.WorkshopFixer, new Vector3(0, 3610, 0));    // Workshop-affiliated Fixers
-            PlaceBattleNodeOnMap(100014, UIStoryLine.Jeong, new Vector3(450, 3610, 0));  // Jeong's Office
-
-            PlaceBattleNodeOnMap(100011, UIStoryLine.SevenAssociation, new Vector3(-450, 4520, 0)); // Seven Association
-            PlaceBattleNodeOnMap(100012, UIStoryLine.Sword, new Vector3(450, 4520, 0));  // Blade Lineage
-
-            PlaceBattleNodeOnMap(100013, UIStoryLine.ClassOneFixer, new Vector3(-450, 5550, 0)); // Dong-hwan the Grade 1 Fixer
-            PlaceBattleNodeOnMap(100015, UIStoryLine.AwlOfNight, new Vector3(450, 5550, 0));  // Night Awls
-            PlaceBattleNodeOnMap(100016, UIStoryLine.Usett, new Vector3(0, 5690, 0));    // The Udjat
-            PlaceBattleNodeOnMap(100017, UIStoryLine.Mirae, new Vector3(0, 5420, 0));    // Mirae Life Insurance
-            PlaceBattleNodeOnMap(100018, UIStoryLine.Workshop, new Vector3(-900, 5550, 0)); // Leaflet Workshop
-            PlaceBattleNodeOnMap(100019, UIStoryLine.Bayyard, new Vector3(900, 5550, 0));  // Bayard
-
-            // Additions
-            // Checkmarks for all found books receptions
-            foreach (var icon in MapPanel.iconList)
+            foreach (var item in MapPanel.chapterIconList)
             {
-                var check = UnityEngine.Object.Instantiate(CheckmarkIconTemplate, icon.transform);
-                check.transform.localPosition = new Vector3(30, 100, 0);
-                check.name = "Checkmark";
-                check.transform.SetSiblingIndex(2);
+                item.gameObject.SetActive(false);
             }
+
+            foreach (var item in MapPanel.blockChapterList)
+            {
+                item.root.gameObject.SetActive(false);
+            }
+
+            MapPanel.iconList.Clear();
         }
 
         internal static void SetupRunContent()
@@ -610,7 +572,6 @@ namespace LORAP.Gameplay
 
             Debug.Log("[LORAP/MAP] Preparing Map");
 
-            // Create a cool looking map using Sugiyama algorithm (Layered graph drawing)
             // Convert BattleNodes into MapNodes for convenience
             MapNodes = SlotDataManager.BattleTree.Nodes.Values.Select(n => new MapNode() { Key = n.Key }).ToList();
             Dictionary<string, MapNode> mapNodeByKey = MapNodes.ToDictionary(n => n.Key, n => n);
@@ -620,6 +581,9 @@ namespace LORAP.Gameplay
                 mNode.Next.AddRange(bNode.Next.Select(bn => mapNodeByKey[bn]));
                 mNode.Prev.AddRange(mapNodeByKey.Values.Where(n => n.Next.Contains(mNode)));
             }
+
+            // UNFINISHED MAP CODE MIGHT USE LATER
+            /*
 
             // Divide the nodes into graphs
             Debug.Log("[LORAP/MAP] Parsing nodes into graphs");
@@ -955,96 +919,143 @@ namespace LORAP.Gameplay
             UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
             MapPanel.posRect.sizeDelta = new Vector2(10000, 20000);
 
+            */
 
-            // Old attempt
-            //Debug.Log("[LORAP] Drawing Step 1");
-            // Step 1.1 Is skipped, because reception tree is always a DAG.
+            // Create a graph using Sugiyama network
+            Debug.Log("[LORAP] Graph Creation Step 1");
+            // Step 1.1 Is skipped because reception tree is always a DAG.
             // Step 1.2 Divide all nodes into layers such that if node A is in layer x, then next node B is in layer x+1
-            // BattleNodes come conveniently ordered, so we can just iterate them and divide into layers
-            //foreach (MapNode node in MapNodes)
-            //{
-            //    foreach (string next in node.Next)
-            //    {
-            //        MapNode nextNode = mapNodeByKey[next];
-            //        if (nextNode.Y <= node.Y)
-            //            nextNode.Y = node.Y + 1;
-            //    }
-            //}
-            //
-            //// Step 1.1 Make the tree into a "proper hierarchy" by inserting dummy nodes in the skipped layers
-            //int dummies = 0;
-            //foreach (MapNode node in MapNodes.ToList())
-            //{
-            //    foreach (string next in node.Next.ToList())
-            //    {
-            //        MapNode nextNode = mapNodeByKey[next];
-            //        int diff = (int)(nextNode.Y - node.Y - 1);
-            //
-            //        if (diff > 0)
-            //        {
-            //            node.Next.Remove(next);
-            //            nextNode.Prev.Remove(node.Key);
-            //
-            //            string prev = node.Key;
-            //            for (int _ = 0; _ < diff; _++)
-            //            {
-            //                MapNode dummy = new MapNode()
-            //                {
-            //                    Key = $"dummy_{dummies}",
-            //                    Prev = new List<string>() { prev },
-            //                    Y = mapNodeByKey[prev].Y + 1,
-            //                    DummyOwner = node.Key,
-            //                };
-            //                MapNodes.Add(dummy);
-            //                mapNodeByKey[dummy.Key] = dummy;
-            //                mapNodeByKey[prev].Next.Add(dummy.Key);
-            //                prev = dummy.Key;
-            //                dummies++;
-            //            }
-            //
-            //            mapNodeByKey[prev].Next.Add(next);
-            //            nextNode.Prev.Add(prev);
-            //        }
-            //    }
-            //}
-            //
-            //// Get all nodes at every level and map level
-            //Dictionary<int, List<string>> mapNodesAtY = new Dictionary<int, List<string>>();
-            //foreach (MapNode node in MapNodes)
-            //{
-            //    if (!mapNodesAtY.ContainsKey((int)node.Y))
-            //        mapNodesAtY[(int)node.Y] = new List<string>();
-            //
-            //    mapNodesAtY[(int)node.Y].Add(node.Key);
-            //}
-            //
-            //int maxY = mapNodesAtY.Keys.Max();
-            //
-            //// Assign X to every node at every Y
-            //foreach (List<string> nodesAtY in mapNodesAtY.Values)
-            //{
-            //    for (int i = 0; i < nodesAtY.Count; i++)
-            //    {
-            //        mapNodeByKey[nodesAtY[i]].X = (-0.5f * (nodesAtY.Count - 1)) + (1 * i);
-            //    }
-            //}
+            // BattleNodes are topologically sorted by the server already we just get to use them
+            foreach (MapNode node in MapNodes)
+            {
+                foreach (MapNode next in node.Next)
+                {
+                    if (next.Y <= node.Y)
+                        next.Y = node.Y + 220f;
+                }
+            }
+            
+            // Step 1.3 Make the tree into a "proper hierarchy" by inserting dummy nodes in the skipped layers
+            foreach (MapNode node in MapNodes.ToList())
+            {
+                foreach (MapNode next in node.Next.ToList())
+                {
+                    int diff = (int)((next.Y - node.Y) / 220 - 1);
 
-            //Debug.Log("[LORAP] Drawing Step 2");
-            //// Step 2 Minimize edge crossing using the Down-Up Procedure (25 attempts)
-            //
-            //Debug.Log("[LORAP] Drawing Step 3");
-            //// Step 3 Figure out the positions of the nodes
-            //foreach (MapNode node in MapNodes)
-            //{
-            //    node.X *= 240;
-            //    node.Y *= 220;
-            //}
+                    if (diff <= 0)
+                        continue;
+                    
+                    node.Next.Remove(next);
+                    next.Prev.Remove(node);
 
-            // Render the map
-            RenderMap();
+                    int i = 0;
+                    MapNode prev = node;
+                    for (int _ = 0; _ < diff; _++)
+                    {
+                        MapNode dummy = new MapNode()
+                        {
+                            Key = $"dummy_{node.Key}_{i}",
+                            Prev = new List<MapNode>() { prev },
+                            Y = prev.Y + 220f,
+                        };
+                        MapNodes.Add(dummy);
+                        mapNodeByKey[dummy.Key] = dummy;
+                        prev.Next.Add(dummy);
+                        prev = dummy;
+                        i++;
+                    }
+            
+                    prev.Next.Add(next);
+                    next.Prev.Add(prev);
+                }
+            }
+
+            // Place nodes inside levels
+            List<float> levels = MapNodes.Select(n => n.Y).Distinct().OrderBy(n => n).ToList();
+
+            foreach (float level in levels)
+            {
+                List<MapNode> nodesAtLevel = MapNodes.Where(n => n.Y == level).ToList();
+
+                for (int i = 0; i < nodesAtLevel.Count; i++)
+                {
+                    nodesAtLevel[i].X = (-120f * (nodesAtLevel.Count - 1)) + (240 * i);
+                }
+            }
+
+            Debug.Log("[LORAP] Graph Creation Step 2");
+            // Step 2 Minimize edge crossing using the Down-Up Procedure (15 passes)
+            for (int _ = 0; _ < 15; _++)
+            {
+                int i = 0;
+
+                // Go Down
+                do
+                {
+                    // Get nodes at level i+1
+                    List<MapNode> nextNodes = MapNodes.Where(n => n.Y == levels[i + 1]).OrderBy(n => n.X).ToList();
+
+                    //Calculate barycenters for every node at that level
+                    Dictionary<MapNode, float> barycenters = new Dictionary<MapNode, float>();
+                    foreach (MapNode node in nextNodes)
+                    {
+                        barycenters[node] = node.Prev.Sum(n => n.X) / node.Prev.Count;
+                    }
+
+                    // Sort nodes by barycenters
+                    List<MapNode> ordered = nextNodes.OrderBy(n => barycenters[n]).ToList();
+
+                    // Update positions
+                    List<float> positions = nextNodes.Select(n => n.X).ToList();
+                    for (int j = 0; j < ordered.Count; j++)
+                    {
+                        ordered[j].X = positions[j];
+                    }
+
+                    i++;
+                } while (i < levels.Count - 1);
+
+                // Go Up
+                do
+                {
+                    // Get nodes at level i-1
+                    List<MapNode> nextNodes = MapNodes.Where(n => n.Y == levels[i - 1]).OrderBy(n => n.X).ToList();
+
+                    //Calculate barycenters for every node at that level
+                    Dictionary<MapNode, float> barycenters = new Dictionary<MapNode, float>();
+                    foreach (MapNode node in nextNodes)
+                    {
+                        if (node.Next.Count == 0)
+                        {
+                            barycenters[node] = node.X;
+                            continue;
+                        }
+
+                        barycenters[node] = node.Next.Sum(n => n.X) / node.Next.Count;
+                    }
+
+                    // Sort nodes by barycenters
+                    List<MapNode> ordered = nextNodes.OrderBy(n => barycenters[n]).ToList();
+
+                    // Update positions
+                    List<float> positions = nextNodes.Select(n => n.X).ToList();
+                    for (int j = 0; j < ordered.Count; j++)
+                    {
+                        ordered[j].X = positions[j];
+                    }
+
+                    i--;
+                } while (i > 0);
+            }
+
+            Debug.Log("[LORAP] Graph Creation Step 3");
+            // Step 3 Make the graph real
+
+            // Render the graph
+            RenderGraph();
         }
 
-        private static void RenderMap()
+        private static void RenderGraph()
         {
             UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
             Dictionary<string, MapNode> mapNodeByKey = MapNodes.ToDictionary(n => n.Key, n => n);
@@ -1098,47 +1109,30 @@ namespace LORAP.Gameplay
             // Connect nodes
             foreach (MapNode node in MapNodes)
             {
-                //string key = node.DummyOwner != null ? node.DummyOwner : node.Key;
-                //
-                //if (!icons.ContainsKey(key))
-                //    continue;
-
-                //UIStoryProgressIconSlot icon = icons[key];
-
                 foreach (MapNode nextNode in node.Next)
                 {
                     Vector3 curPos = new Vector3(node.X, node.Y, 0);
                     Vector3 nextPos = new Vector3(nextNode.X, nextNode.Y, 0);
                     Vector3 diff = nextPos - curPos;
 
-                    var line = UnityEngine.Object.Instantiate(LineTemplate, MapPanel.chapterList.First().transform); //icon.transform.Find("[Rect]Lines"));
+                    var line = UnityEngine.Object.Instantiate(LineTemplate, MapPanel.chapterList.First().transform);
                     line.transform.localPosition = new Vector3(0, 140, 0) + curPos + diff / 2;
                     line.transform.right = diff.normalized;
                     line.transform.localScale = new Vector3(diff.magnitude / 220, 1, 1);
                     line.SetActive(true);
 
                     NodeLines.Add(line);
-                    //icon.connectLineList.Add(line);
                 }
             }
 
-            //ResizeBattleTreeMap(MapPanel, nodes);
+            ResizeMap();
         }
 
-        private static void ResizeBattleTreeMap(UIStoryProgressPanel mapPanel, List<BattleNode> nodes)
+        private static void ResizeMap()
         {
-            //if (mapPanel == null || nodes == null || nodes.Count == 0)
-            //    return;
-            //
-            //float minX = nodes.Min(n => n.VisualX);
-            //float maxX = nodes.Max(n => n.VisualX);
-            //float minY = nodes.Min(n => n.VisualY);
-            //float maxY = nodes.Max(n => n.VisualY);
-            //
-            //float width = Math.Max(5000f, Math.Abs(maxX - minX) + 1800f);
-            //float height = Math.Max(9000f, Math.Abs(maxY - minY) + 1800f);
-            //
-            //mapPanel.posRect.sizeDelta = new Vector2(width, height);
+            UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
+
+            MapPanel.posRect.sizeDelta = new Vector2(MapNodes.Max(n => n.X) - MapNodes.Min(n => n.X) + 1800f, MapNodes.Max(n => n.Y) + 1800f);
         }
 
         private static DropBookXmlInfo CreateCustomBook(int id, string name/*, int dropNum, List<BookDropItemInfo> dropList*/)
@@ -1163,7 +1157,7 @@ namespace LORAP.Gameplay
         {
             UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
 
-            var icon = UnityEngine.Object.Instantiate(MapIconTemplate, MapPanel.chapterList.First().transform);
+            var icon = GameObject.Instantiate(MapIconTemplate, MapPanel.chapterList.First().transform);
             icon.transform.localPosition = position;
             icon.StoryProgressPanel = MapPanel;
             icon.connectLineList = new List<GameObject>();

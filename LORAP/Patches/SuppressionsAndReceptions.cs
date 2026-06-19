@@ -821,8 +821,6 @@ namespace LORAP.Patches
 
         private static bool IsBattleNodeRevealed(int stageId)
         {
-            return true; // TODO: REMOVE AFTER DEGGING!
-
             BattleNode battleNode = SlotDataManager.BattleTree?.GetNodeById(stageId);
             if (!SlotDataManager.RandomizeReceptionTree || battleNode == null)
                 return PlaythruManager.IsReceptionCompleted(stageId);
@@ -871,23 +869,12 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool MapUpdate(UIStoryProgressPanel __instance)
         {
-            // TODO:
-            // Hide chapter lines if either randomizing tree or no reception of chapter yet gotten to
+            //StoryTotal.instance.SetData(); // Get all the recipes and receptions
             __instance.currentSlot = null;
-            StoryTotal.instance.SetData(); // Get all the recipes and receptions
-            __instance.blockChapterList.ForEach(b => b.root.gameObject.SetActive(false)); // Hide all chapter block things
-            __instance.chapterList.ForEach(c => c.SetActive(true)); // Show all chapters (groups of receptions)
+            //__instance.blockChapterList.ForEach(b => b.root.gameObject.SetActive(false)); // Hide all chapter block things
+            //__instance.chapterList.ForEach(c => c.SetActive(true)); // Show all chapters (groups of receptions)
 
-            if (SlotDataManager.RandomizeReceptionTree) // For randomized reception tree or Unlocked/Books progression
-            {
-                // Hide all chapter lines
-                foreach (var chapter in __instance.chapterIconList)
-                {
-                    chapter.gameObject.SetActive(false);
-                }
-            }
-
-            List<int> hideIDs = new List<int>() { 60007 };
+            //List<int> hideIDs = new List<int>() { 60007 };
             foreach (var icon in __instance.iconList) // Set all receptions info and icons
             {
                 List<StageClassInfo> storyData = SlotDataManager.RandomizeReceptionTree ? icon.storyData : StoryTotal.instance._lineList.Find((StoryLineData x) => x.currentstory == icon.currentStory)?.stageList ?? icon.storyData;
@@ -905,7 +892,7 @@ namespace LORAP.Patches
                 }
 
                 // In battle-tree mode closed nodes stay visible as lock icons instead of disappearing.
-                bool shouldShowNode = !hideIDs.Contains(storyData[0]._id) && (!SlotDataManager.RandomizeReceptionTree || battleNode != null);
+                bool shouldShowNode = !SlotDataManager.RandomizeReceptionTree || battleNode != null; //!hideIDs.Contains(storyData[0]._id) && (!SlotDataManager.RandomizeReceptionTree || battleNode != null);
                 icon.SetActiveStory(shouldShowNode);
 
                 /*if (SlotDataManager.RandomizeReceptionTree) // For randomized reception tree
