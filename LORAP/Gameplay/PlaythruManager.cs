@@ -85,7 +85,6 @@ namespace LORAP.Playthru
             // Init book drop manager
             BookDropManager.Init();
 
-
             // Load Save
             Gameplay.SaveManager.LoadGame();
 

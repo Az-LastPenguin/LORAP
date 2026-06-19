@@ -51,8 +51,8 @@ namespace LORAP.Archipelago
         public int RequiredLibrarians;
         public SephirahType AssignedFloor = SephirahType.None;
         public List<string> Next = new List<string>();
-        public float VisualX;
-        public float VisualY;
+        //public int VisualX;
+        //public int VisualY;
     }
 
     internal class BattleTree
@@ -241,8 +241,8 @@ namespace LORAP.Archipelago
                     ? BattleNodeKind.Stage
                     : BattleNodeKind.Reception;
 
-                if (!data.ContainsKey("visual_x") || !data.ContainsKey("visual_y"))
-                    throw new Exception($"LORAP battle node {o.Key} is missing visual coordinates.");
+                //if (!data.ContainsKey("visual_x") || !data.ContainsKey("visual_y"))
+                //    throw new Exception($"LORAP battle node {o.Key} is missing visual coordinates.");
 
                 BattleNode node = new BattleNode
                 {
@@ -252,8 +252,8 @@ namespace LORAP.Archipelago
                     Kind = kind,
                     Chapter = data["chapter"].Value<int>(),
                     RequiredLibrarians = data["req_librarians"].Value<int>(),
-                    VisualX = data["visual_x"].Value<float>(),
-                    VisualY = data["visual_y"].Value<float>(),
+                    //VisualX = data["visual_x"].Value<int>(),
+                    //VisualY = data["visual_y"].Value<int>(),
                 };
 
                 if (kind == BattleNodeKind.Stage && data.ContainsKey("assigned_floor"))

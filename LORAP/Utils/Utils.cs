@@ -57,15 +57,4 @@ namespace LORAP.Utils
             return instance.StartCoroutine(Coroutine());
         }
     }
-
-    internal static class ListExtensions
-    {
-        internal static T PopRandom<T>(this List<T> list, System.Random random)
-        {
-            int rng = random.Next(list.Count);
-            T element = list.ElementAt(rng);
-            list.RemoveAt(rng);
-            return element;
-        }
-    }
 }

@@ -372,25 +372,6 @@ namespace LORAP.Patches
             if (cType != UIScreenChangeType.ReturnTitle)
                 return;
 
-            // Clear map
-            UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
-            if (SlotDataManager.HasBattleTree)
-            {
-                foreach (var icon in MapPanel.iconList)
-                {
-                    GameObject.Destroy(icon.gameObject);
-                    GameObject.Destroy(icon);
-                }
-            }
-            else
-            {
-                foreach (var icon in MapPanel.iconList)
-                {
-                    icon.SetActiveStory(false);
-                }
-            }
-            MapPanel.iconList.Clear();
-
             // Stop Item Manager & Disconnect from AP
             ItemManager.Suspended = true;
             SessionManager.EndSession();
