@@ -342,8 +342,8 @@ namespace LORAP.Playthru
 
             if (seph == SephirahType.Binah)
             {
-                seph.FloorModel().SetOpenedUnitCount(2);
-                Floors[seph].Librarians = 2;
+                Floors[seph].Librarians = Math.Min(5, Floors[seph].Librarians + 1);
+                seph.FloorModel().SetOpenedUnitCount(Floors[seph].Librarians);
             }
 
             ChangeUIToFloor(seph);
