@@ -1,9 +1,7 @@
 using LORAP.Patches;
-using LORAP.Utils;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace LORAP
 {
@@ -23,20 +21,20 @@ namespace LORAP
 
             PatchManager.PatchAll();            
 
-            SceneManager.sceneLoaded += OnSceneLoad;
+            //SceneManager.sceneLoaded += OnSceneLoad;
 
             Debug.Log($"[LORAP] Loaded!");
         }
 
-        public void OnSceneLoad(Scene scene, LoadSceneMode mode)
-        {
-            if (scene.name == "Stage_Hod_New")
-            {
-                // Setup Coroutines
-                var gameObject = new GameObject("LORAP Coroutines");
-                gameObject.AddComponent<Timing>();
-                Timing.Setup(gameObject);
-            }
-        }
+        //public void OnSceneLoad(Scene scene, LoadSceneMode mode)
+        //{
+        //    if (scene.name == "Stage_Hod_New")
+        //    {
+        //        // Setup Coroutines
+        //        var gameObject = new GameObject("LORAP Coroutines");
+        //        gameObject.AddComponent<Timing>();
+        //        Timing.Init(gameObject);
+        //    }
+        //}
     }
 }

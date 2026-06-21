@@ -1,65 +1,24 @@
+using Archipelago.MultiClient.Net.Enums;
 using HarmonyLib;
-using UI;
+using LORAP.Archipelago;
+using LORAP.CustomUI;
+using LORAP.Gameplay;
+using LORAP.Playthru;
+using LORAP.Utils;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
-using LORAP.Playthru;
-using LORAP.Archipelago;
-using System;
-using UnityEngine;
 using TMPro;
+using UI;
+using UnityEngine;
+using UnityEngine.UI;
 using static StageController;
-using Archipelago.MultiClient.Net.Enums;
-using LORAP.Gameplay;
-using LORAP.Utils;
-using LORAP.CustomUI;
 
 namespace LORAP.Patches
 {
     internal class SuppressionsAndReceptions
     {
-        private static readonly Dictionary<int, List<SephirahType>> ApStageOriginalFloorOnly = new Dictionary<int, List<SephirahType>>();
-        private static readonly Dictionary<int, List<SephirahType>> ApStageOriginalExceptFloor = new Dictionary<int, List<SephirahType>>();
-
-        private static bool HasBattleTreeStageNodes()
-        {
-            return SlotDataManager.BattleTree?.Nodes?.Values.Any(n => n.Kind == BattleNodeKind.Stage) == true;
-        }
-
-        private static bool AreBattleParentsComplete(BattleNode node)
-        {
-            if (node == null)
-                return false;
-
-            List<BattleNode> parents = SlotDataManager.BattleTree?.GetPrevNodes(node.Key) ?? new List<BattleNode>();
-            return parents.Count == 0 || parents.Any(parent => PlaythruManager.IsReceptionCompleted(parent.Id));
-        }
-
-        private static UIPhase GetReturnPhaseForStage(int stageId)
-        {
-            BattleNode node = SlotDataManager.BattleTree?.GetNodeById(stageId);
-            return node != null && node.Kind == BattleNodeKind.Stage ? UIPhase.Invitation : UIPhase.Sephirah;
-        }
-
-        private static void RestoreApStageFloorRestriction(int stageId)
-        {
-            StageClassInfo stageInfo = StageClassInfoList.Instance.GetData(stageId);
-            if (stageInfo == null)
-                return;
-
-            if (ApStageOriginalFloorOnly.ContainsKey(stageId))
-            {
-                stageInfo.floorOnlyList = ApStageOriginalFloorOnly[stageId];
-                ApStageOriginalFloorOnly.Remove(stageId);
-            }
-
-            if (ApStageOriginalExceptFloor.ContainsKey(stageId))
-            {
-                stageInfo.exceptFloorList = ApStageOriginalExceptFloor[stageId];
-                ApStageOriginalExceptFloor.Remove(stageId);
-            }
-        }
-
         // On Abno Suppression or Floor Realization end, send the checks & progress current abno fight #
         // Entire method is overriden because it's easier that way.
         [HarmonyPatch(typeof(StageController), nameof(StageController.EndBattlePhase_creature))]
@@ -80,13 +39,18 @@ namespace LORAP.Patches
 
                 if (won)
                 {
-                    switch (stageModel.ClassInfo.id.id)
+                    PlaythruManager.MarkStageCompleted(stageId);
+
+                    switch (stageModel.ClassInfo._id)
                     {
                         // Black Silence I-IV
                         case 210005:
                         case 210006:
                         case 210007:
                         case 210008:
+                            Debug.Log("[LORAP] Keter Realization Progress");
+                            PlaythruManager.ProgressKeterRealization();
+
                             controller._enemyStageManager.OnStageClear();
 
                             BattleManagerUI battleManagerUI = BattleManagerUI.Instance;
@@ -101,8 +65,7 @@ namespace LORAP.Patches
                             controller.firstStartState = false;
 
                             var seph = controller._currentFloor;
-                            var data = FloorLevelXmlList.Instance.GetData(seph, seph.FloorModel().GetCurrentAbnoStage());
-                            StageClassInfo stageInfo = StageClassInfoList.Instance.GetData(data.stageId);
+                            StageClassInfo stageInfo = StageClassInfoList.Instance.GetData(210005 + PlaythruManager.KeterRealizationStage);
 
                             // InitStageForKeterCompleteOpen
                             controller.InitStageByCreature(stageInfo);
@@ -113,7 +76,7 @@ namespace LORAP.Patches
                             if (_floor == null)
                                 return false;
 
-                            controller.SetCurrentSephirah(SephirahType.Keter);
+                            controller.SetCurrentSephirah(seph);
 
                             int num = 0;
                             foreach (UnitBattleDataModel unitBattleData in _floor.GetUnitBattleDataList())
@@ -126,7 +89,7 @@ namespace LORAP.Patches
                                 }
                             }
 
-                            Gameplay.SaveManager.SaveGame();
+                            SaveManager.SaveGame();
 
                             GlobalGameManager.Instance.LoadBattleScene();
 
@@ -135,19 +98,20 @@ namespace LORAP.Patches
                         case 210009:
                         // Every other Suppression/Realization
                         default:
-                            LocationManager.SendStageChecks(stageId);
+                            if (stageModel.ClassInfo._id == 210009)
+                                PlaythruManager.ProgressKeterRealization();
 
-                            PlaythruManager.MarkReceptionCompletedIfReady(stageId, true, true);
+                            Debug.Log("[LORAP] Floor Stage Complete");
+                            LocationManager.SendStageChecks(stageId);
 
                             PlaythruManager.CheckEndConditions();
 
                             controller.battleState = BattleState.None;
                             GameSceneManager.Instance.ActivateUIController();
                             UIFloorPanel.firstSelectableState = FirstSelectableState.Center;
-                            UI.UIController.Instance.CallUIPhase(GetReturnPhaseForStage(stageId));
+                            UI.UIController.Instance.CallUIPhase(UIPhase.Sephirah);
 
-                            RestoreApStageFloorRestriction(stageId);
-                            Gameplay.SaveManager.SaveGame();
+                            SaveManager.SaveGame();
 
                             break;
                     }
@@ -157,9 +121,8 @@ namespace LORAP.Patches
                     controller.battleState = BattleState.None;
                     GameSceneManager.Instance.ActivateUIController();
                     UIFloorPanel.firstSelectableState = FirstSelectableState.Center;
-                    UI.UIController.Instance.CallUIPhase(GetReturnPhaseForStage(stageId));
+                    UI.UIController.Instance.CallUIPhase(UIPhase.Sephirah);
 
-                    RestoreApStageFloorRestriction(stageId);
                     return false;
                 }
             }
@@ -235,15 +198,10 @@ namespace LORAP.Patches
 
                 if (won)
                 {
-                    bool checkedAllLocations = false;
+                    //if (!SlotDataManager.EnemiesTurnIntoChecks)
+                    LocationManager.SendStageChecks(stageModel.ClassInfo._id);
 
-                    if (!SlotDataManager.EnemiesTurnIntoChecks)
-                    {
-                        LocationManager.SendStageChecks(stageModel.ClassInfo._id);
-                        checkedAllLocations = true;
-                    }
-
-                    PlaythruManager.MarkReceptionCompletedIfReady(stageModel.ClassInfo._id, checkedAllLocations, true);
+                    PlaythruManager.MarkStageCompleted(stageModel.ClassInfo._id);
 
                     PlaythruManager.CheckEndConditions();
                 }
@@ -334,6 +292,7 @@ namespace LORAP.Patches
         }
 
 
+
         // Don't remove books on not winning gameover
         [HarmonyPatch(typeof(StageController), nameof(StageController.GameOver))]
         [HarmonyTranspiler]
@@ -389,7 +348,7 @@ namespace LORAP.Patches
 
             int stageId = StageController.Instance._stageModel.ClassInfo.id.id;
 
-            List<long> locations = LocationManager.GetUncheckedReceptionLocations(stageId);
+            List<long> locations = LocationManager.GetUncheckedStageLocations(stageId);
 
             BattleEmotionRewardSlotUI slot = __instance.slots.First();
 
@@ -440,29 +399,6 @@ namespace LORAP.Patches
 
 
 
-        // Patch Request abno page to not give bonus books.
-        //[HarmonyPatch(typeof(EmotionCardAbility_freischutz1), nameof(EmotionCardAbility_freischutz1.OnKill))]
-        //[HarmonyTranspiler]
-        //static IEnumerable<CodeInstruction> RequestNoBonusBooks(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
-        //{
-        //    var codeMatcher = new CodeMatcher(instructions, generator);
-        //
-        //    codeMatcher.MatchStartForward(OpCodes.Ldarg_1, OpCodes.Callvirt, OpCodes.Callvirt, OpCodes.Stloc_0)
-        //        .SetAndAdvance(OpCodes.Nop, null)
-        //        .RemoveInstructions(41);
-        //
-        //    return codeMatcher.Instructions();
-        //}
-
-
-
-        // Patch Sentinel abno page to not give bonus books. I HATE free stuff.
-        //[HarmonyPatch(typeof(EmotionCardAbility_whitenight2), nameof(EmotionCardAbility_whitenight2.OnBattleEnd_alive))]
-        //[HarmonyPrefix]
-        //static bool SentinelNoBonusBooks() => false;
-
-
-
         // Make Angela replace any Patron Librarian for Keter Realization.
         [HarmonyPatch(typeof(StageLibraryFloorModel), nameof(StageLibraryFloorModel.InitUnitList))]
         [HarmonyTranspiler]
@@ -476,146 +412,6 @@ namespace LORAP.Patches
                 .RemoveInstructions(4);
 
             return codeMatcher.Instructions();
-        }
-
-
-
-        // Return Angela her light in the battle prepare screen.
-        [HarmonyPatch(typeof(UIBattleSettingPanel), nameof(UIBattleSettingPanel.OnUIPhaseEnter))]
-        [HarmonyTranspiler]
-        static IEnumerable<CodeInstruction> ReturnLight(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
-        {
-            var codeMatcher = new CodeMatcher(instructions, generator);
-
-            codeMatcher.MatchStartForward(OpCodes.Call, OpCodes.Callvirt, OpCodes.Ldc_I4_3, OpCodes.Bne_Un)
-                .SetAndAdvance(OpCodes.Nop, null)
-                .RemoveInstructions(2)
-                .InsertAndAdvance(Transpilers.EmitDelegate<Func<bool>>(() => {
-                    int id = StageController.Instance.GetStageModel().ClassInfo.id.id;
-
-                    return id == 210005 || id == 210006 || id == 210007 || id == 210008 || id == 210009;
-                }))
-                .SetOpcodeAndAdvance(OpCodes.Brfalse_S);
-
-            return codeMatcher.Instructions();
-        }
-
-
-
-        // Check what abno is next when clicking on !.
-        // Fully overriden because too many patches with changes needed to get desired result.
-        [HarmonyPatch(typeof(UIMainPanel), nameof(UIMainPanel.OnClickLevelUp))]
-        [HarmonyPrefix]
-        static bool ClickSuppression(UIMainPanel __instance, int index)
-        {
-            SephirahType seph = (SephirahType)(index + 1);
-
-            if (HasBattleTreeStageNodes())
-            {
-                UIAlarmPopup.instance.SetAlarmText(UIAlarmType.StartCreatureBattle);
-                UIAlarmPopup.instance.txt_alarm.text = "Abnormality battles are placed in the reception tree for this seed.";
-                return false;
-            }
-
-            FloorLevelXmlInfo data = FloorLevelXmlList.Instance.GetData(seph, seph.GetCurrentAbnoStage());
-
-            if (data == null)
-                return false;
-
-            List<int> bossStages = new List<int>()
-            {
-                201005, 202005, 203005, 204005, 205005, 206005, 207005, 208004, 209004, 210005, 210006, 210007, 210008, 210009
-            };
-
-            string stageName = "";
-            UIAlarmType alarmtype = UIAlarmType.StartCreatureBattle;
-
-            if (bossStages.Contains(data.stageId))
-            {
-                stageName = TextDataModel.GetText(seph.FloorTextId());
-                alarmtype = UIAlarmType.StartCreatureBattleInBoss;
-            }
-            else
-            {
-                StageClassInfo data2 = StageClassInfoList.Instance.GetData(data.stageId);
-                if (data2 != null)
-                    stageName = StageNameXmlList.Instance.GetName(data2);
-            }
-
-            UIAlarmPopup.instance.SetAlarmText(alarmtype, UIAlarmButtonType.YesNo, delegate (bool b) // TODO: Refactor?
-            {
-                if (!b)
-                    return;
-
-                UI.UIController UIController = UI.UIController.Instance;
-                StageController StageController = StageController.Instance;
-
-                UI.UIController.Instance.SetCurrentSephirah(seph);
-
-                if (data.stageId >= 210005 && data.stageId <= 210009)
-                {
-                    // StartEndContentsStage
-                    StageClassInfo stageInfo = StageClassInfoList.Instance.GetData(data.stageId);
-
-                    if (stageInfo == null)
-                        return;
-
-                    UIController.SetStageInfo(stageInfo);
-
-                    // InitStageForKeterCompleteOpen
-                    StageController.InitStageByCreature(stageInfo);
-                    StageController.firstStartState = true;
-                    StageController._isEndContentsStage = true;
-
-                    StageLibraryFloorModel _floor = StageController._stageModel.GetFloor(seph);
-                    if (_floor == null)
-                        return;
-
-                    StageController.SetCurrentSephirah(SephirahType.Keter);
-
-                    int num = 0;
-                    foreach (UnitBattleDataModel unitBattleData in _floor.GetUnitBattleDataList())
-                    {
-                        unitBattleData.IsAddedBattle = false;
-                        if (!unitBattleData.isDead && num < StageController._stageModel.GetWave(StageController._currentWave).AvailableUnitNumber)
-                        {
-                            unitBattleData.IsAddedBattle = true;
-                            num++;
-                        }
-                    }
-
-                    // Continuation of StartEndContentsStage
-                    UIController.OpenBattlePrepare();
-                }
-                else
-                {
-                    // OnClickStartCreatureStage
-                    StageController.SetCurrentSephirah(seph);
-
-                    StageClassInfo stageInfo = StageClassInfoList.Instance.GetData(data.stageId);
-
-                    if (stageInfo == null)
-                        return;
-
-                    StageController.InitStageByCreature(stageInfo);
-
-                    foreach (UnitBattleDataModel unitBattleData in StageController.GetCurrentStageFloorModel().GetUnitBattleDataList())
-                    {
-                        if (seph == SephirahType.Binah && LibraryModel.Instance.IsBinahLockedInLibrary() && unitBattleData.unitData.isSephirah)
-                        {
-                            unitBattleData.IsAddedBattle = false;
-                        }
-                        else
-                        {
-                            unitBattleData.IsAddedBattle = true;
-                        }
-                    }
-
-                    GlobalGameManager.Instance.LoadBattleScene();
-                }
-            }, stageName);
-
-            return false;
         }
 
 
@@ -634,49 +430,7 @@ namespace LORAP.Patches
         {
             __result = false;
 
-            if (HasBattleTreeStageNodes())
-                return false;
-
-            if (!floor.Sephirah.IsOpen())
-                return false;
-
-            List<int> bossStages = new List<int>()
-            {
-                201005, 202005, 203005, 204005, 205005, 206005, 207005, 208004, 209004, 210005, 210006, 210007, 210008, 210009
-            };
-
-            FloorLevelXmlInfo data = FloorLevelXmlList.Instance.GetData(floor.Sephirah, floor.GetCurrentAbnoStage());
-            if (data == null)
-            {
-                __result = false;
-                return false;
-            }
-
-            int stageIndex = floor.GetCurrentAbnoStage() - 1;
-            if (!SlotDataManager.AbnoBookRequirements.ContainsKey(floor.Sephirah) ||
-                stageIndex < 0 ||
-                stageIndex >= SlotDataManager.AbnoBookRequirements[floor.Sephirah].Count)
-            {
-                __result = false;
-                return false;
-            }
-
-            // Check if player has all the required books
-            List<int> books = SlotDataManager.AbnoBookRequirements[floor.Sephirah][stageIndex];
-            bool hasBooks = true;
-
-            foreach (int book in books)
-            {
-                if (DropBookInventoryModel.Instance.GetBookCount(book) == 0)
-                {
-                    hasBooks = false;
-                    break;
-                }
-            }
-
-            __result = bossStages.Contains(data.stageId) && hasBooks;
-
-            return false;
+            return false; // All Realizations are on the map.
         }
 
 
@@ -688,47 +442,8 @@ namespace LORAP.Patches
         {
             __result = false;
 
-            if (HasBattleTreeStageNodes())
-                return false;
-
-            if (!sep.IsOpen())
-                return false;
-
-            FloorLevelXmlInfo data = FloorLevelXmlList.Instance.GetData(sep, sep.GetCurrentAbnoStage());
-            if (data == null)
-            {
-                __result = false;
-                return false;
-            }
-
-            int stageIndex = sep.GetCurrentAbnoStage() - 1;
-            if (!SlotDataManager.AbnoBookRequirements.ContainsKey(sep) ||
-                stageIndex < 0 ||
-                stageIndex >= SlotDataManager.AbnoBookRequirements[sep].Count)
-            {
-                __result = false;
-                return false;
-            }
-
-            // Check if player has all the required books
-            List<int> books = SlotDataManager.AbnoBookRequirements[sep][stageIndex];
-            bool hasBooks = true;
-
-            foreach (int book in books)
-            {
-                if (DropBookInventoryModel.Instance.GetBookCount(book) == 0)
-                {
-                    hasBooks = false;
-                    break;
-                }
-            }
-
-            __result = hasBooks;
-
-            return false;
+            return false; // All Suppressions are on the map.
         }
-
-
 
 
 
@@ -819,41 +534,33 @@ namespace LORAP.Patches
 
 
 
-        private static bool IsBattleNodeRevealed(int stageId)
-        {
-            BattleNode battleNode = SlotDataManager.BattleTree?.GetNodeById(stageId);
-            if (!SlotDataManager.RandomizeReceptionTree || battleNode == null)
-                return PlaythruManager.IsReceptionCompleted(stageId);
-
-            if (PlaythruManager.IsReceptionCompleted(stageId))
-                return true;
-
-            List<BattleNode> parents = SlotDataManager.BattleTree.GetPrevNodes(battleNode.Key);
-            return parents.Count == 0 || parents.Any(parent => PlaythruManager.IsReceptionCompleted(parent.Id));
-        }
-
         // Set battle-node visual state. Access is enforced separately by AP recipe/stage-start checks.
         [HarmonyPatch(typeof(StageClassInfo), nameof(StageClassInfo.currentState), MethodType.Getter)]
         [HarmonyPrefix]
         static bool GetBattleNodeAvailability(StageClassInfo __instance, ref StoryState __result)
         {
-            int stageId = __instance.id.id;
+            __result = StoryState.Clear;
+            return false;
+
+            int stageId = __instance._id;
             BattleNode battleNode = SlotDataManager.BattleTree?.GetNodeById(stageId);
 
-            if (SlotDataManager.RandomizeReceptionTree && battleNode != null)
+            if (battleNode == null)
             {
-                __result = IsBattleNodeRevealed(stageId) ? StoryState.Clear : StoryState.Close;
+                __result = StoryState.Close;
                 return false;
             }
 
-            __result = PlaythruManager.IsReceptionCompleted(stageId) ? StoryState.Clear : StoryState.Close;
+            __result = battleNode.AreBattleParentsComplete() ? StoryState.Clear : StoryState.Close;
             return false;
         }
+
+
 
         // When player clicks on stage icon which is Black Silence or Distorted Ensemble, check if we should actually show anything or not
         [HarmonyPatch(typeof(UIStoryProgressIconSlot), nameof(UIStoryProgressIconSlot.ClickMainIcon))]
         [HarmonyPrefix]
-        static bool DontShowBSDE(UIStoryProgressIconSlot __instance)
+        static bool DontOpenBSDE(UIStoryProgressIconSlot __instance)
         {
             if (__instance.currentStory == UIStoryLine.BlackSilence || __instance.currentStory == UIStoryLine.TwistedBlue)
             {
@@ -864,77 +571,73 @@ namespace LORAP.Patches
             return true;
         }
 
-        // UIStoryProgressPanel patch. Update map. //
+
+
+        // Update the reception tree.
         [HarmonyPatch(typeof(UIStoryProgressPanel), nameof(UIStoryProgressPanel.SetStoryLine))]
         [HarmonyPrefix]
         static bool MapUpdate(UIStoryProgressPanel __instance)
         {
-            //StoryTotal.instance.SetData(); // Get all the recipes and receptions
             __instance.currentSlot = null;
-            //__instance.blockChapterList.ForEach(b => b.root.gameObject.SetActive(false)); // Hide all chapter block things
-            //__instance.chapterList.ForEach(c => c.SetActive(true)); // Show all chapters (groups of receptions)
 
-            //List<int> hideIDs = new List<int>() { 60007 };
-            foreach (var icon in __instance.iconList) // Set all receptions info and icons
+            // Set info for every icon
+            foreach (var icon in __instance.iconList)
             {
-                List<StageClassInfo> storyData = SlotDataManager.RandomizeReceptionTree ? icon.storyData : StoryTotal.instance._lineList.Find((StoryLineData x) => x.currentstory == icon.currentStory)?.stageList ?? icon.storyData;
+                List<StageClassInfo> storyData = icon.storyData;
 
-                icon.SetSlotData(storyData);
-
+                // If the stage is not on the randomized tree, hide it entirely
                 BattleNode battleNode = SlotDataManager.BattleTree?.GetNodeById(storyData[0]._id);
-                bool isRevealed = !SlotDataManager.RandomizeReceptionTree || battleNode == null || IsBattleNodeRevealed(storyData[0]._id);
-
-                if (SlotDataManager.RandomizeReceptionTree && battleNode != null && battleNode.Kind == BattleNodeKind.Stage)
+                if (battleNode == null)
                 {
-                    ContentManager.ConfigureBattleNodeLevelIcons(icon, isRevealed);
-                    if (isRevealed)
-                        ContentManager.ApplyFloorIcon(icon, battleNode.AssignedFloor);
+                    icon.SetActiveStory(false);
+                    continue;
                 }
 
-                // In battle-tree mode closed nodes stay visible as lock icons instead of disappearing.
-                bool shouldShowNode = !SlotDataManager.RandomizeReceptionTree || battleNode != null; //!hideIDs.Contains(storyData[0]._id) && (!SlotDataManager.RandomizeReceptionTree || battleNode != null);
-                icon.SetActiveStory(shouldShowNode);
-
-                /*if (SlotDataManager.RandomizeReceptionTree) // For randomized reception tree
+                // If it's one of the stages stage of keter realization, make it show the current realization stage player is at
+                if (storyData[0]._id >= 210005 && storyData[0]._id <= 210009)
                 {
-                    icon.SetSlotData(icon.storyData);
-                    icon.SetActiveStory(true);
+                    List<StageClassInfo> keterData = new List<StageClassInfo>() { StageClassInfoList.Instance.GetData(210005 + PlaythruManager.KeterRealizationStage) };
+
+                    icon.SetSlotData(keterData);
                 }
-                else // For Vanilla reception tree
+                else
                 {
                     icon.SetSlotData(storyData);
+                }
 
-                    // Hide some receptions
-                    icon.SetActiveStory(hideIDs.Contains(storyData[0]._id));
-                }*/
+                // If it's a floor stage and it can be seen, set its icon 
+                if (battleNode.Kind == BattleNodeKind.Stage && storyData[0].currentState == StoryState.Clear)
+                    icon.SetIcon(UIUtils.GetFloorIconSet(storyData[0]._id, battleNode.AssignedFloor));
 
-                // Show checkmark for completed receptions
-                if (icon.transform.Find("Checkmark") == null)
+                // Show the icon on the map
+                icon.SetActiveStory(true);
+
+                // Show status of the stage (Complete/Clearable)
+                if (icon.transform.Find("Status") == null)
                     continue;
 
-                if (storyData.All(d => PlaythruManager.IsReceptionCompleted(d._id)))
-                    icon.transform.Find("Checkmark").gameObject.SetActive(true);
+                GameObject status = icon.transform.Find("Status").gameObject;
 
+                // If the stage is completed and all checks are collected
+                if (PlaythruManager.IsStageComplete(battleNode.Id) && LocationManager.GetUncheckedStageLocations(battleNode.Id).Count == 0)
+                {
+                    status.GetComponent<Image>().sprite = UIUtils.CheckmarkSprite;
+                    status.SetActive(true);
 
-                // Show checkmark for the completed receptions that have every book collected
-                //if (icon.transform.Find("Checkmark") == null)
-                //    continue;
+                    continue;
+                }
 
-                //var notFound = storyData.SelectMany(s => s.waveList).SelectMany(w => w.enemyUnitIdList).SelectMany(u => EnemyUnitClassInfoList.Instance.GetData(u).dropTableList).SelectMany(t => t.dropItemList).Where(i => !PlaythruManager.FoundBooks.Contains(i.bookId)).Count();
+                // If the stage isn't completed but can be completed (player has all required books for it)
+                if (storyData[0].currentState == StoryState.Clear && storyData[0].invitationInfo.needsBooks.All(b => DropBookInventoryModel.Instance.GetBookCount(b) > 0)
+                    && (battleNode.Kind != BattleNodeKind.Stage || battleNode.AssignedFloor.IsOpen()))
+                {
+                    status.GetComponent<Image>().sprite = UIUtils.ExclamationSprite;
+                    status.SetActive(true);
 
-                //if (PlaythruManager.ReceptionsCompleted.Contains(storyData[0]._id) && notFound == 0)
-                //  icon.transform.Find("Checkmark").gameObject.SetActive(true);
-            }
+                    continue;
+                }
 
-
-            // TODO: Find a better way?
-            foreach (UIStoryProgressIconSlot chapterIcon in __instance.chapterIconList) // Make chapter buttons not interactable (and some other default stuff)
-            {
-                chapterIcon.SetChapterStoryIcon();
-                chapterIcon.SetChapterStoryIconDefault();
-                chapterIcon.enabled = false;
-                chapterIcon.isDisabled = true;
-                chapterIcon.transform.Find("[Rect]ChapterTitle/[Rect]Close (1)/[Xbox]SelectableTarget").gameObject.GetComponent<UICustomSelectable>().interactable = false;
+                status.SetActive(false);
             }
 
             return false;
@@ -942,12 +645,13 @@ namespace LORAP.Patches
 
 
 
-        // UIInvitationStageInfoPanel patch. Show AP items in "Resolvable Rewards"
+        // Show AP items in "Resolvable Rewards", also set icon for floor stages
         [HarmonyPatch(typeof(UIInvitationStageInfoPanel), nameof(UIInvitationStageInfoPanel.SetData))]
         [HarmonyPostfix]
         static void OnSelectStage(UIInvitationStageInfoPanel __instance, StageClassInfo stage, UIStoryLine story = UIStoryLine.None)
         {
-            List<long> receptionLocations = LocationManager.GetUncheckedReceptionLocations(stage._id);
+            // If it's one of the keter realization stages make sure to get the last one since it's the only one that technically has items
+            List<long> receptionLocations = LocationManager.GetUncheckedStageLocations(stage._id >= 210005 && stage._id <= 210008 ? 210009 : stage._id);
             List<long> locationsWithHints = receptionLocations.Where(l => LocationManager.KnownHints.Any(h => !h.Found && h.LocationId == l)).ToList();
 
             // Scout all unchecked locations (they're already known, but this time we scout for hints.) // TODO: Make an option to toggle the hint scouting
@@ -972,7 +676,7 @@ namespace LORAP.Patches
                 if (i == 7 && receptionLocations.Count > 8)
                 {
                     slot.BookName.text = $"+{receptionLocations.Count - 7} more items!";
-                    slot.Icon.sprite = UIUtils.FillerSprite;
+                    slot.Icon.sprite = UIUtils.FillerSmallSprite;
                 }
                 else
                 {
@@ -982,16 +686,16 @@ namespace LORAP.Patches
                         slot.BookName.text = LocationManager.FormatPairItem(pair);
 
                         if (pair.Item.Flags.HasFlag(ItemFlags.Advancement))
-                            slot.Icon.sprite = UIUtils.ProgSprite;
+                            slot.Icon.sprite = UIUtils.ProgSmallSprite;
                         else if (pair.Item.Flags.HasFlag(ItemFlags.NeverExclude))
-                            slot.Icon.sprite = UIUtils.UsefulSprite;
+                            slot.Icon.sprite = UIUtils.UsefulSmallSprite;
                         else
-                            slot.Icon.sprite = UIUtils.FillerSprite;
+                            slot.Icon.sprite = UIUtils.FillerSmallSprite;
                     }
                     else
                     {
                         slot.BookName.text = "???";
-                        slot.Icon.sprite = UIUtils.FillerSprite;
+                        slot.Icon.sprite = UIUtils.FillerSmallSprite;
                     }
                 }
 
@@ -999,114 +703,165 @@ namespace LORAP.Patches
                 slot.SetHighlighted(false);
                 slot.originSiblingIdx = slot.transform.GetSiblingIndex();
             }
-        }
 
-
-
-
-        private static List<int> GetStageBookRequirements(int stageId, SephirahType assignedFloor)
-        {
-            if (!SlotDataManager.AbnoBookRequirements.ContainsKey(assignedFloor) || !SlotDataManager.AbnoFightOrder.ContainsKey(assignedFloor))
-                return new List<int>();
-
-            int stageIndex = SlotDataManager.AbnoFightOrder[assignedFloor].IndexOf(stageId);
-            if (stageIndex < 0 || stageIndex >= SlotDataManager.AbnoBookRequirements[assignedFloor].Count)
-                return new List<int>();
-
-            return SlotDataManager.AbnoBookRequirements[assignedFloor][stageIndex];
-        }
-
-        private static string GetBookRequirementName(int book)
-        {
-            DropBookXmlInfo bookInfo = DropBookXmlList.Instance.GetData(new LorId(book));
-            return bookInfo != null ? bookInfo.Name : $"Book {book}";
-        }
-
-        private static List<string> GetApStageUnavailableReasons(BattleNode node)
-        {
-            List<string> reasons = new List<string>();
-
-            if (node == null || node.Kind != BattleNodeKind.Stage)
-                return reasons;
-
-            if (!LibraryModel.Instance.IsOpenedSephirah(node.AssignedFloor))
-                reasons.Add($"{node.AssignedFloor.FloorName()} is needed");
-
-            foreach (int book in GetStageBookRequirements(node.Id, node.AssignedFloor))
-            {
-                if (DropBookInventoryModel.Instance.GetBookCount(book) == 0)
-                    reasons.Add($"{GetBookRequirementName(book)} is needed");
-            }
-
-            return reasons;
-        }
-
-        private static bool CanStartApStage(BattleNode node)
-        {
-            return GetApStageUnavailableReasons(node).Count == 0;
-        }
-
-        internal static void StartApCreatureStage(int stageId, SephirahType assignedFloor)
-        {
-            StageClassInfo stageInfo = StageClassInfoList.Instance.GetData(stageId);
-            if (stageInfo == null)
+            // Set icon
+            BattleNode battleNode = SlotDataManager.BattleTree?.GetNodeById(stage._id);
+            if (battleNode == null || battleNode.Kind != BattleNodeKind.Stage || stage.currentState != StoryState.Clear)
                 return;
 
-            UI.UIController.Instance.SetCurrentSephirah(assignedFloor);
-            UI.UIController.Instance.SetStageInfo(stageInfo);
-            Singleton<StageController>.Instance.SetCurrentSephirah(assignedFloor);
+            UIIconManager.IconSet set = UIUtils.GetFloorIconSet(stage._id, battleNode.AssignedFloor);
 
-            if (!ApStageOriginalFloorOnly.ContainsKey(stageId))
-                ApStageOriginalFloorOnly[stageId] = stageInfo.floorOnlyList.ToList();
-            if (!ApStageOriginalExceptFloor.ContainsKey(stageId))
-                ApStageOriginalExceptFloor[stageId] = stageInfo.exceptFloorList.ToList();
-
-            stageInfo.floorOnlyList = new List<SephirahType> { assignedFloor };
-            stageInfo.exceptFloorList = new List<SephirahType>();
-
-            Singleton<StageController>.Instance.InitStageByCreature(stageInfo);
-
-            foreach (UnitBattleDataModel unitBattleData in Singleton<StageController>.Instance.GetCurrentStageFloorModel().GetUnitBattleDataList())
-            {
-                if (assignedFloor == SephirahType.Binah && LibraryModel.Instance.IsBinahLockedInStage(stageInfo) && unitBattleData.unitData.isSephirah)
-                    unitBattleData.IsAddedBattle = false;
-                else
-                    unitBattleData.IsAddedBattle = true;
-            }
-
-            StageStoryInfo startStory = stageInfo.GetStartStory();
-            if (startStory != null && !string.IsNullOrWhiteSpace(startStory.story))
-                UI.UIController.Instance.OpenStory(startStory.story, () => GlobalGameManager.Instance.LoadBattleScene());
-            else
-                GlobalGameManager.Instance.LoadBattleScene();
+            __instance.img_enemyTitleIcon.sprite = set.icon;
+            __instance.img_enemyTitleIconBg.sprite = set.iconGlow;
         }
 
-        [HarmonyPatch(typeof(UIStoryProgressIconSlot), nameof(UIStoryProgressIconSlot.OnPointerClickLevelIcon))]
+
+
+        // Stop chapter shortcuts from updating
+        [HarmonyPatch(typeof(UIStoryGradeFilter), nameof(UIStoryGradeFilter.Init))]
         [HarmonyPrefix]
-        static bool StartApStageFromBattleTree(UIStoryProgressIconSlot __instance, int index)
+        static bool NoChapterShortcuts(UIStoryGradeFilter __instance) => false;
+
+
+
+        // Change icon of the stage for floor stages on right invitation panel
+        [HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.SetLowerIconData))]
+        [HarmonyPostfix]
+        static void RightPanelIcon(UIInvitationRightMainPanel __instance, StageClassInfo stage)
         {
-            if (!SlotDataManager.RandomizeReceptionTree || __instance?._storyData == null || __instance._storyData.Count <= index)
-                return true;
+            if (stage == null)
+                return;
 
-            int stageId = __instance._storyData[index].id.id;
-            BattleNode node = SlotDataManager.BattleTree?.GetNodeById(stageId);
-            if (node == null || node.Kind != BattleNodeKind.Stage)
-                return true;
+            BattleNode battleNode = SlotDataManager.BattleTree?.GetNodeById(stage._id);
+            if (battleNode == null || battleNode.Kind != BattleNodeKind.Stage || stage.currentState != StoryState.Clear)
+                return;
 
-            UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Click);
+            UIIconManager.IconSet set = UIUtils.GetFloorIconSet(stage._id, battleNode.AssignedFloor);
 
-            List<string> unavailableReasons = GetApStageUnavailableReasons(node);
-            if (unavailableReasons.Count > 0)
+            __instance.LowerIcon.sprite = set.icon;
+            __instance.LowerIconGlow.sprite = set.iconGlow;
+        }
+
+
+
+        // Return Angela her light in the battle prepare screen.
+        [HarmonyPatch(typeof(UIBattleSettingPanel), nameof(UIBattleSettingPanel.OnUIPhaseEnter))]
+        [HarmonyTranspiler]
+        static IEnumerable<CodeInstruction> ReturnLight(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+        {
+            var codeMatcher = new CodeMatcher(instructions, generator);
+
+            codeMatcher.MatchStartForward(OpCodes.Call, OpCodes.Callvirt, OpCodes.Ldc_I4_3, OpCodes.Bne_Un)
+                .SetAndAdvance(OpCodes.Nop, null)
+                .RemoveInstructions(2)
+                .InsertAndAdvance(Transpilers.EmitDelegate<Func<bool>>(() => {
+                    int id = StageController.Instance.GetStageModel().ClassInfo.id.id;
+
+                    return id == 210005 || id == 210006 || id == 210007 || id == 210008 || id == 210009;
+                }))
+                .SetOpcodeAndAdvance(OpCodes.Brfalse_S);
+
+            return codeMatcher.Instructions();
+        }
+
+
+
+        // Start the floor stage from map
+        [HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.ConfirmSendInvitation))]
+        [HarmonyPrefix]
+        static bool StartFloorStage(UIInvitationRightMainPanel __instance)
+        {
+            StageClassInfo stage = __instance.GetBookRecipe();
+
+            if (stage == null)
             {
-                UIAlarmPopup.instance.SetAlarmText(UIAlarmType.StartCreatureBattle);
-                UIAlarmPopup.instance.txt_alarm.text = "This battle is not available yet.\n" + string.Join("\n", unavailableReasons.Select(reason => $"({reason})"));
+                MessagePopup.ShowMessage($"Stage is null.");
+
+                UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Cancel);
+
                 return false;
             }
 
-            StartApCreatureStage(node.Id, node.AssignedFloor);
+            // If it's one of the keter stages, make sure to get the last one instead since only it technically exists on the tree
+            BattleNode battleNode = SlotDataManager.BattleTree?.GetNodeById(stage._id);
+            if (battleNode == null || battleNode.Kind != BattleNodeKind.Stage)
+                return true;
+
+            __instance.confirmAreaRoot.SetActive(false);
+
+            if (!battleNode.AssignedFloor.IsOpen())
+            {
+                MessagePopup.ShowMessage($"{battleNode.AssignedFloor.FloorName()} is not unlocked.");
+
+                UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Cancel);
+
+                return false;
+            }
+
+            UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Invite);
+
+
+            UI.UIController UIController = UI.UIController.Instance;
+            StageController StageController = StageController.Instance;
+
+            UI.UIController.Instance.SetCurrentSephirah(battleNode.AssignedFloor);
+
+            // If it's one of the stages of keter realization, we start it differently
+            if (stage._id >= 210005 && stage._id <= 210009)
+            {
+                // StartEndContentsStage
+                UIController.SetStageInfo(stage);
+
+                // InitStageForKeterCompleteOpen
+                StageController.InitStageByCreature(stage);
+                StageController.firstStartState = true;
+                StageController._isEndContentsStage = true;
+
+                StageLibraryFloorModel _floor = StageController._stageModel.GetFloor(battleNode.AssignedFloor);
+                if (_floor == null)
+                    return false;
+
+                StageController.SetCurrentSephirah(battleNode.AssignedFloor);
+
+                int num = 0;
+                foreach (UnitBattleDataModel unitBattleData in _floor.GetUnitBattleDataList())
+                {
+                    unitBattleData.IsAddedBattle = false;
+                    if (!unitBattleData.isDead && num < StageController._stageModel.GetWave(StageController._currentWave).AvailableUnitNumber)
+                    {
+                        unitBattleData.IsAddedBattle = true;
+                        num++;
+                    }
+                }
+
+                // Continuation of StartEndContentsStage
+                UIController.OpenBattlePrepare();
+            }
+            else
+            {
+                // OnClickStartCreatureStage
+                StageController.SetCurrentSephirah(battleNode.AssignedFloor);
+
+                StageController.InitStageByCreature(stage);
+
+                foreach (UnitBattleDataModel unitBattleData in StageController.GetCurrentStageFloorModel().GetUnitBattleDataList())
+                {
+                    if (battleNode.AssignedFloor == SephirahType.Binah && LibraryModel.Instance.IsBinahLockedInLibrary() && unitBattleData.unitData.isSephirah)
+                    {
+                        unitBattleData.IsAddedBattle = false;
+                    }
+                    else
+                    {
+                        unitBattleData.IsAddedBattle = true;
+                    }
+                }
+
+                GlobalGameManager.Instance.LoadBattleScene();
+            }
+
+
             return false;
         }
-
 
 
         // Hide "Workshop" checkbox
@@ -1118,10 +873,12 @@ namespace LORAP.Patches
             __instance._workshopInvitationToggle.isOn = false;
         }
 
+
+
         // Disallow manual placement of books in the invitation
         [HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.SetInvBookApplyState))]
         [HarmonyPrefix]
-        static bool FakeSelectedBooks(UIInvitationRightMainPanel __instance, ref InvitationApply_State state)
+        static bool SetUnneededSlots(UIInvitationRightMainPanel __instance, ref InvitationApply_State state)
         {
             if (state == InvitationApply_State.Normal)
             {
@@ -1137,53 +894,49 @@ namespace LORAP.Patches
         }
 
 
+
         // AP battle-tree fixed receptions use randomized book requirements, so vanilla GetDataFromBooks() must not be used for them.
         [HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.GetBookRecipe))]
         [HarmonyPrefix]
-        static bool UseSelectedBattleTreeReceptionAsRecipe(UIInvitationRightMainPanel __instance, ref StageClassInfo __result)
+        static bool UseSelectedBattleTreeStageAsRecipe(UIInvitationRightMainPanel __instance, ref StageClassInfo __result)
         {
+            __result = null;
+
             StageClassInfo currentStage = __instance.invPanel.CurrentStage;
             if (currentStage == null || __instance.invPanel.currentSelectedStorySlot == null || __instance.invPanel.currentStoryidx < 0)
-                return true;
+                return false;
 
             if (__instance.invPanel.currentSelectedStorySlot.storyData.Count <= __instance.invPanel.currentStoryidx ||
                 currentStage != __instance.invPanel.currentSelectedStorySlot.storyData[__instance.invPanel.currentStoryidx])
-                return true;
-
-            BattleNode node = SlotDataManager.BattleTree?.GetNodeById(currentStage.id.id);
-            if (node == null || node.Kind != BattleNodeKind.Reception)
-                return true;
-
-            if (!AreBattleParentsComplete(node))
-            {
-                __result = null;
                 return false;
-            }
+
+            // Get the node
+            BattleNode node = SlotDataManager.BattleTree?.GetNodeById(currentStage._id);
+            if (node == null || !node.AreBattleParentsComplete())
+                return false;
 
             List<LorId> requiredBooks = currentStage.invitationInfo.needsBooks ?? new List<LorId>();
             List<LorId> appliedBooks = __instance.GetAppliedBookModel().Select(book => book.id).ToList();
 
             if (requiredBooks.Count == 0 || requiredBooks.All(book => appliedBooks.Contains(book)))
                 __result = currentStage;
-            else
-                __result = null;
 
             return false;
         }
+
 
 
         [HarmonyPatch(typeof(UIStoryProgressPanel), nameof(UIStoryProgressPanel.SetRectPos))]
         [HarmonyPrefix]
         static bool RemoveBattleTreeMapScrollClamp(UIStoryProgressPanel __instance, Vector2 target)
         {
-            if (!SlotDataManager.RandomizeReceptionTree)
-                return true;
-
             float minY = -Math.Max(__instance.posRect.sizeDelta.y, 9000f);
             target.y = Mathf.Clamp(target.y, minY, 1200f);
             __instance.posRect.anchoredPosition = target;
             return false;
         }
+
+
 
         // Make amount of books for invitations show as infinite
         [HarmonyPatch(typeof(UIInvitationDropBookSlot), nameof(UIInvitationDropBookSlot.SetData_DropBook))]

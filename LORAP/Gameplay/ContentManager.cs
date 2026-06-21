@@ -34,13 +34,13 @@ namespace LORAP.Gameplay
         //    public List<MapGraph> PrevGraphs = new List<MapGraph>();
         //    public int Level = 0;
         //}
+        //private static List<MapGraph> MapGraphs = new List<MapGraph>();
+
 
         private static UIStoryProgressIconSlot MapIconTemplate;
         private static GameObject LineTemplate;
-        private static GameObject CheckmarkIconTemplate = UICardListDetailFilterPopup.Instance.transform.Find("[Image]Frame/Scroll View/Viewport/Content/RarityGroup/Group/[Toggle]DetailSlot/[Toggle]SelectableToggle/[Image]IconGlow").gameObject;
 
         private static List<MapNode> MapNodes = new List<MapNode>();
-        //private static List<MapGraph> MapGraphs = new List<MapGraph>();
         private static List<GameObject> NodeLines = new List<GameObject>();
 
 
@@ -51,22 +51,6 @@ namespace LORAP.Gameplay
 
         private static List<EmotionEgoXmlInfo> EGOPageInitialList;
 
-
-        private static List<SephirahType> GameplaySephirahs = new List<SephirahType>()
-            {
-                SephirahType.Malkuth,
-                SephirahType.Yesod,
-                SephirahType.Hod,
-                SephirahType.Netzach,
-                SephirahType.Tiphereth,
-                SephirahType.Gebura,
-                SephirahType.Chesed,
-                SephirahType.Binah,
-                SephirahType.Hokma,
-                SephirahType.Keter,
-            };
-
-
         internal static void Init()
         {
             Debug.Log("[LORAP] Initializing Custom Content");
@@ -74,6 +58,9 @@ namespace LORAP.Gameplay
             // Save vanilla lists of Abno and EGO Pages to return or modify later on
             AbnoPageInitialList = EmotionCardXmlList.Instance._list.ToList();
             EGOPageInitialList = EmotionEgoXmlList.Instance._list.ToList();
+
+            // Init UI Utils
+            UIUtils.Init();
 
             // Initialize Custom UI
             APConnectWindow.Init();
@@ -84,7 +71,7 @@ namespace LORAP.Gameplay
             ApplyUIChanges();
             ApplyMapChanges();
 
-            // Add BOE and Booster Pack to book list
+            // Add BOE and Booster Pack to book list // TODO: Make book icons
             CreateCustomBook(123456, "Book of Everything");
             CreateCustomBook(123457, "Booster Pack");
         }
@@ -228,6 +215,7 @@ namespace LORAP.Gameplay
             // Save an icon to later use as a template and hide it
             MapIconTemplate = MapPanel.iconList.First();
             LineTemplate = MapIconTemplate.connectLineList.First();
+            MapIconTemplate.connectLineList.Clear();
             MapPanel.iconList.Remove(MapIconTemplate);
             MapIconTemplate.SetActiveStory(false);
 
@@ -254,6 +242,13 @@ namespace LORAP.Gameplay
             }
 
             MapPanel.iconList.Clear();
+
+            // Hide shortcut buttons on map
+            foreach (UIStoryGradeFilterSlot filter in MapPanel.gradeFilter.gradeSlots)
+            {
+                filter.gameObject.SetActive(false);
+            }
+            MapPanel.gradeFilter.gradeSlots.Clear();
         }
 
         internal static void SetupRunContent()
@@ -269,6 +264,28 @@ namespace LORAP.Gameplay
             PrepareSuppressions();
 
             PrepareMap();
+
+            // This exists solely to make Keter Realization ACTUALLY FUCKING WORK
+            BattleNode lastKeterNode = SlotDataManager.BattleTree.GetNodeById(210009);
+            for (int i = 210005; i <= 210008; i++)
+            {
+                BattleNode keterNode = new BattleNode()
+                {
+                    Key = $"stage:{i}",
+                    Id = i,
+                    Name = "Keter Realization {i}",
+                    Kind = BattleNodeKind.Stage,
+                    Chapter = lastKeterNode.Chapter,
+                    RequiredLibrarians = lastKeterNode.RequiredLibrarians,
+                    AssignedFloor = lastKeterNode.AssignedFloor,
+                };
+
+                SlotDataManager.BattleTree.Nodes[keterNode.Key] = keterNode;
+                foreach (BattleNode prev in SlotDataManager.BattleTree.GetPrevNodesById(210009))
+                {
+                    prev.Next.Add(keterNode.Key);
+                }
+            }
         }
 
         private static void ShuffleAbnoPages()
@@ -306,15 +323,15 @@ namespace LORAP.Gameplay
             });
 
             // Pool of pages that contains only relevant sephirahs abno pages (aka all sephirahs, but the game has other non relevant values)
-            List<EmotionCardXmlInfo> abnoPagePool = allPages.Where(x => GameplaySephirahs.Contains(x.Sephirah)).ToList();
+            List<EmotionCardXmlInfo> abnoPagePool = allPages.Where(x => GameUtils.FloorSephs.Contains(x.Sephirah)).ToList();
 
             // Resulting list of abno pages
-            List<EmotionCardXmlInfo> abnoPages = allPages.Where(p => !GameplaySephirahs.Contains(p.Sephirah)).ToList();
+            List<EmotionCardXmlInfo> abnoPages = allPages.Where(p => !GameUtils.FloorSephs.Contains(p.Sephirah)).ToList();
 
             // If we randomize in same floor, just shuffle them around, it's good enough, no need to ensure anything else
             if (SlotDataManager.AbnoPageShuffle == AbnoPageShuffle.InFloor)
             {
-                foreach (var seph in GameplaySephirahs)
+                foreach (var seph in GameUtils.FloorSephs)
                 {
                     List<EmotionCardXmlInfo> sephPages = abnoPagePool.Where(p => p.Sephirah == seph).ToList();
 
@@ -376,7 +393,7 @@ namespace LORAP.Gameplay
                 foreach ((SephirahType seph, List<int> pages) in exodiaPages.Select(x => (x.Key, x.Value)))
                 {
                     // Select which seph to put exodias to
-                    SephirahType targetSeph = GameplaySephirahs.Where(s => floorAbnoPages[s].Where(l => l.Count <= 2).Count() >= pages.Count).ToList().TakeRandom(Random); // That's a copy so it doesn't matter if we pop
+                    SephirahType targetSeph = GameUtils.FloorSephs.Where(s => floorAbnoPages[s].Where(l => l.Count <= 2).Count() >= pages.Count).ToList().TakeRandom(Random); // That's a copy so it doesn't matter if we pop
 
                     foreach (int pid in pages)
                     {
@@ -449,7 +466,7 @@ namespace LORAP.Gameplay
 
             var Random = SlotDataManager.CreateRandom("abno_page_randomization");
 
-            foreach (SephirahType seph in GameplaySephirahs)
+            foreach (SephirahType seph in GameUtils.FloorSephs)
             {
                 // Pool of Levels & States
                 List<MentalState> statesPool = new List<MentalState>();
@@ -513,7 +530,7 @@ namespace LORAP.Gameplay
             List<EmotionEgoXmlInfo> EGOPages = EGOPageInitialList.ToList();
             List<EmotionEgoXmlInfo> shuffledEGO = new List<EmotionEgoXmlInfo>();
 
-            foreach (SephirahType seph in GameplaySephirahs)
+            foreach (SephirahType seph in GameUtils.FloorSephs)
             {
                 for (int i = 0; i < 5; i++)
                 {
@@ -1077,6 +1094,25 @@ namespace LORAP.Gameplay
             // Now, render allat
             Dictionary<string, UIStoryProgressIconSlot> icons = new Dictionary<string, UIStoryProgressIconSlot>();
 
+            // Connect nodes
+            foreach (MapNode node in MapNodes)
+            {
+                foreach (MapNode nextNode in node.Next)
+                {
+                    Vector3 curPos = new Vector3(node.X, node.Y, 0);
+                    Vector3 nextPos = new Vector3(nextNode.X, nextNode.Y, 0);
+                    Vector3 diff = nextPos - curPos;
+
+                    var line = UnityEngine.Object.Instantiate(LineTemplate, MapPanel.chapterList.First().transform);
+                    line.transform.localPosition = new Vector3(0, 140, 0) + curPos + diff / 2;
+                    line.transform.right = diff.normalized;
+                    line.transform.localScale = new Vector3(diff.magnitude / 220, 1, 1);
+                    line.SetActive(true);
+
+                    NodeLines.Add(line);
+                }
+            }
+
             // Place nodes on the map
             foreach (MapNode mapNode in MapNodes)
             {
@@ -1099,30 +1135,28 @@ namespace LORAP.Gameplay
                 else
                 {
                     storyline = GetStoryLineForChapter(Math.Max(1, Math.Min(7, node.Chapter)));
+
+                    List<LorId> requirements = new List<LorId>();
+
+                    int stageIndex = SlotDataManager.AbnoFightOrder[node.AssignedFloor].IndexOf(node.Id);
+                    if (SlotDataManager.AbnoBookRequirements[node.AssignedFloor].Count > stageIndex)
+                        requirements = SlotDataManager.AbnoBookRequirements[node.AssignedFloor][stageIndex].Select(b => new LorId(b)).ToList();
+
+                    info.invitationInfo.needsBooks = requirements;
+
+                    // If this was the last stage of keter realization, also make same requirements for every other stage of it
+                    if (node.Id == 210009)
+                    {
+                        for (int i = 210005; i <= 210008; i++)
+                        {
+                            StageClassInfo keterInfo = StageClassInfoList.Instance.GetData(i);
+                            keterInfo.invitationInfo.needsBooks = requirements;
+                        }
+                    }
                 }
 
                 Vector3 position = new Vector3(mapNode.X, mapNode.Y, 0f);
-                icons[node.Key] = PlaceBattleNodeOnMap(node.Id, storyline, position, node.Kind == BattleNodeKind.Stage ? node.AssignedFloor : SephirahType.None);
-                icons[node.Key].connectLineList.Clear();
-            }
-
-            // Connect nodes
-            foreach (MapNode node in MapNodes)
-            {
-                foreach (MapNode nextNode in node.Next)
-                {
-                    Vector3 curPos = new Vector3(node.X, node.Y, 0);
-                    Vector3 nextPos = new Vector3(nextNode.X, nextNode.Y, 0);
-                    Vector3 diff = nextPos - curPos;
-
-                    var line = UnityEngine.Object.Instantiate(LineTemplate, MapPanel.chapterList.First().transform);
-                    line.transform.localPosition = new Vector3(0, 140, 0) + curPos + diff / 2;
-                    line.transform.right = diff.normalized;
-                    line.transform.localScale = new Vector3(diff.magnitude / 220, 1, 1);
-                    line.SetActive(true);
-
-                    NodeLines.Add(line);
-                }
+                icons[node.Key] = PlaceBattleNodeOnMap(node.Id, storyline, position);
             }
 
             ResizeMap();
@@ -1135,7 +1169,7 @@ namespace LORAP.Gameplay
             MapPanel.posRect.sizeDelta = new Vector2(MapNodes.Max(n => n.X) - MapNodes.Min(n => n.X) + 1800f, MapNodes.Max(n => n.Y) + 1800f);
         }
 
-        private static DropBookXmlInfo CreateCustomBook(int id, string name/*, int dropNum, List<BookDropItemInfo> dropList*/)
+        private static DropBookXmlInfo CreateCustomBook(int id, string name)
         {
             var Book = new DropBookXmlInfo(); // TODO: AP Icons
             Book._id = id;
@@ -1153,7 +1187,7 @@ namespace LORAP.Gameplay
             return Book;
         }
 
-        private static UIStoryProgressIconSlot PlaceBattleNodeOnMap(int id, UIStoryLine story, Vector3 position, SephirahType assignedFloor = SephirahType.None)
+        private static UIStoryProgressIconSlot PlaceBattleNodeOnMap(int id, UIStoryLine story, Vector3 position)
         {
             UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
 
@@ -1164,87 +1198,17 @@ namespace LORAP.Gameplay
             icon.storyData = new List<StageClassInfo>() { StageClassInfoList.Instance.GetData(id) };
             icon.currentStory = story;
 
-            if (assignedFloor != SephirahType.None)
-                ApplyFloorIcon(icon, assignedFloor);
-
-            var check = UnityEngine.Object.Instantiate(CheckmarkIconTemplate, icon.transform);
-            check.transform.localPosition = new Vector3(30, 100, 0);
-            check.name = "Checkmark";
-            check.transform.SetSiblingIndex(2);
-            check.SetActive(false);
+            var status = new GameObject("Status", typeof(Image));
+            status.transform.SetParent(icon.transform);
+            status.transform.localPosition = new Vector3(40, 100, 0);
+            status.transform.SetSiblingIndex(2);
+            status.GetComponent<RectTransform>().sizeDelta = new Vector2(40, 40);
+            status.GetComponent<Image>().raycastTarget = false;
+            status.SetActive(false);
 
             MapPanel.iconList.Add(icon);
 
             return icon;
-        }
-
-        internal static void ApplyFloorIcon(UIStoryProgressIconSlot icon, SephirahType floor)
-        {
-            Sprite contentSprite;
-            Sprite glowSprite;
-            TryGetFloorSprites(floor, out contentSprite, out glowSprite);
-            if (contentSprite == null)
-                return;
-
-            SetStoryIconSet(icon, "closeIconset", contentSprite, glowSprite, Color.white, Color.clear);
-            SetStoryIconSet(icon, "openIconset", contentSprite, glowSprite, Color.white, Color.clear);
-        }
-
-        internal static void ConfigureBattleNodeLevelIcons(UIStoryProgressIconSlot icon, bool isRevealed)
-        {
-            if (icon == null || icon.IconLevels == null)
-                return;
-
-            for (int i = 0; i < icon.IconLevels.Length; i++)
-            {
-                storyIconLevel levelIcon = icon.IconLevels[i];
-                if (levelIcon.root == null)
-                    continue;
-
-                levelIcon.root.SetActive(isRevealed && i == 0);
-            }
-        }
-
-        private static void SetStoryIconSet(UIStoryProgressIconSlot icon, string fieldName, Sprite content, Sprite glow, Color contentColor, Color glowColor)
-        {
-            FieldInfo iconSetField = typeof(UIStoryProgressIconSlot).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-            object iconSet = iconSetField?.GetValue(icon);
-            if (iconSet == null)
-                return;
-
-            Image contentImage = GetImageField(iconSet, "img_iconContent") ?? GetImageField(iconSet, "img_icon");
-            Image bgImage = GetImageField(iconSet, "img_iconbg");
-            Image frameImage = GetImageField(iconSet, "img_iconFrame");
-
-            if (contentImage != null)
-            {
-                if (content != null)
-                {
-                    contentImage.sprite = content;
-                    contentImage.SetNativeSize();
-                }
-                contentImage.color = contentColor;
-            }
-
-            if (bgImage != null)
-            {
-                if (glow != null)
-                {
-                    bgImage.sprite = glow;
-                    bgImage.SetNativeSize();
-                }
-                bgImage.color = glowColor;
-            }
-
-            if (frameImage != null)
-            {
-                if (glow != null)
-                {
-                    frameImage.sprite = glow;
-                    frameImage.SetNativeSize();
-                }
-                frameImage.color = glowColor;
-            }
         }
 
         private static UIStoryLine GetStoryLineForChapter(int chapter)
@@ -1272,50 +1236,6 @@ namespace LORAP.Gameplay
                 return parsedStoryLine;
 
             return GetStoryLineForChapter(Math.Max(1, Math.Min(7, info.chapter)));
-        }
-
-        private static Image GetImageField(object target, string fieldName)
-        {
-            return target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.GetValue(target) as Image;
-        }
-
-        private static void TryGetFloorSprites(SephirahType floor, out Sprite content, out Sprite glow)
-        {
-            content = null;
-            glow = null;
-
-            try
-            {
-                string spriteName = GetFloorIconSpriteName(floor);
-                if (string.IsNullOrEmpty(spriteName))
-                    return;
-
-                content = Resources.FindObjectsOfTypeAll<Sprite>().FirstOrDefault(s => s != null && s.name == spriteName);
-                glow = null;
-            }
-            catch
-            {
-                content = null;
-                glow = null;
-            }
-        }
-
-        private static string GetFloorIconSpriteName(SephirahType floor)
-        {
-            switch (floor)
-            {
-                case SephirahType.Keter: return "Icon_Sephirah_0";
-                case SephirahType.Malkuth: return "Icon_Sephirah_1";
-                case SephirahType.Yesod: return "Icon_Sephirah_2";
-                case SephirahType.Hod: return "Icon_Sephirah_4";
-                case SephirahType.Netzach: return "Icon_Sephirah_3";
-                case SephirahType.Tiphereth: return "Icon_Sephirah_5";
-                case SephirahType.Gebura: return "Icon_Sephirah_6";
-                case SephirahType.Chesed: return "Icon_Sephirah_7";
-                case SephirahType.Binah: return "Icon_Sephirah_9";
-                case SephirahType.Hokma: return "Icon_Sephirah_8";
-                default: return null;
-            }
         }
     }
 }

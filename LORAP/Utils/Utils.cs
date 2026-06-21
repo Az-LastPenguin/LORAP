@@ -1,12 +1,30 @@
+using LORAP.Archipelago;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
+using UI;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace LORAP.Utils
 {
+    internal static class GameUtils
+    {
+        internal static List<SephirahType> FloorSephs = new List<SephirahType>()
+        {
+            SephirahType.Malkuth,
+            SephirahType.Yesod,
+            SephirahType.Hod,
+            SephirahType.Netzach,
+            SephirahType.Tiphereth,
+            SephirahType.Gebura,
+            SephirahType.Chesed,
+            SephirahType.Binah,
+            SephirahType.Hokma,
+            SephirahType.Keter,
+        };
+    }
+
     // Class to help work with UI
     internal static class UIUtils
     {
@@ -19,13 +37,49 @@ namespace LORAP.Utils
             fadeDuration = 0f,
         };
 
-        internal static Sprite FillerSprite = AssetBundleHelper.GetAsset<Sprite>("fillersprite");
-        internal static Sprite UsefulSprite = AssetBundleHelper.GetAsset<Sprite>("usefulsprite");
-        internal static Sprite ProgSprite = AssetBundleHelper.GetAsset<Sprite>("progsprite");
+        internal static Sprite FillerSprite = AssetBundleHelper.GetAsset<Sprite>("filler");
+        internal static Sprite UsefulSprite = AssetBundleHelper.GetAsset<Sprite>("useful");
+        internal static Sprite ProgSprite = AssetBundleHelper.GetAsset<Sprite>("prog");
+        internal static Sprite FillerSmallSprite = AssetBundleHelper.GetAsset<Sprite>("fillerSmall");
+        internal static Sprite UsefulSmallSprite = AssetBundleHelper.GetAsset<Sprite>("usefulSmall");
+        internal static Sprite ProgSmallSprite = AssetBundleHelper.GetAsset<Sprite>("progSmall");
 
-        internal static void Setup()
+        internal static Sprite CheckmarkSprite = AssetBundleHelper.GetAsset<Sprite>("checkmark");
+        internal static Sprite ExclamationSprite = AssetBundleHelper.GetAsset<Sprite>("exclamation");
+
+        internal static Sprite Transparent = AssetBundleHelper.GetAsset<Sprite>("Transparent");
+
+        internal static Dictionary<SephirahType, List<UIIconManager.IconSet>> FloorTierSprites = new Dictionary<SephirahType, List<UIIconManager.IconSet>>();
+
+        internal static void Init()
         {
+            // Create IconSets for every floor stage
+            foreach (SephirahType seph in GameUtils.FloorSephs)
+            {
+                FloorTierSprites[seph] = new List<UIIconManager.IconSet>();
 
+                for (int i = 1; i <= 5; i++)
+                {
+                    Sprite sprite = AssetBundleHelper.GetAsset<Sprite>($"{seph.ToString()}{i}");
+
+                    FloorTierSprites[seph].Add(new UIIconManager.IconSet()
+                    {
+                        icon = sprite,
+                        iconGlow = sprite,
+                        color = Color.clear,
+                        colorGlow = Color.clear,
+                        type = "",
+                    });
+                }
+            }
+        }
+
+        internal static UIIconManager.IconSet GetFloorIconSet(int stageId, SephirahType seph)
+        {
+            if (stageId >= 210005 && stageId <= 210008)
+                stageId = 210009;
+
+            return FloorTierSprites[seph][SlotDataManager.AbnoFightOrder[seph].IndexOf(stageId)];
         }
     }
 
@@ -33,7 +87,7 @@ namespace LORAP.Utils
     // Also has some utility functions for timing of things
     internal class Timing : MonoBehaviour
     {
-        internal static void Setup(GameObject newInstance)
+        internal static void Init(GameObject newInstance)
         {
             instance = newInstance.GetComponent<Timing>();
         }

@@ -5,6 +5,7 @@ using LORAP.Archipelago;
 using LORAP.CustomUI;
 using LORAP.Gameplay;
 using LORAP.Playthru;
+using LORAP.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -82,27 +83,6 @@ namespace LORAP.Patches
                     lockIcon
                 ));
             }
-
-
-            // Book requirements
-            int stageIndex = floorInfo.AbnoStage - 1;
-            if (SlotDataManager.AbnoBookRequirements.ContainsKey(seph) &&
-                stageIndex >= 0 &&
-                stageIndex < SlotDataManager.AbnoBookRequirements[seph].Count)
-            {
-                List<int> books = SlotDataManager.AbnoBookRequirements[seph][stageIndex];
-                foreach (int book in books)
-                {
-                    pairs = LocationManager.GetPairsWithItemAndHint(ItemManager.GetItemId(book, APItemType.Book), true);
-                    infos.Add(new Tuple<string, string, bool, Sprite>(
-                        $"{DropBookXmlList.Instance.GetData(new LorId(book)).Name}: {(pairs.Count > 0 ? LocationManager.FormatPairLocation(pairs.First()) : "No Hints")}",
-                        $"{DropBookInventoryModel.Instance.GetBookCount(book)}/1",
-                        DropBookInventoryModel.Instance.GetBookCount(book) > 0,
-                        exclamMarkIcon
-                    ));
-                }
-            }
-
 
             // Now render this shit!
             for (int i = 0; i < 7; i++)
@@ -414,11 +394,17 @@ namespace LORAP.Patches
 
 
 
-        // Add custom content when game starts
+        // Add custom stuff when game starts
         [HarmonyPatch(typeof(GameSceneManager), nameof(GameSceneManager.Start))]
         [HarmonyPostfix]
-        static void AddCustomContent()
+        static void AddCustomStuffOnGameStart()
         {
+            // Setup Coroutines
+            var gameObject = new GameObject("LORAP Coroutines");
+            gameObject.AddComponent<Timing>();
+            Timing.Init(gameObject);
+
+            // Init Custom Content
             ContentManager.Init();
         }
 

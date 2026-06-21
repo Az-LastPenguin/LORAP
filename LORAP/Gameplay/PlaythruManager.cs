@@ -1,4 +1,3 @@
-using GameSave;
 using LORAP.Archipelago;
 using LORAP.CustomUI;
 using LORAP.Gameplay;
@@ -17,14 +16,15 @@ namespace LORAP.Playthru
         public int AbnoPages = 0; // Gotten from items on load
         public int EGO = 0; // Gotten from items on load
         public int Librarians = 1; // Gotten from items on load
-        public int AbnoStage = 1; // Saved in SaveData
     }
 
     internal static class PlaythruManager
     {
         // Gameplay stuff
         internal static Dictionary<SephirahType, FloorInfo> Floors = Enum.GetValues(typeof(SephirahType)).Cast<SephirahType>().ToDictionary(k => k, v => new FloorInfo());
-        internal static List<int> ReceptionsCompleted = new List<int>();
+        internal static List<int> StagesCompleted = new List<int>();
+
+        internal static int KeterRealizationStage = 0;
 
         internal static bool CanAttributePassives = false;
         internal static int MaxAttributionPoints = 0;
@@ -40,7 +40,8 @@ namespace LORAP.Playthru
             Debug.Log("[LORAP] Starting Game");
 
             // Clear PlaythruManager
-            ReceptionsCompleted.Clear();
+            StagesCompleted.Clear();
+            KeterRealizationStage = 0;
             CanAttributePassives = false;
             MaxAttributionPoints = 0;
             MaxPassives = 0;
@@ -48,14 +49,13 @@ namespace LORAP.Playthru
             BinahUnlocked = false;
             BlackSilenceUnlocked = false;
 
-
             // Create list of floor infos to keep track of every floors state by our own
             Floors = Enum.GetValues(typeof(SephirahType)).Cast<SephirahType>().ToDictionary(k => k, v => new FloorInfo());
 
-            foreach (var floor in LibraryModel.Instance._floorList)
-            {
-                Floors[floor.Sephirah].Open = LibraryModel.Instance.IsOpenedSephirah(floor.Sephirah);
-            }
+            //foreach (var floor in LibraryModel.Instance._floorList)
+            //{
+            //    Floors[floor.Sephirah].Open = LibraryModel.Instance.IsOpenedSephirah(floor.Sephirah);
+            //}
 
             // Init AP Managers
             ItemManager.Init();
@@ -86,7 +86,7 @@ namespace LORAP.Playthru
             BookDropManager.Init();
 
             // Load Save
-            Gameplay.SaveManager.LoadGame();
+            SaveManager.LoadGame();
 
             // Set some flags so that game doesn't spam tutorial and shit
             PlayHistoryModel model = LibraryModel.Instance._playHistory;
@@ -162,59 +162,23 @@ namespace LORAP.Playthru
         }
 
         // Saving/loading game state
-        internal static SaveData GetSaveData()
+        internal static GameSave.SaveData GetSaveData()
         {
-            SaveData saveData = new SaveData();
+            GameSave.SaveData saveData = new GameSave.SaveData();
 
             // Save completed receptions
-            saveData.AddData("receptionsCompleted", new SaveData(ReceptionsCompleted));
+            saveData.AddData("stagesCompleted", new GameSave.SaveData(StagesCompleted));
 
-            // Save floors data about current stage
-            //saveData.AddData("floorStages", new SaveData(Floors.Select(p => p.Value.AbnoStage).ToList())); // TODO: Remove
-
-            //saveData.AddData("maxAttributionPoints", new SaveData(MaxAttributionPoints)); // TODO: Make those values depend on items received and not saved.
-            //saveData.AddData("maxPassives", new SaveData(MaxPassives));
-            //saveData.AddData("maxEmotionLevel", new SaveData(MaxEmotionLevel));
-            //saveData.AddData("binahUnlocked", new SaveData(BinahUnlocked ? 1 : 0));
-            //saveData.AddData("blackSilenceUnlocked", new SaveData(BlackSilenceUnlocked ? 1 : 0));
+            saveData.AddData("keterRealizationStage", new GameSave.SaveData(KeterRealizationStage));
 
             return saveData;
         }
 
-        internal static void LoadFromSaveData(SaveData saveData)
+        internal static void LoadFromSaveData(GameSave.SaveData saveData)
         {
-            ReceptionsCompleted = saveData.GetData("receptionsCompleted")._list.Select(d => d.GetIntSelf()).ToList();
+            StagesCompleted = saveData.GetData("stagesCompleted")._list.Select(d => d.GetIntSelf()).ToList();
 
-            ReceptionsCompleted = ReceptionsCompleted.Where(IsStageCompleteForProgression).Distinct().ToList();
-
-            ///var floorData = saveData.GetData("floorStages");
-            ///for (int i = 0; i < Floors.Count; i++)
-            ///{
-            ///    var data = floorData._list[i];
-            ///    var pair = Floors.ElementAt(i);
-            ///
-            ///    pair.Value.AbnoStage = data.GetIntSelf();
-            ///}
-
-            //var maxAttrib = saveData.GetData("maxAttributionPoints"); // TODO: Remove
-            //if (maxAttrib != null)
-            //    MaxAttributionPoints = maxAttrib.GetIntSelf();
-            //
-            //var maxPass = saveData.GetData("maxPassives");
-            //if (maxPass != null)
-            //    MaxPassives = maxPass.GetIntSelf();
-            //
-            //var maxEmotion = saveData.GetData("maxEmotionLevel");
-            //if (maxEmotion != null)
-            //    MaxEmotionLevel = maxEmotion.GetIntSelf();
-            //
-            //var binah = saveData.GetData("binahUnlocked");
-            //if (binah != null)
-            //    BinahUnlocked = binah.GetIntSelf() != 0;
-            //
-            //var blackSilence = saveData.GetData("blackSilenceUnlocked");
-            //if (blackSilence != null)
-            //    BlackSilenceUnlocked = blackSilence.GetIntSelf() != 0;
+            KeterRealizationStage = saveData.GetData("keterRealizationStage").GetIntSelf();
         }
 
 
@@ -224,64 +188,19 @@ namespace LORAP.Playthru
             if (UI.UIController.Instance.CurrentUIPhase != UIPhase.Sephirah || !LibraryModel.Instance.IsOpenedSephirah(seph))
                 return;
 
-            //GameSceneManager.Instance.ActivateUIController();
             UI.UIController.Instance.SetCurrentSephirah(seph);
             UI.UIController.Instance.CallUIPhase(UIPhase.Sephirah);
         }
 
-        internal static bool IsLocationlessEndgoalStage(int stageId)
+        internal static void MarkStageCompleted(int stageId)
         {
-            if (SlotDataManager.Endgoals == null)
-                return false;
-
-            if (stageId >= 70001 && stageId <= 70010)
-                return SlotDataManager.Endgoals.Contains(Endgoal.ReverberationEnsemble);
-
-            switch (stageId)
-            {
-                case 60003:
-                    return SlotDataManager.Endgoals.Contains(Endgoal.BlackSilence);
-                case 210009:
-                    return SlotDataManager.Endgoals.Contains(Endgoal.KeterRealization);
-                case 60004:
-                    return SlotDataManager.Endgoals.Contains(Endgoal.DistortedEnsemble);
-                default:
-                    return false;
-            }
+            if (!StagesCompleted.Contains(stageId))
+                StagesCompleted.Add(stageId);
         }
 
-        internal static bool IsStageCompleteForProgression(int stageId)
+        internal static bool IsStageComplete(int stageId)
         {
-            int totalLocations = LocationManager.GetReceptionLocations(stageId).Count;
-            if (totalLocations > 0)
-                return LocationManager.GetUncheckedReceptionLocations(stageId).Count == 0;
-
-            return IsLocationlessEndgoalStage(stageId) && ReceptionsCompleted.Contains(stageId);
-        }
-
-        internal static bool MarkReceptionCompletedIfReady(int stageId, bool checkedAllLocationsByThisClear = false, bool wonLocationlessGoal = false)
-        {
-            bool hasLocations = LocationManager.GetReceptionLocations(stageId).Count > 0;
-            bool isComplete = hasLocations
-                ? checkedAllLocationsByThisClear || LocationManager.GetUncheckedReceptionLocations(stageId).Count == 0
-                : wonLocationlessGoal && IsLocationlessEndgoalStage(stageId);
-
-            if (!isComplete)
-                return false;
-
-            if (!ReceptionsCompleted.Contains(stageId))
-                ReceptionsCompleted.Add(stageId);
-
-            return true;
-        }
-
-        internal static bool IsReceptionCompleted(int stageId)
-        {
-            if (ReceptionsCompleted.Contains(stageId))
-                return true;
-
-            int totalLocations = LocationManager.GetReceptionLocations(stageId).Count;
-            return totalLocations > 0 && MarkReceptionCompletedIfReady(stageId);
+            return StagesCompleted.Contains(stageId);
         }
 
         internal static void CheckEndConditions()
@@ -293,23 +212,23 @@ namespace LORAP.Playthru
                 switch (goal)
                 {
                     case Endgoal.ReverberationEnsemble:
-                        int completedEnsembleBattles = Enumerable.Range(70001, 10).Count(IsReceptionCompleted);
+                        int completedEnsembleBattles = Enumerable.Range(70001, 10).Count(IsStageComplete);
                         if (completedEnsembleBattles < SlotDataManager.EnsembleBattles)
                             allGoalsComplete = false;
                         break;
 
                     case Endgoal.BlackSilence:
-                        if (!IsReceptionCompleted(60003))
+                        if (!IsStageComplete(60003))
                             allGoalsComplete = false;
                         break;
 
                     case Endgoal.KeterRealization:
-                        if (!IsReceptionCompleted(210009))
+                        if (!IsStageComplete(210009))
                             allGoalsComplete = false;
                         break;
 
                     case Endgoal.DistortedEnsemble:
-                        if (!IsReceptionCompleted(60004))
+                        if (!IsStageComplete(60004))
                             allGoalsComplete = false;
                         break;
                 }
@@ -464,10 +383,12 @@ namespace LORAP.Playthru
             }
         }
 
-        // Progression
-        //internal static void ProgressSuppression(SephirahType seph)
-        //{
-        //    Floors[seph].AbnoStage++;
-        //}
+        internal static void ProgressKeterRealization()
+        {
+            KeterRealizationStage++;
+
+            if (KeterRealizationStage >= 5)
+                KeterRealizationStage = 0;
+        }
     }
 }

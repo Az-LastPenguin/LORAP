@@ -1,15 +1,8 @@
-using Archipelago.MultiClient.Net;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Models;
-using Archipelago.MultiClient.Net.Packets;
-using HarmonyLib;
-using LORAP.Playthru;
-using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 using UnityEngine;
 
 namespace LORAP.Archipelago
@@ -56,9 +49,9 @@ namespace LORAP.Archipelago
         internal static List<Hint> KnownHints = new List<Hint>();
 
 
-        internal static int GetReceptionIdFromLocationId(long id) => (int)(id & 0x0FFFFFFF);
-        internal static List<long> GetUncheckedReceptionLocations(int id) => UncheckedLocations.Where(l => GetReceptionIdFromLocationId(l) == id).ToList();
-        internal static List<long> GetReceptionLocations(int id) => AllLocations.Where(l => GetReceptionIdFromLocationId(l) == id).ToList();
+        internal static int GetStageIdFromLocationId(long id) => (int)(id & 0x0FFFFFFF);
+        internal static List<long> GetUncheckedStageLocations(int id) => UncheckedLocations.Where(l => GetStageIdFromLocationId(l) == id).ToList();
+        internal static List<long> GetStageLocations(int id) => AllLocations.Where(l => GetStageIdFromLocationId(l) == id).ToList();
 
 
         internal static void Init()
@@ -148,14 +141,14 @@ namespace LORAP.Archipelago
 
         internal static void SendStageChecks(int id)
         {
-            List<long> checks = UncheckedLocations.Where(l => (int)(l & 0x0FFFFFFF) == id).ToList();
+            List<long> checks = GetUncheckedStageLocations(id);
 
             CompleteLocations(checks);
         }
 
         internal static string SendRandomReceptionCheck(int id)
         {
-            List<long> checks = UncheckedLocations.Where(l => (int)(l & 0x0FFFFFFF) == id).ToList();
+            List<long> checks = GetUncheckedStageLocations(id);
 
             if (checks.Count == 0)
                 return "";

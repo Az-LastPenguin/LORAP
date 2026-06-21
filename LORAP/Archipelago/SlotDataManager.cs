@@ -1,7 +1,9 @@
+using LORAP.Playthru;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 namespace LORAP.Archipelago
 {
@@ -53,6 +55,12 @@ namespace LORAP.Archipelago
         public List<string> Next = new List<string>();
         //public int VisualX;
         //public int VisualY;
+
+        public bool AreBattleParentsComplete()
+        {
+            List<BattleNode> parents = SlotDataManager.BattleTree?.GetPrevNodes(Key) ?? new List<BattleNode>();
+            return parents.Count == 0 || parents.Any(parent => PlaythruManager.IsStageComplete(parent.Id));
+        }
     }
 
     internal class BattleTree
@@ -89,8 +97,6 @@ namespace LORAP.Archipelago
         internal static bool ExodiaGuarantee;
 
         internal static bool EgoPageShuffle;
-
-        internal static bool RandomizeReceptionTree;
 
         internal static bool ReceptionsRequireBooks;
 
@@ -167,7 +173,7 @@ namespace LORAP.Archipelago
         {
             ClientSeed = Convert.ToInt32(slotData["lorap_client_seed"]);
             EffectiveLORAPSeed = slotData.ContainsKey("effective_lorap_seed") ? Convert.ToString(slotData["effective_lorap_seed"]) : "unknown";
-            UnityEngine.Debug.Log($"[LORAP] Effective LORAP seed: {EffectiveLORAPSeed}");
+            Debug.Log($"[LORAP] Effective LORAP seed: {EffectiveLORAPSeed}");
 
             Endgoals = ((JArray)slotData["endgoals"]).Select(i => (Endgoal)Enum.Parse(typeof(Endgoal), i.Value<string>().Replace(" ", ""))).ToList();
 
@@ -180,8 +186,6 @@ namespace LORAP.Archipelago
             ExodiaGuarantee = (long)slotData["exodia_guaratnee"] == 1;
 
             EgoPageShuffle = (long)slotData["ego_page_shuffle"] == 1;
-
-            RandomizeReceptionTree = (long)slotData["randomize_reception_tree"] == 1;
 
             ReceptionsRequireBooks = (long)slotData["receptions_require_books"] == 1;
 

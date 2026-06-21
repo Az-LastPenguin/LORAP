@@ -14,16 +14,6 @@ namespace LORAP.Utils
             return PlaythruManager.Floors[seph].Open;
         }
 
-        internal static int GetCurrentAbnoStage(this SephirahType seph)
-        {
-            return PlaythruManager.Floors[seph].AbnoStage;
-        }
-
-        internal static int GetCurrentAbnoStage(this LibraryFloorModel floor)
-        {
-            return PlaythruManager.Floors[floor.Sephirah].AbnoStage;
-        }
-
         internal static int GetEGOAmount(this LibraryFloorModel floor)
         {
             return PlaythruManager.Floors[floor.Sephirah].EGO;
