@@ -164,6 +164,12 @@ namespace LORAP.Gameplay
             var Random = SlotDataManager.CreateRandom("book_drops");
             List<BookDrop> allowedDrops = AllDrops.Where(d => d.collectible).ToList();
 
+            if (bookChapters.Count == 0)
+            {
+                Debug.LogWarning("[LORAP] No book requirements found; skipping vanilla book drop randomization.");
+                return;
+            }
+
             if (SlotDataManager.BookContentsRandomization == BookContentsRandomization.Chaotic)
             {
                 List<LorId> books = bookChapters.Select(p => p.Key).ToList();
@@ -279,7 +285,9 @@ namespace LORAP.Gameplay
             else
             {
                 // Vanilla books
-                List<BookDrop> pool = BookDrops[bookID];
+                if (!BookDrops.TryGetValue(bookID, out List<BookDrop> pool))
+                    return dropResults;
+
                 foreach (BookDrop drop in pool)
                 {
                     BookDropResult dropResult = new BookDropResult()
