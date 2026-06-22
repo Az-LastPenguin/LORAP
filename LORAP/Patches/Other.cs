@@ -15,6 +15,7 @@ using UI;
 using UnityEngine;
 using UnityEngine.UI;
 using static UI.UIMainPanel;
+using static UI.UIPassiveSuccessionPopup;
 
 namespace LORAP.Patches
 {
@@ -285,8 +286,9 @@ namespace LORAP.Patches
         static bool APProgressBar(UILibrarySliderPanel __instance)
         {
             int chapter = LibraryModel.Instance.GetChapter();
-            __instance.img_CityIcon.sprite = UISpriteDataManager.instance._bookGradeFilterIcon[chapter - 1].icon;
-            __instance.img_CityIconGlow.sprite = UISpriteDataManager.instance._bookGradeFilterIcon[chapter - 1].iconGlow;
+            __instance.img_CityIcon.sprite = UIUtils.ProgSmallSprite;
+            __instance.img_CityIcon.color = Color.white;
+            __instance.img_CityIconGlow.color = Color.clear;
 
             float num = LocationManager.CheckedLocations.Count;
             float num2 = LocationManager.AllLocations.Count;
@@ -482,13 +484,35 @@ namespace LORAP.Patches
         // Prefix ensuring that when you open the attrib window keypage has enough empty passives
         [HarmonyPatch(typeof(UIPassiveSuccessionPopup), nameof(UIPassiveSuccessionPopup.SetData))]
         [HarmonyPrefix]
-        static bool EnsureEmptyPassives(UIPassiveSuccessionPopup __instance, UnitDataModel unit)
+        static bool EnsureEmptyPassives(UIPassiveSuccessionPopup __instance, UnitDataModel unit, ApplyEvent applyfunc = null)
         {
+            if (unit == null)
+                return false;
+
             // Get the amount of empty passives already on the keypages
-            int emptyCount = unit._bookItem._activatedAllPassives.Count(p => p.originpassive.CanReceivePassive);
+            int emptyCount = unit.bookItem._activatedAllPassives.Count(p => p.originpassive.CanReceivePassive);
 
             for (int i = 0; i < PlaythruManager.MaxPassives-emptyCount; i++) {
-                unit._bookItem._activatedAllPassives.Add(new PassiveModel(LorId.None, unit._bookItem.instanceId, 1));
+                unit.bookItem._activatedAllPassives.Add(new PassiveModel(LorId.None, unit.bookItem.instanceId, 1));
+            }
+
+            return true;
+        }
+
+        // Another prefix ensuring that when you open the attrib window keypage has enough empty passives (but for keypage list)
+        [HarmonyPatch(typeof(UIPassiveSuccessionPopup), nameof(UIPassiveSuccessionPopup.SetDataOnly))]
+        [HarmonyPrefix]
+        static bool EnsureEmptyPassivesFromList(UIPassiveSuccessionPopup __instance, BookModel currentbook, ApplyEvent applyfunc = null)
+        {
+            if (currentbook == null)
+                return false;
+
+            // Get the amount of empty passives already on the keypages
+            int emptyCount = currentbook._activatedAllPassives.Count(p => p.originpassive.CanReceivePassive);
+
+            for (int i = 0; i < PlaythruManager.MaxPassives - emptyCount; i++)
+            {
+                currentbook._activatedAllPassives.Add(new PassiveModel(LorId.None, currentbook.instanceId, 1));
             }
 
             return true;

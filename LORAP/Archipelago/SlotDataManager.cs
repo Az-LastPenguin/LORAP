@@ -125,6 +125,8 @@ namespace LORAP.Archipelago
 
         internal static bool EnemiesTurnIntoChecks;
 
+        internal static bool EndgoalsAlwaysUnlocked;
+
         /* OTHER */
         internal static bool Deathlink;
 
@@ -187,6 +189,8 @@ namespace LORAP.Archipelago
             FloorsRequireBooks = (long)slotData["floors_require_books"] == 1;
 
             EnemiesTurnIntoChecks = (long)slotData["enemies_turn_into_checks"] == 1;
+
+            EndgoalsAlwaysUnlocked = (long)slotData["endgoals_always_unlocked"] == 1;
 
             /* OTHER */
             Deathlink = (long)slotData["deathlink"] == 1;

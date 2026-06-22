@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
+using System.Runtime.Remoting.Contexts;
 using TMPro;
 using UI;
 using UnityEngine;
@@ -452,6 +453,14 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool ReplaceLeaveButton()
         {
+            if (StageController.Instance.firstStartState)
+            {
+                GameSceneManager.Instance.ActivateUIController();
+                UIBgScreenChangeAnim.Instance.StartBg(UIScreenChangeType.BackInvitation);
+
+                return false;
+            }
+
             UIAlarmPopup.instance.SetAlarmText(UIAlarmType.ReturnToTitleWarn_NoPenalty, UIAlarmButtonType.YesNo, (bool yes) =>
             {
                 if (!yes) return;
@@ -461,7 +470,7 @@ namespace LORAP.Patches
                 UIBgScreenChangeAnim.Instance.StartBg(UIScreenChangeType.BackInvitation);
             });
 
-            UIAlarmPopup.instance.txt_alarm.text = "Are you sure you want to leave?";
+            UIAlarmPopup.instance.txt_alarm.text = "Are you sure you want to abandon the on-going battle?";
 
             return false;
         }
@@ -539,8 +548,8 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool GetBattleNodeAvailability(StageClassInfo __instance, ref StoryState __result)
         {
-            __result = StoryState.Clear;
-            return false;
+            //__result = StoryState.Clear;
+            //return false;
 
             int stageId = __instance._id;
             BattleNode battleNode = SlotDataManager.BattleTree?.GetNodeById(stageId);
@@ -548,6 +557,17 @@ namespace LORAP.Patches
             if (battleNode == null)
             {
                 __result = StoryState.Close;
+                return false;
+            }
+
+            List<int> endgoals = new List<int>()
+            {
+                60003, 60004,
+                70001, 70002, 70003, 70004, 70005, 70006, 70007, 70008, 70009, 70010
+            };
+            if (endgoals.Contains(battleNode.Id))
+            {
+                __result = StoryState.Clear;
                 return false;
             }
 
@@ -701,7 +721,9 @@ namespace LORAP.Patches
                 slot.originSiblingIdx = slot.transform.GetSiblingIndex();
             }
 
-            // Set icon
+            __instance.rewardBookList.SetActiveList(true);
+
+            // Set floor icon for stages
             BattleNode battleNode = SlotDataManager.BattleTree?.GetNodeById(stage._id);
             if (battleNode == null || battleNode.Kind != BattleNodeKind.Stage || stage.currentState != StoryState.Clear)
                 return;
@@ -711,20 +733,6 @@ namespace LORAP.Patches
             __instance.img_enemyTitleIcon.sprite = set.icon;
             __instance.img_enemyTitleIconBg.sprite = set.iconGlow;
         }
-
-
-
-        // Stop chapter shortcuts from updating
-        [HarmonyPatch(typeof(UIStoryGradeFilter), nameof(UIStoryGradeFilter.Init))]
-        [HarmonyPrefix]
-        static bool NoChapterShortcuts(UIStoryGradeFilter __instance) => false;
-
-
-
-        // Stop chapter shortcuts from updating
-        [HarmonyPatch(typeof(UIStoryGradeFilter), nameof(UIStoryGradeFilter.Initialized))]
-        [HarmonyPrefix]
-        static bool AnotherNoChapterShortcuts(UIStoryGradeFilter __instance) => false;
 
 
 
@@ -924,9 +932,8 @@ namespace LORAP.Patches
                 currentStage != __instance.invPanel.currentSelectedStorySlot.storyData[__instance.invPanel.currentStoryidx])
                 return false;
 
-            // Get the node
-            BattleNode node = SlotDataManager.BattleTree?.GetNodeById(currentStage._id);
-            if (node == null || !node.AreBattleParentsComplete())
+            // Check if the stage is ""clear"" since that is same as checking if battle parents are complete
+            if (currentStage.currentState != StoryState.Clear)
                 return false;
 
             List<LorId> requiredBooks = currentStage.invitationInfo.needsBooks ?? new List<LorId>();

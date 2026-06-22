@@ -11,7 +11,7 @@ namespace LORAP
 
         internal static string ModPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
-        internal static string ModVersion = "v1.0-delta";
+        internal static string ModVersion = "v1.0-epsilon";
 
         public override void OnInitializeMod()
         {
@@ -19,22 +19,9 @@ namespace LORAP
 
             Instance = this;
 
-            PatchManager.PatchAll();            
-
-            //SceneManager.sceneLoaded += OnSceneLoad;
+            PatchManager.PatchAll();
 
             Debug.Log($"[LORAP] Loaded!");
         }
-
-        //public void OnSceneLoad(Scene scene, LoadSceneMode mode)
-        //{
-        //    if (scene.name == "Stage_Hod_New")
-        //    {
-        //        // Setup Coroutines
-        //        var gameObject = new GameObject("LORAP Coroutines");
-        //        gameObject.AddComponent<Timing>();
-        //        Timing.Init(gameObject);
-        //    }
-        //}
     }
 }

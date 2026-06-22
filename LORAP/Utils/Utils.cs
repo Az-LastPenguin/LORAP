@@ -94,6 +94,30 @@ namespace LORAP.Utils
 
         internal static void Init()
         {
+            // Add LORAP icons for books & library level
+            UIIconManager.IconSet progIcon = new UIIconManager.IconSet()
+            {
+                icon = ProgSmallSprite,
+                iconGlow = ProgSmallSprite,
+                color = Color.clear,
+                colorGlow = Color.clear,
+                type = "",
+            };
+
+            UIIconManager.IconSet fillerIcon = new UIIconManager.IconSet()
+            {
+                icon = FillerSmallSprite,
+                iconGlow = FillerSmallSprite,
+                color = Color.clear,
+                colorGlow = Color.clear,
+                type = "",
+            };
+
+            UISpriteDataManager.instance.StoryIcons.Add(progIcon);
+            UISpriteDataManager.instance.StoryIconDic.Add("prog", progIcon);
+            UISpriteDataManager.instance.StoryIcons.Add(fillerIcon);
+            UISpriteDataManager.instance.StoryIconDic.Add("filler", fillerIcon);
+
             // Create IconSets for every floor stage
             foreach (SephirahType seph in GameUtils.FloorSephs)
             {

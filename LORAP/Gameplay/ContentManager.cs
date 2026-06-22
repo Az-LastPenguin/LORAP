@@ -74,8 +74,8 @@ namespace LORAP.Gameplay
             ApplyMapChanges();
 
             // Add BOE and Booster Pack to book list // TODO: Make book icons
-            CreateCustomBook(123456, "Book of Everything");
-            CreateCustomBook(123457, "Booster Pack");
+            CreateCustomBook(123456, "Book of Everything", "prog");
+            CreateCustomBook(123457, "Booster Pack", "filler");
         }
 
         private static void ApplyUIChanges()
@@ -196,7 +196,8 @@ namespace LORAP.Gameplay
                 icon.iconGlow = icon.icon;
             }
 
-            // TODO: Change Icon for the library level in the level progress bar to AP icon
+            // Hide sort buttons in book burn screen
+            bookPanel.invenFeedBookList.gradeFilter.transform.Find("[Rect]ToggleList").gameObject.SetActive(false);
         }
 
         private static void ApplyMapChanges()
@@ -236,12 +237,8 @@ namespace LORAP.Gameplay
 
             MapPanel.iconList.Clear();
 
-            // Hide shortcut buttons on map
-            foreach (UIStoryGradeFilterSlot filter in MapPanel.gradeFilter.gradeSlots)
-            {
-                filter.gameObject.SetActive(false);
-            }
-            MapPanel.gradeFilter.gradeSlots.Clear();
+            // Hide chapter shortcuts from map
+            MapPanel.gradeFilter.transform.Find("[Rect]ToggleList").gameObject.SetActive(false);
         }
 
         internal static void SetupRunContent()
@@ -1272,17 +1269,14 @@ namespace LORAP.Gameplay
             }
         }
 
-        private static DropBookXmlInfo CreateCustomBook(int id, string name)
+        private static DropBookXmlInfo CreateCustomBook(int id, string name, string icon)
         {
             var Book = new DropBookXmlInfo();
             Book._id = id;
             Book.workshopName = name;
             Book.workshopID = "lorap";
-            //Book.DropNum = dropNum;   
-            //Book.DropItemList = dropList;
-            //Singleton<DropBookXmlList>.Instance._list.Add(Book);
-            //Singleton<DropBookXmlList>.Instance._dict.Add(Book.id, Book);
-            //Singleton<DropBookXmlList>.Instance._workshopDict["lorap"].Add(Book);
+            Book._bookIcon = icon;
+
             DropBookXmlList.Instance.AddBookByMod("lorap", new List<DropBookXmlInfo>() { Book });
 
             CustomBooks[id] = Book;
