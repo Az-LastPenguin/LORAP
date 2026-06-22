@@ -1,5 +1,6 @@
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Models;
+using LORAP.Utils;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -153,7 +154,7 @@ namespace LORAP.Archipelago
             if (checks.Count == 0)
                 return "";
 
-            System.Random random = SlotDataManager.CreateRandom("reception_checks", id * 397 ^ checks.Count);
+            System.Random random = GameUtils.CreateRandom("reception_checks", id * 397 ^ checks.Count);
 
             long check = checks.ElementAt(random.Next(checks.Count));
 

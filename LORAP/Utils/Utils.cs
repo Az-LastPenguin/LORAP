@@ -8,6 +8,7 @@ using UnityEngine.UI;
 
 namespace LORAP.Utils
 {
+    // Some other general stuff
     internal static class GameUtils
     {
         internal static List<SephirahType> FloorSephs = new List<SephirahType>()
@@ -23,6 +24,46 @@ namespace LORAP.Utils
             SephirahType.Hokma,
             SephirahType.Keter,
         };
+
+        internal static int CreateSeed(string stream, int salt = 0)
+        {
+            unchecked
+            {
+                uint hash = 2166136261u;
+                hash = MixHash(hash, SlotDataManager.ClientSeed);
+                hash = MixHash(hash, salt);
+
+                if (stream != null)
+                {
+                    for (int i = 0; i < stream.Length; i++)
+                        hash = MixHash(hash, stream[i]);
+                }
+
+                int seed = (int)(hash & 0x7FFFFFFF);
+                return seed == 0 ? 1 : seed;
+            }
+        }
+
+        internal static System.Random CreateRandom(string stream, int salt = 0)
+        {
+            return new System.Random(CreateSeed(stream, salt));
+        }
+
+        private static uint MixHash(uint hash, int value)
+        {
+            unchecked
+            {
+                hash ^= (uint)value;
+                hash *= 16777619u;
+                hash ^= (uint)(value >> 8);
+                hash *= 16777619u;
+                hash ^= (uint)(value >> 16);
+                hash *= 16777619u;
+                hash ^= (uint)(value >> 24);
+                hash *= 16777619u;
+                return hash;
+            }
+        }
     }
 
     // Class to help work with UI

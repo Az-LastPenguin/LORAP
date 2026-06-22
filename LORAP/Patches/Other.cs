@@ -85,7 +85,7 @@ namespace LORAP.Patches
             }
 
             // Now render this shit!
-            for (int i = 0; i < 7; i++)
+            for (int i = 0; i < 5; i++)
             {
                 UIFloorQuestSlot slot = __instance.questSlotList[i];
 
@@ -355,6 +355,9 @@ namespace LORAP.Patches
             // Stop Item Manager & Disconnect from AP
             ItemManager.Suspended = true;
             SessionManager.EndSession();
+
+            // Hide the log
+            APLog.Hide();
         }
 
 
@@ -407,7 +410,7 @@ namespace LORAP.Patches
             // Init Custom Content
             ContentManager.Init();
         }
-
+         
 
 
         // Make game unable to grant steam achievements

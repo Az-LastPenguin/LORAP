@@ -20,7 +20,7 @@ namespace LORAP.Archipelago
         None,
         InFloor,
         Sets,
-        Pages,
+        Pages
     }
 
     internal enum AbnoPageRandomization
@@ -41,6 +41,13 @@ namespace LORAP.Archipelago
     {
         Reception,
         Stage
+    }
+
+    internal enum DeathlinkAction
+    {
+        UnitDeath,
+        FloorWipe,
+        StageLoss
     }
 
     internal class BattleNode
@@ -82,13 +89,14 @@ namespace LORAP.Archipelago
 
     internal static class SlotDataManager
     {
-        internal static int ClientSeed;
-
-        internal static string EffectiveLORAPSeed;
-
+        /* ENDGOAL-RELATED */
         internal static List<Endgoal> Endgoals;
 
         internal static long EnsembleBattles;
+
+        /* RANDOMIZATION */
+        internal static int ClientSeed;
+        internal static string EffectiveLORAPSeed;
 
         internal static AbnoPageShuffle AbnoPageShuffle;
 
@@ -98,20 +106,33 @@ namespace LORAP.Archipelago
 
         internal static bool EgoPageShuffle;
 
-        internal static bool ReceptionsRequireBooks;
-
-        internal static bool EnemiesTurnIntoChecks;
-
-        internal static bool ShuffleAbnos;
-
-        internal static bool ShuffleRealizations;
-
-        internal static bool FloorsRequireBooks;
+        // Page randomization here (someday)
 
         internal static bool RandomizeBlackSilencePage;
 
         internal static BookContentsRandomization BookContentsRandomization;
 
+        internal static bool ShuffleAbnos;
+
+        internal static bool ShuffleRealizations;
+
+        internal static bool ShuffleEnsembleFloors;
+
+        /* PROGRESSION */
+        internal static bool ReceptionsRequireBooks;
+
+        internal static bool FloorsRequireBooks;
+
+        internal static bool EnemiesTurnIntoChecks;
+
+        /* OTHER */
+        internal static bool Deathlink;
+
+        internal static DeathlinkAction OutgoingDeathlink;
+
+        internal static DeathlinkAction IncomingDeathlink;
+
+        /* SLOT DATA */
         internal static Dictionary<int, List<int>> ReceptionBookRequirements;
 
         internal static BattleTree BattleTree;
@@ -128,56 +149,17 @@ namespace LORAP.Archipelago
 
         internal static int LastReception;
 
-
-        internal static int CreateSeed(string stream, int salt = 0)
-        {
-            unchecked
-            {
-                uint hash = 2166136261u;
-                hash = MixHash(hash, ClientSeed);
-                hash = MixHash(hash, salt);
-
-                if (stream != null)
-                {
-                    for (int i = 0; i < stream.Length; i++)
-                        hash = MixHash(hash, stream[i]);
-                }
-
-                int seed = (int)(hash & 0x7FFFFFFF);
-                return seed == 0 ? 1 : seed;
-            }
-        }
-
-        internal static System.Random CreateRandom(string stream, int salt = 0)
-        {
-            return new System.Random(CreateSeed(stream, salt));
-        }
-
-        private static uint MixHash(uint hash, int value)
-        {
-            unchecked
-            {
-                hash ^= (uint)value;
-                hash *= 16777619u;
-                hash ^= (uint)(value >> 8);
-                hash *= 16777619u;
-                hash ^= (uint)(value >> 16);
-                hash *= 16777619u;
-                hash ^= (uint)(value >> 24);
-                hash *= 16777619u;
-                return hash;
-            }
-        }
-
         internal static void Parse(Dictionary<string, object> slotData)
         {
-            ClientSeed = Convert.ToInt32(slotData["lorap_client_seed"]);
-            EffectiveLORAPSeed = slotData.ContainsKey("effective_lorap_seed") ? Convert.ToString(slotData["effective_lorap_seed"]) : "unknown";
-            Debug.Log($"[LORAP] Effective LORAP seed: {EffectiveLORAPSeed}");
-
+            /* ENDGOAL-RELATED */
             Endgoals = ((JArray)slotData["endgoals"]).Select(i => (Endgoal)Enum.Parse(typeof(Endgoal), i.Value<string>().Replace(" ", ""))).ToList();
 
             EnsembleBattles = (long)slotData["ensemble_battles"];
+
+            /* RANDOMIZATION */
+            ClientSeed = Convert.ToInt32(slotData["lorap_client_seed"]);
+            EffectiveLORAPSeed = slotData.ContainsKey("effective_lorap_seed") ? Convert.ToString(slotData["effective_lorap_seed"]) : "unknown";
+            Debug.Log($"[LORAP] Effective LORAP seed: {EffectiveLORAPSeed}");
 
             AbnoPageShuffle = (AbnoPageShuffle)(long)slotData["abno_page_shuffle"];
 
@@ -187,21 +169,35 @@ namespace LORAP.Archipelago
 
             EgoPageShuffle = (long)slotData["ego_page_shuffle"] == 1;
 
-            ReceptionsRequireBooks = (long)slotData["receptions_require_books"] == 1;
-
-            EnemiesTurnIntoChecks = (long)slotData["enemies_turn_into_checks"] == 1;
-
-            ShuffleAbnos = (long)slotData["shuffle_abnos"] == 1;
-
-            ShuffleRealizations = (long)slotData["shuffle_realizations"] == 1;
-
-            FloorsRequireBooks = (long)slotData["floors_require_books"] == 1;
+            // Page randomization here (someday)
 
             RandomizeBlackSilencePage = (long)slotData["randomize_black_silence_page"] == 1;
 
             BookContentsRandomization = (BookContentsRandomization)(long)slotData["book_contents_randomization"];
 
+            ShuffleAbnos = (long)slotData["shuffle_abnos"] == 1;
+
+            ShuffleRealizations = (long)slotData["shuffle_realizations"] == 1;
+
+            ShuffleEnsembleFloors = (long)slotData["shuffle_ensemble_floor"] == 1;
+
+            /* PROGRESSION */
+            ReceptionsRequireBooks = (long)slotData["receptions_require_books"] == 1;
+
+            FloorsRequireBooks = (long)slotData["floors_require_books"] == 1;
+
+            EnemiesTurnIntoChecks = (long)slotData["enemies_turn_into_checks"] == 1;
+
+            /* OTHER */
+            Deathlink = (long)slotData["deathlink"] == 1;
+
+            IncomingDeathlink = (DeathlinkAction)(long)slotData["incoming_deathlink"];
+
+            OutgoingDeathlink = (DeathlinkAction)(long)slotData["outgoing_deathlink"];
+
+            /* SLOT DATA */
             FirstReception = Convert.ToInt32(slotData["first_reception"]);
+
             LastReception = Convert.ToInt32(slotData["last_reception"]);
 
             ReceptionBookRequirements = new Dictionary<int, List<int>>();

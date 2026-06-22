@@ -59,7 +59,7 @@ namespace LORAP.Archipelago
                         if (item.ItemType != APItemType.Book) // Unless it's a book. We don't want copies, that's cheating
                             ParseAndGiveItem(item, true);
 
-                        yield return new WaitForSeconds(0.01f);
+                        yield return new WaitForEndOfFrame(); //WaitForSeconds(0.01f);
                     }
                     else // Means this is a new item, receive it as it should be received
                     {
@@ -67,7 +67,7 @@ namespace LORAP.Archipelago
 
                         newItems = true;
                         TotalItemsReceived++;
-                        yield return new WaitForSeconds(0.1f);
+                        yield return new WaitForEndOfFrame(); //WaitForSeconds(0.1f);
                     }
 
                     ItemsReceived++;

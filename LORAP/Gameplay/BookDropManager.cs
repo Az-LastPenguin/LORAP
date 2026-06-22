@@ -161,7 +161,7 @@ namespace LORAP.Gameplay
                 }
             }
 
-            var Random = SlotDataManager.CreateRandom("book_drops");
+            var Random = GameUtils.CreateRandom("book_drops");
             List<BookDrop> allowedDrops = AllDrops.Where(d => d.collectible).ToList();
 
             if (bookChapters.Count == 0)
@@ -231,7 +231,7 @@ namespace LORAP.Gameplay
             List<BookDropResult> dropResults = new List<BookDropResult>();
 
             // Generate Drops
-            if (bookID == new LorId("lorap", 123456)) // TODO: Make it. Also bias utility combat pages
+            if (bookID == new LorId("lorap", 123456)) // TODO: Make it. Also bias utility combat pages (?)
             {
 
             }
@@ -239,7 +239,7 @@ namespace LORAP.Gameplay
             {
                 for (int i = 0; i < 8; i++)
                 {
-                    var Random = SlotDataManager.CreateRandom("booster_packs", BoosterPacksOpened * 8 + i);
+                    var Random = GameUtils.CreateRandom("booster_packs", BoosterPacksOpened * 8 + i);
 
                     float rng = (float)Random.NextDouble();
                     Rarity dropRarity = Rarity.Common;

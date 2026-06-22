@@ -46,7 +46,7 @@ namespace LORAP.Gameplay
             }
         }
 
-        internal static void SaveGame() // TODO: Maybe save data in different datastore keys? Maybe that will allow for same slot coop at the same time?
+        internal static void SaveGame()
         {
             Debug.Log("[LORAP] Saving AP Run");
 
@@ -180,7 +180,7 @@ namespace LORAP.Gameplay
         }
 
 
-        internal static SessionData LoadLastSessionData() // TODO: Possibly make shorter and TODO: Delete Archipelago Folder & place session data along other save files
+        internal static SessionData LoadLastSessionData() // TODO: Possibly make shorter 
         {
             if (!Directory.Exists($"{Application.persistentDataPath}/Archipelago"))
                 Directory.CreateDirectory($"{Application.persistentDataPath}/Archipelago");

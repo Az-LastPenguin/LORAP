@@ -52,11 +52,6 @@ namespace LORAP.Playthru
             // Create list of floor infos to keep track of every floors state by our own
             Floors = Enum.GetValues(typeof(SephirahType)).Cast<SephirahType>().ToDictionary(k => k, v => new FloorInfo());
 
-            //foreach (var floor in LibraryModel.Instance._floorList)
-            //{
-            //    Floors[floor.Sephirah].Open = LibraryModel.Instance.IsOpenedSephirah(floor.Sephirah);
-            //}
-
             // Init AP Managers
             ItemManager.Init();
             LocationManager.Init();

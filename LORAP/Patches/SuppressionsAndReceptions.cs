@@ -585,6 +585,10 @@ namespace LORAP.Patches
             {
                 List<StageClassInfo> storyData = icon.storyData;
 
+                // If it's one of the stages stage of keter realization, make it show the current realization stage player is at
+                if (storyData[0]._id >= 210005 && storyData[0]._id <= 210009)
+                    storyData = new List<StageClassInfo>() { StageClassInfoList.Instance.GetData(210005 + PlaythruManager.KeterRealizationStage) };
+
                 // If the stage is not on the randomized tree, hide it entirely
                 BattleNode battleNode = SlotDataManager.BattleTree?.GetNodeById(storyData[0]._id);
                 if (battleNode == null)
@@ -593,21 +597,14 @@ namespace LORAP.Patches
                     continue;
                 }
 
-                // If it's one of the stages stage of keter realization, make it show the current realization stage player is at
-                if (storyData[0]._id >= 210005 && storyData[0]._id <= 210009)
-                {
-                    List<StageClassInfo> keterData = new List<StageClassInfo>() { StageClassInfoList.Instance.GetData(210005 + PlaythruManager.KeterRealizationStage) };
-
-                    icon.SetSlotData(keterData);
-                }
-                else
-                {
-                    icon.SetSlotData(storyData);
-                }
+                icon.SetSlotData(storyData);
 
                 // If it's a floor stage and it can be seen, set its icon 
                 if (battleNode.Kind == BattleNodeKind.Stage && storyData[0].currentState == StoryState.Clear)
                     icon.SetIcon(UIUtils.GetFloorIconSet(storyData[0]._id, battleNode.AssignedFloor));
+
+                if (storyData[0]._id >= 70001 && storyData[0]._id <= 70010)
+                    icon.SetIcon(UISpriteDataManager.instance.floorIconSet[(int)storyData[0].floorOnlyList[0]]);
 
                 // Show the icon on the map
                 icon.SetActiveStory(true);
@@ -619,7 +616,7 @@ namespace LORAP.Patches
                 GameObject status = icon.transform.Find("Status").gameObject;
 
                 // If the stage is completed and all checks are collected
-                if (PlaythruManager.IsStageComplete(battleNode.Id) && LocationManager.GetUncheckedStageLocations(battleNode.Id).Count == 0)
+                if (PlaythruManager.IsStageComplete(storyData[0]._id) && LocationManager.GetUncheckedStageLocations(storyData[0]._id).Count == 0)
                 {
                     status.GetComponent<Image>().sprite = UIUtils.CheckmarkSprite;
                     status.SetActive(true);
@@ -724,6 +721,13 @@ namespace LORAP.Patches
 
 
 
+        // Stop chapter shortcuts from updating
+        [HarmonyPatch(typeof(UIStoryGradeFilter), nameof(UIStoryGradeFilter.Initialized))]
+        [HarmonyPrefix]
+        static bool AnotherNoChapterShortcuts(UIStoryGradeFilter __instance) => false;
+
+
+
         // Change icon of the stage for floor stages on right invitation panel
         [HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.SetLowerIconData))]
         [HarmonyPostfix]
@@ -782,6 +786,16 @@ namespace LORAP.Patches
                 return false;
             }
 
+            // If it's reverb ensemble stage, check if player has the floor for it
+            if (stage._id >= 70001 && stage._id <= 70010 && !stage.floorOnlyList[0].IsOpen())
+            {
+                MessagePopup.ShowMessage($"{stage.floorOnlyList[0].FloorName()} is not unlocked.");
+
+                UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Cancel);
+
+                return false;
+            }
+
             // If it's one of the keter stages, make sure to get the last one instead since only it technically exists on the tree
             BattleNode battleNode = SlotDataManager.BattleTree?.GetNodeById(stage._id);
             if (battleNode == null || battleNode.Kind != BattleNodeKind.Stage)
@@ -799,7 +813,6 @@ namespace LORAP.Patches
             }
 
             UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Invite);
-
 
             UI.UIController UIController = UI.UIController.Instance;
             StageController StageController = StageController.Instance;
@@ -844,6 +857,7 @@ namespace LORAP.Patches
 
                 StageController.InitStageByCreature(stage);
 
+                // Add units to the battle (don't add binah if not unlocked)
                 foreach (UnitBattleDataModel unitBattleData in StageController.GetCurrentStageFloorModel().GetUnitBattleDataList())
                 {
                     if (battleNode.AssignedFloor == SephirahType.Binah && LibraryModel.Instance.IsBinahLockedInLibrary() && unitBattleData.unitData.isSephirah)
