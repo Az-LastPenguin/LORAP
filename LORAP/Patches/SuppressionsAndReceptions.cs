@@ -966,5 +966,66 @@ namespace LORAP.Patches
         {
             __instance.txt_bookNum.text = "∞";
         }
+
+
+
+        // Change amount of emotion coins needed for emotion level up
+        [HarmonyPatch(typeof(BattleUnitEmotionDetail), nameof(BattleUnitEmotionDetail.GetNeedEmotionCoin))]
+        [HarmonyPrefix]
+        static bool NeedEmotionCoinPatch(BattleUnitEmotionDetail __instance, int level, ref int __result)
+        {
+            __result = level switch
+            {
+                0 => 3,
+                1 => 3,
+                2 => 3,
+                3 => 5,
+                4 => 7,
+                5 => 9,
+                6 => 9,
+                7 => 10,
+                8 => 11,
+                9 => 12,
+                10 => 13,
+                _ => 13,
+            };
+
+            return false;
+        }
+
+
+
+        // Change amount of light gained per emotion level
+        [HarmonyPatch(typeof(BattleUnitEmotionDetail), nameof(BattleUnitEmotionDetail.MaxPlayPointAdderByLevel))]
+        [HarmonyPrefix]
+        static bool LightPerLevel(BattleUnitEmotionDetail __instance, ref int __result)
+        {
+            __result = __instance.EmotionLevel switch
+            {
+                int n when (n <= 5) => __instance.EmotionLevel,
+                int n when (n <= 10) => 5 + (__instance.EmotionLevel - 4)/2,
+                int n when (n > 10) => 8 + (__instance.EmotionLevel - 8)/3,
+            };  
+
+            return false;
+        }
+
+
+
+        // Change amount of speed dies gained for emotion levels
+        [HarmonyPatch(typeof(BattleUnitEmotionDetail), nameof(BattleUnitEmotionDetail.SpeedDiceNumAdder))]
+        [HarmonyPrefix]
+        static bool SpeedForEmotions(BattleUnitEmotionDetail __instance, ref int __result)
+        {
+            __result = 0;
+
+            if (Singleton<StageController>.Instance.stageType == StageType.Creature && __instance._self.faction == Faction.Enemy)
+            {
+                return false;
+            }
+
+            __result = __instance.EmotionLevel / 4;
+            return false;
+        }
     }
 }

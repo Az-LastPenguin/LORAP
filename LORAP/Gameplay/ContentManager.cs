@@ -1067,7 +1067,7 @@ namespace LORAP.Gameplay
             // Before rendering, place endogal receptions in a cool way (Yeah i know, hardcoding this doesn't look that good but oh well)
             MapNode oliverNode = mapNodeByKey["reception:60002"];
             oliverNode.Next.Clear();
-            
+
             Dictionary<int, Vector2> BSDEPositions = new Dictionary<int, Vector2>()
             {
                 [60003] = new Vector2(-240, 220),
@@ -1100,36 +1100,42 @@ namespace LORAP.Gameplay
                 [SephirahType.Keter]     = new List<SephirahType>() { },
             };
 
-            foreach (var pair in BSDEPositions)
+            if (SlotDataManager.Endgoals.Contains(Endgoal.BlackSilence) || SlotDataManager.Endgoals.Contains(Endgoal.DistortedEnsemble))
             {
-                string key = $"endgoal:{pair.Key}";
-                if (!mapNodeByKey.ContainsKey(key))
-                    continue;
-
-                MapNode node = mapNodeByKey[key];
-                node.X = oliverNode.X + pair.Value.x;
-                node.Y = oliverNode.Y + pair.Value.y;
-
-                oliverNode.Next.Add(node);
-            }
-
-            foreach (var pair in DEPositions)
-            {
-                string key = $"endgoal:{EnsembleFloorToStage[pair.Key]}";
-                if (!mapNodeByKey.ContainsKey(key))
-                    continue;
-
-                MapNode node = mapNodeByKey[key];
-                node.X = oliverNode.X + pair.Value.x;
-                node.Y = oliverNode.Y + pair.Value.y;
-
-                foreach (SephirahType seph in DELinks[pair.Key])
+                foreach (var pair in BSDEPositions)
                 {
-                    node.Next.Add(mapNodeByKey[$"endgoal:{EnsembleFloorToStage[seph]}"]);
+                    string key = $"endgoal:{pair.Key}";
+                    if (!mapNodeByKey.ContainsKey(key))
+                        continue;
+
+                    MapNode node = mapNodeByKey[key];
+                    node.X = oliverNode.X + pair.Value.x;
+                    node.Y = oliverNode.Y + pair.Value.y;
+
+                    oliverNode.Next.Add(node);
                 }
             }
 
-            oliverNode.Next.Add(mapNodeByKey[$"endgoal:{EnsembleFloorToStage[SephirahType.Malkuth]}"]);
+            if (SlotDataManager.Endgoals.Contains(Endgoal.ReverberationEnsemble))
+            {
+                foreach (var pair in DEPositions)
+                {
+                    string key = $"endgoal:{EnsembleFloorToStage[pair.Key]}";
+                    if (!mapNodeByKey.ContainsKey(key))
+                        continue;
+
+                    MapNode node = mapNodeByKey[key];
+                    node.X = oliverNode.X + pair.Value.x;
+                    node.Y = oliverNode.Y + pair.Value.y;
+
+                    foreach (SephirahType seph in DELinks[pair.Key])
+                    {
+                        node.Next.Add(mapNodeByKey[$"endgoal:{EnsembleFloorToStage[seph]}"]);
+                    }
+                }
+
+                oliverNode.Next.Add(mapNodeByKey[$"endgoal:{EnsembleFloorToStage[SephirahType.Malkuth]}"]);
+            }
 
             // Render the graph
             RenderGraph();
