@@ -33,7 +33,7 @@ Planned and existing features, not in any particular order:
 - [ ] Extended player/AI capabilities (Acquiring enemies pages, enemies using abno pages and etc.)
 
 ## How do i..? / Can i..?
-Most of the questions asked before (and some of those that were never asked) can be found in the [Questions & Answers](https://github.com/Az-LastPenguin/LORAP/blob/dev/QNA.md). Please make sure to look up your question in FAQ before asking it in the thread directly. (Though i won't hate you if you do! I will try to answer to every question regarding the mod whenever i'm available, as long as someone else doesn't answer before me, that is)
+Most of the questions asked before (and some of those that were never asked) can be found in the [Questions & Answers](https://github.com/Az-LastPenguin/LORAP/blob/dev/QNA.md). Please make sure to look up your question in Q&A before asking it in the thread directly. (Though i won't hate you if you do! I will try to answer to every question regarding the mod whenever i'm available, as long as someone else doesn't answer before me, that is)
 
 ## Track progress
 You can track progress of the mod, things that are completed, will be done, or still just an idea in [this project](https://github.com/users/Az-LastPenguin/projects/1/views/1?layout=board). (Note: this doesn't contain ALL the ideas and things i'm gonna do, most of them are minor enough to not be tracked in any way other than a TODO comment in the code)
