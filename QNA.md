@@ -24,6 +24,9 @@ Playing testing versions is always appreciated. Make sure to report bugs and sha
 3. You can contact me on discord: last_penguin. Please do mention how you found my tag and why you are messaging me. (Fine option)
 4. You can leave a comment on the [Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3430626765) page of the mod. (Worst option)
 
+## I want to play a ruina randomizer without installing Archipelago, is it possible?
+Sadly, not yet. But i do plan on making a standalone mod after i'm done with v1.0 of LORAP. Stay tuned.
+
 ## Why no mod support?
 Adding a support for gameplay mods is going to be really really taxing on my free time and sanity. Modding a Project Moon coded game is hell on earth sometimes (half-jokingly).
 
