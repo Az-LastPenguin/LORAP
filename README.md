@@ -1,6 +1,8 @@
 # DISCLAIMER
 The mod is in a semi-playable state, meaning you can play it from beginning to end, but may and **WILL** experience bugs. I myself would not recemmend doing actual serious runs with it, as it may brick sometimes. (There is no logic yet)
 
+**Currently 1.0 version of the mod is in the development, you can find it in the [dev branch](https://github.com/Az-LastPenguin/LORAP/tree/dev).**
+
 ## WHAT IS?
 Library of Ruina Archipelago (LORAP for short) is a Harmony mod for Library of Ruina to make it work with Archipelago.
 
