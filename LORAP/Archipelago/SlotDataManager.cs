@@ -37,6 +37,12 @@ namespace LORAP.Archipelago
         Chaotic
     }
 
+    internal enum ProgressionMode
+    {
+        BookRequirements,
+        BoESpheres
+    }
+
     internal enum BattleNodeKind
     {
         Reception,
@@ -57,6 +63,8 @@ namespace LORAP.Archipelago
         public string Name;
         public BattleNodeKind Kind;
         public int Chapter;
+        public int Sphere;
+        public int SphereLayer;
         public int RequiredLibrarians;
         public SephirahType AssignedFloor = SephirahType.None;
         public List<string> Next = new List<string>();
@@ -66,7 +74,22 @@ namespace LORAP.Archipelago
         public bool AreBattleParentsComplete()
         {
             List<BattleNode> parents = SlotDataManager.BattleTree?.GetPrevNodes(Key) ?? new List<BattleNode>();
-            return parents.Count == 0 || parents.Any(parent => PlaythruManager.IsStageComplete(parent.Id));
+            if (parents.Count == 0)
+                return true;
+
+            foreach (BattleNode parent in parents)
+            {
+                if (!PlaythruManager.IsStageComplete(parent.Id))
+                    continue;
+
+                if (!SlotDataManager.BoESpheresEnabled || parent.Sphere == Sphere)
+                    return true;
+
+                if (parent.Sphere + 1 == Sphere && SlotDataManager.IsSphereClearEnough(parent.Sphere))
+                    return true;
+            }
+
+            return false;
         }
     }
 
@@ -112,6 +135,12 @@ namespace LORAP.Archipelago
 
         internal static BookContentsRandomization BookContentsRandomization;
 
+        internal static ProgressionMode ProgressionMode;
+
+        internal static bool BoESpheresEnabled => ProgressionMode == ProgressionMode.BoESpheres;
+
+        internal static int SphereClearPercentage;
+
         internal static bool ShuffleAbnos;
 
         internal static bool ShuffleRealizations;
@@ -147,9 +176,40 @@ namespace LORAP.Archipelago
 
         internal static Dictionary<int, int> AbnoStageChapters;
 
+        internal static List<int> BoEBundlesPerSphere;
+
+        internal static List<int> BoEBundlesCumulative;
+
         internal static int FirstReception;
 
         internal static int LastReception;
+
+        internal static int GetBoEBundlesRequiredThroughSphere(int sphere)
+        {
+            if (BoEBundlesCumulative == null || sphere <= 0)
+                return 0;
+
+            int index = Math.Min(sphere, BoEBundlesCumulative.Count) - 1;
+            return index >= 0 ? BoEBundlesCumulative[index] : 0;
+        }
+
+        internal static bool IsSphereClearEnough(int sphere)
+        {
+            if (!BoESpheresEnabled || BattleTree == null)
+                return true;
+
+            List<BattleNode> sphereNodes = BattleTree.Nodes.Values.Where(n => n.Sphere == sphere).ToList();
+            if (sphereNodes.Count == 0)
+                return true;
+
+            int percentage = Math.Max(0, Math.Min(100, SphereClearPercentage));
+            int required = (int)Math.Ceiling(sphereNodes.Count * percentage / 100.0);
+            if (required <= 0)
+                return true;
+
+            int cleared = sphereNodes.Count(n => PlaythruManager.IsStageComplete(n.Id));
+            return cleared >= required;
+        }
 
         internal static void Parse(Dictionary<string, object> slotData)
         {
@@ -176,6 +236,14 @@ namespace LORAP.Archipelago
             RandomizeBlackSilencePage = (long)slotData["randomize_black_silence_page"] == 1;
 
             BookContentsRandomization = (BookContentsRandomization)(long)slotData["book_contents_randomization"];
+
+            ProgressionMode = slotData.ContainsKey("progression_mode")
+                ? (ProgressionMode)(long)slotData["progression_mode"]
+                : ProgressionMode.BookRequirements;
+
+            SphereClearPercentage = slotData.ContainsKey("sphere_clear_percentage")
+                ? Convert.ToInt32(slotData["sphere_clear_percentage"])
+                : 70;
 
             ShuffleAbnos = (long)slotData["shuffle_abnos"] == 1;
 
@@ -233,6 +301,14 @@ namespace LORAP.Archipelago
                 }
             }
 
+            BoEBundlesPerSphere = slotData.ContainsKey("boe_bundles_per_sphere")
+                ? ((JArray)slotData["boe_bundles_per_sphere"]).Select(i => i.Value<int>()).ToList()
+                : Enumerable.Repeat(0, 7).ToList();
+
+            BoEBundlesCumulative = slotData.ContainsKey("boe_bundles_cumulative")
+                ? ((JArray)slotData["boe_bundles_cumulative"]).Select(i => i.Value<int>()).ToList()
+                : Enumerable.Repeat(0, 7).ToList();
+
             if (!slotData.ContainsKey("battle_nodes") || !slotData.ContainsKey("battle_edges"))
                 throw new Exception("LORAP slot data is missing battle tree data.");
 
@@ -255,6 +331,8 @@ namespace LORAP.Archipelago
                     Name = data["name"].Value<string>(),
                     Kind = kind,
                     Chapter = data["chapter"].Value<int>(),
+                    Sphere = data.ContainsKey("sphere") ? data["sphere"].Value<int>() : data["chapter"].Value<int>(),
+                    SphereLayer = data.ContainsKey("sphere_layer") ? data["sphere_layer"].Value<int>() : 0,
                     RequiredLibrarians = data["req_librarians"].Value<int>(),
                     //VisualX = data["visual_x"].Value<int>(),
                     //VisualY = data["visual_y"].Value<int>(),

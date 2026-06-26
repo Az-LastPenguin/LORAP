@@ -34,6 +34,7 @@ namespace LORAP.Playthru
 
         internal static bool BinahUnlocked = false;
         internal static bool BlackSilenceUnlocked = false;
+        internal static int BoEBundlesReceived = 0;
 
         internal static void StartGame()
         {
@@ -48,6 +49,7 @@ namespace LORAP.Playthru
             MaxEmotionLevel = 0;
             BinahUnlocked = false;
             BlackSilenceUnlocked = false;
+            BoEBundlesReceived = 0;
 
             // Create list of floor infos to keep track of every floors state by our own
             Floors = Enum.GetValues(typeof(SephirahType)).Cast<SephirahType>().ToDictionary(k => k, v => new FloorInfo());
@@ -165,6 +167,7 @@ namespace LORAP.Playthru
             saveData.AddData("stagesCompleted", new GameSave.SaveData(StagesCompleted));
 
             saveData.AddData("keterRealizationStage", new GameSave.SaveData(KeterRealizationStage));
+            saveData.AddData("boeBundlesReceived", new GameSave.SaveData(BoEBundlesReceived));
 
             return saveData;
         }
@@ -174,6 +177,7 @@ namespace LORAP.Playthru
             StagesCompleted = saveData.GetData("stagesCompleted")._list.Select(d => d.GetIntSelf()).ToList();
 
             KeterRealizationStage = saveData.GetData("keterRealizationStage").GetIntSelf();
+            BoEBundlesReceived = saveData.GetData("boeBundlesReceived").GetIntSelf();
         }
 
 
@@ -328,6 +332,41 @@ namespace LORAP.Playthru
 
             if (!silent)
                 MessagePopup.ShowMessage($"You received {DropBookXmlList.Instance.GetData(lid).Name}!");
+        }
+
+        internal static void GiveBookOfEverything(bool silent = false)
+        {
+            BoEBundlesReceived++;
+            GiveBook(123456, 1, silent);
+        }
+
+        internal static int GetUnlockedBoEBundleLimit()
+        {
+            if (!SlotDataManager.BoESpheresEnabled || SlotDataManager.BattleTree == null)
+                return int.MaxValue;
+
+            int unlockedSphere = 1;
+
+            for (int targetSphere = 2; targetSphere <= 7; targetSphere++)
+            {
+                bool sphereOpen = SlotDataManager.BattleTree.Nodes.Values
+                    .Where(n => n.Sphere == targetSphere)
+                    .Any(n => n.AreBattleParentsComplete());
+
+                if (sphereOpen)
+                    unlockedSphere = Math.Max(unlockedSphere, targetSphere);
+            }
+
+            BattleNode oliver = SlotDataManager.BattleTree.GetNodeById(SlotDataManager.LastReception);
+            if (oliver != null && IsStageComplete(oliver.Id))
+                unlockedSphere = 7;
+
+            return SlotDataManager.GetBoEBundlesRequiredThroughSphere(unlockedSphere);
+        }
+
+        internal static bool CanOpenBookOfEverything()
+        {
+            return BookDropManager.BookOfEverythingOpened < GetUnlockedBoEBundleLimit();
         }
 
         internal static void UpMaxAttributionPoints(bool silent = false)
