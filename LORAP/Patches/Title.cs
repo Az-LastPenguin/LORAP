@@ -7,13 +7,12 @@ using TMPro;
 using UI;
 using UI.Title;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace LORAP.Patches
 {
     internal class TitlePatches
     {
-        // UITitleController patches. This game is so ass i had to split the code into two patches. //
+        // This game is so ass i had to split the code into two patches
         [HarmonyPatch(typeof(UITitleController),  nameof(UITitleController.OnSelectButton))]
         [HarmonyPostfix]
         static void TitleButtonsPatch(UITitleController __instance, TitleActionType type)
@@ -22,6 +21,8 @@ namespace LORAP.Patches
             if (__instance.TitleButtons != null && __instance.TitleButtons.Count() > 1 && __instance.TitleButtons[1] != null && __instance.TitleButtons[1].gameObject != null && __instance.TitleButtons[1].gameObject.GetComponentInChildren<TextMeshProUGUI>() != null)
                 __instance.TitleButtons[1].gameObject.GetComponentInChildren<TextMeshProUGUI>().text = "Archipelago Connect";
         }
+
+
 
         // Override OnSelectButton because the code is so ass patches break for some reason...
         [HarmonyPatch(typeof(UITitleController), nameof(UITitleController.OnSelectButton))]
@@ -79,6 +80,8 @@ namespace LORAP.Patches
             return false;
         }
 
+
+
         // To Load the save and connect to AP
         [HarmonyPatch(typeof(UITitleController), nameof(UITitleController.Continue))]
         [HarmonyPrefix]
@@ -88,6 +91,8 @@ namespace LORAP.Patches
 
             return false;
         }
+
+
 
         // Ruin Title
         [HarmonyPatch(typeof(UITitleController), nameof(UITitleController.CheckRuinTitle))]
@@ -104,7 +109,7 @@ namespace LORAP.Patches
 
 
 
-        // EntryScene patch. Display custom CG when loading into the game. //
+        // Display custom CG when loading into the game
         public static LatestDataModel GenerateRandomLatestData()
         {
             var AllCGs = new List<Tuple<int, int, int>>() { };

@@ -141,7 +141,9 @@
     <Compile Include="Gameplay\SaveManager.cs" />
     <Compile Include="LORAP.cs" />
     <Compile Include="Patches\AbnoAndEGOPages.cs" />
+    <Compile Include="Patches\Emotion.cs" />
     <Compile Include="Patches\Gacha.cs" />
+    <Compile Include="Patches\Map.cs" />
     <Compile Include="Patches\Other.cs" />
     <Compile Include="Patches\PatchManager.cs" />
     <Compile Include="Patches\RemoveStory.cs" />

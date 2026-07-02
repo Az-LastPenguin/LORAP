@@ -1,21 +1,24 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Emit;
 using HarmonyLib;
 using LORAP.CustomUI;
 using LORAP.Utils;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection.Emit;
 using UI;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace LORAP.Patches
 {
     internal class AbnoAndEGOPages
     {
-        // UIGetAbnormalityPanel patches. For modified abno and ego page display. //
         // Stop abno and ego page display window from appearing vanilla way (it's shown when getting abno and ego page items)
         [HarmonyPatch(typeof(UIGetAbnormalityPanel), nameof(UIGetAbnormalityPanel.SetData))]
         [HarmonyPrefix]
         static bool NoGetAbnoPanel() => false;
+
+
 
         // Instead of closing it vanilla way it's closed by my mod with additional stuff done
         [HarmonyPatch(typeof(UIGetAbnormalityPanel), nameof(UIGetAbnormalityPanel.PointerClickButton))]
@@ -30,43 +33,34 @@ namespace LORAP.Patches
 
 
 
-        // StageLibraryFloorModel patches. For modified abno and ego pages selection. // TODO: Make a transpiler. Again.
-        // Due to PM quantum coding, i'm replacing this method with itself with few changes. Mostly to show abno pages of the level you have
+        // Change the way game makes a list of abno pages when emotion levels up
         [HarmonyPatch(typeof(StageLibraryFloorModel), nameof(StageLibraryFloorModel.CreateSelectableList))]
         [HarmonyPrefix]
-        static bool CustomRandomizeAbnoPages(StageLibraryFloorModel __instance, ref List<EmotionCardXmlInfo> __result, int emotionLevel)
+        static bool CustomRandomizeAbnoPages(StageLibraryFloorModel __instance, int emotionLevel, ref List<EmotionCardXmlInfo> __result)
         {
-            int posivtiveTotal = 0;
-            int negativeTotal = 0;
-            foreach (UnitBattleDataModel unit in __instance._unitList)
-            {
-                if (unit.IsAddedBattle)
-                {
-                    posivtiveTotal += unit.emotionDetail.totalPositiveCoins.Count;
-                    negativeTotal += unit.emotionDetail.totalNegativeCoins.Count;
-                }
-            }
+            int positiveTotal = __instance._unitList.Where(u => u.IsAddedBattle).Sum(u => u.emotionDetail.totalPositiveCoins.Count);
+            int negativeTotal = __instance._unitList.Where(u => u.IsAddedBattle).Sum(u => u.emotionDetail.totalNegativeCoins.Count);
 
-            int floorLevel = 0;
-            LibraryFloorModel floor = LibraryModel.Instance.GetFloor(Singleton<StageController>.Instance.CurrentFloor);
-            if (floor != null)
-            {
-                // The difference
-                floorLevel = floor.GetAbnoPageAmount() + 1;
-            }
+            LibraryFloorModel floor = LibraryModel.Instance.GetFloor(StageController.Instance.CurrentFloor);
+
+            if (floor == null)
+                return false;
+
+            int floorLevel = floor.GetAbnoPageAmount() + 1;
 
             int num3 = 1;
             num3 = (emotionLevel <= 2) ? 1 : ((emotionLevel > 4) ? 3 : 2);
 
-            List<EmotionCardXmlInfo> dataList = Singleton<EmotionCardXmlList>.Instance.GetDataList(Singleton<StageController>.Instance.CurrentFloor, floorLevel, num3);
+            // Copied and expanded EmotionCardXmlList.Instance.GetDataList()
+            List<EmotionCardXmlInfo> data = EmotionCardXmlList.Instance._list.Where(c => c.Sephirah == StageController.Instance.CurrentFloor && c.Level <= floorLevel && c.EmotionLevel <= emotionLevel && !c.Locked).ToList();
             foreach (EmotionCardXmlInfo selected in __instance._selectedList)
             {
-                dataList.Remove(selected);
+                data.Remove(selected);
             }
 
             // The simplified code
             int center = 0;
-            float diff = ((posivtiveTotal + negativeTotal) > 0 ? (float)(posivtiveTotal - negativeTotal) / (float)(posivtiveTotal + negativeTotal) : 0.5f) / ((11f - emotionLevel) / 10f);
+            float diff = ((positiveTotal + negativeTotal) > 0 ? (float)(positiveTotal - negativeTotal) / (float)(positiveTotal + negativeTotal) : 0.5f) / ((Math.Max(11f - emotionLevel, 1)) / 10f);
             if (Mathf.Abs(diff) < 0.1f)
             {
                 center = 0;
@@ -80,20 +74,20 @@ namespace LORAP.Patches
                 center = diff > 0 ? 2 : -2;
             }
 
-            dataList.Sort((EmotionCardXmlInfo x, EmotionCardXmlInfo y) => Mathf.Abs(x.EmotionRate - center) - Mathf.Abs(y.EmotionRate - center));
+            data.Sort((EmotionCardXmlInfo x, EmotionCardXmlInfo y) => Mathf.Abs(x.EmotionRate - center) - Mathf.Abs(y.EmotionRate - center));
 
             List<EmotionCardXmlInfo> list = new List<EmotionCardXmlInfo>();
-            while (dataList.Count > 0 && list.Count < 3)
+            while (data.Count > 0 && list.Count < 3)
             {
-                int ER = Mathf.Abs(dataList[0].EmotionRate - center);
-                List<EmotionCardXmlInfo> list2 = dataList.FindAll((EmotionCardXmlInfo x) => Mathf.Abs(x.EmotionRate - center) == ER);
+                int ER = Mathf.Abs(data[0].EmotionRate - center);
+                List<EmotionCardXmlInfo> list2 = data.FindAll((EmotionCardXmlInfo x) => Mathf.Abs(x.EmotionRate - center) == ER);
 
                 if (list2.Count + list.Count <= 3)
                 {
                     list.AddRange(list2);
                     foreach (EmotionCardXmlInfo item2 in list2)
                     {
-                        dataList.Remove(item2);
+                        data.Remove(item2);
                     }
 
                     continue;
@@ -108,7 +102,7 @@ namespace LORAP.Patches
 
                     EmotionCardXmlInfo item = RandomUtil.SelectOne(list2);
                     list2.Remove(item);
-                    dataList.Remove(item);
+                    data.Remove(item);
                     list.Add(item);
                 }
             }
@@ -117,23 +111,6 @@ namespace LORAP.Patches
 
             return false;
         }
-
-        // Select random Abno Page
-        /*[HarmonyPatch("RandomSelect")]
-        [HarmonyTranspiler]
-        static IEnumerable<CodeInstruction> CustomAbnoPagesRandom(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
-        {
-            // Replace floorLevel in the GetDataList with player's currently owned abno pages number
-            var instr = instructions.ToList();
-            var pos = instr.FindIndex(i => i.opcode == OpCodes.Ldc_I4_1) + 8;
-
-            instr.RemoveRange(pos, 11);
-            //instr.Insert(pos, new CodeInstruction(OpCodes.Ldc_I4, LibraryModel.Instance.GetFloor(StageController.Instance.CurrentFloor).GetAbnoPageAmount() + 1));
-            instr.Insert(pos, new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(LORClassExtensions), nameof(LORClassExtensions.GetAbnoPageAmount))));
-            instr.Insert(pos + 1, new CodeInstruction(OpCodes.Stloc_1));
-
-            return instr;
-        }*/
 
         // Custom ego page selection according to amount of currently owned pages
         [HarmonyPatch(typeof(StageLibraryFloorModel), nameof(StageLibraryFloorModel.RandomSelectEgo))]
@@ -164,14 +141,14 @@ namespace LORAP.Patches
 
 
 
-        // UIAbnormalityCategoryPanel patch. Hide name of the abno. //
+        // Hide name of the abno in the list of abno pages
         [HarmonyPatch(typeof(UIAbnormalityCategoryPanel), nameof(UIAbnormalityCategoryPanel.SetData))]
         [HarmonyPostfix]
         static void AbnoCardsName(UIAbnormalityCategoryPanel __instance) => __instance.txt_Title.text = "";
 
 
 
-        // UIAbnormalityPanel patch. Display currently owned abno pages. //
+        // Display currently owned abno pages
         [HarmonyPatch(typeof(UIAbnormalityPanel), nameof(UIAbnormalityPanel.SetData))]
         [HarmonyTranspiler]
         static IEnumerable<CodeInstruction> FloorAbnoList(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
@@ -192,7 +169,7 @@ namespace LORAP.Patches
 
 
 
-        // UIEgoCardPanel patch. Display currently owned ego pages. //
+        // Display currently owned ego pages
         [HarmonyPatch(typeof(UIEgoCardPanel), nameof(UIEgoCardPanel.SetData))]
         [HarmonyTranspiler]
         static IEnumerable<CodeInstruction> FloorEGOList(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
@@ -214,13 +191,56 @@ namespace LORAP.Patches
 
 
 
-        // UIFloorPanel patch. Make game always show both abno and ego page panels. //
+        // Make game always show both abno and ego page panels
         [HarmonyPatch(typeof(UIFloorPanel), nameof(UIFloorPanel.OnUpdatePhase))]
         [HarmonyPostfix]
         static void FloorAbnoEGOButtons(UIFloorPanel __instance)
         {
             __instance.abnormalityEgoTap.SetActive(true);
             __instance.onlyAbnormalityTap.SetActive(false);
+        }
+
+
+
+        // Instead of closing it vanilla way it's closed by my mod with additional stuff done
+        [HarmonyPatch(typeof(LevelUpUI), nameof(LevelUpUI.InitBase))]
+        [HarmonyPrefix]
+        static bool FixPickUnbound(LevelUpUI __instance, ref int selectedCount)
+        {
+            if (selectedCount > 4)
+                selectedCount = 4;
+
+            return true;
+        }
+
+
+
+        // When hovering over abno page in unit info, make it higher in render (sorting) order
+        [HarmonyPatch(typeof(EmotionPassiveCardUI), nameof(EmotionPassiveCardUI.OnPointerEnter))]
+        [HarmonyPostfix]
+        static void AbnoPageChangeOrderEnter(EmotionPassiveCardUI __instance, PointerEventData eventData)
+        {
+            Canvas canvas = __instance.gameObject.GetComponent<Canvas>();
+
+            if (canvas == null)
+                return;
+
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 1400;
+        }
+
+        // When hovering exiting over abno page in unit info, make it lower in render (sorting) order
+        [HarmonyPatch(typeof(EmotionPassiveCardUI), nameof(EmotionPassiveCardUI.OnPointerExit))]
+        [HarmonyPostfix]
+        static void AbnoPageChangeOrderExit(EmotionPassiveCardUI __instance, PointerEventData eventData)
+        {
+            Canvas canvas = __instance.gameObject.GetComponent<Canvas>();
+
+            if (canvas == null)
+                return;
+
+            canvas.overrideSorting = false;
+            //canvas.sortingOrder = 1301;
         }
     }
 }

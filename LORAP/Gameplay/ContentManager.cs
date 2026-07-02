@@ -196,6 +196,26 @@ namespace LORAP.Gameplay
                 icon.iconGlow = icon.icon;
             }
 
+            // Add slots for abno pages for unit info in battle (For player only)
+            BattleUnitInformationUI unitInfo = BattleManagerUI._instance.ui_unitInformationPlayer;
+            GameObject abnoPageSlotBase = unitInfo.AbnormalityCardList[0].gameObject;
+
+            for (int i = 0; i < 10; i++)
+            {
+                GameObject copy = GameObject.Instantiate(abnoPageSlotBase, abnoPageSlotBase.transform.parent);
+                unitInfo.AbnormalityCardList.Add(copy.GetComponent<EmotionPassiveCardUI>());
+            }
+
+            // Make each of them a canvas to change the sorting order and make them be displayed on top when hovering
+            foreach (EmotionPassiveCardUI slot in unitInfo.AbnormalityCardList)
+            {
+                slot.gameObject.AddComponent<Canvas>();
+                slot.gameObject.AddComponent<GraphicRaycaster>();
+            }
+
+            // Make horizontal sort element place abno pages closer
+            abnoPageSlotBase.transform.parent.gameObject.GetComponent<HorizontalLayoutGroup>().childControlWidth = true;
+
             // Hide sort buttons in book burn screen
             bookPanel.invenFeedBookList.gradeFilter.transform.Find("[Rect]ToggleList").gameObject.SetActive(false);
         }
