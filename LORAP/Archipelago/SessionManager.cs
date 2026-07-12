@@ -99,7 +99,10 @@ namespace LORAP.Archipelago
             }
 
             // Parse Slot Data
-            SlotDataManager.Parse(((LoginSuccessful)result).SlotData);
+            var slotData = ((LoginSuccessful)result).SlotData;
+
+            SettingsManager.ParseSlotData(slotData);
+            SlotDataManager.ParseSlotData(slotData);
         }
 
         private static void OnMessageRecieved(LogMessage message)

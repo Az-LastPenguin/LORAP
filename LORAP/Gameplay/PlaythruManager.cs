@@ -202,13 +202,13 @@ namespace LORAP.Playthru
         {
             bool allGoalsComplete = true;
 
-            foreach (Endgoal goal in SlotDataManager.Endgoals)
+            foreach (Endgoal goal in SettingsManager.Endgoals.GetValue())
             {
                 switch (goal)
                 {
                     case Endgoal.ReverberationEnsemble:
                         int completedEnsembleBattles = Enumerable.Range(70001, 10).Count(IsStageComplete);
-                        if (completedEnsembleBattles < SlotDataManager.EnsembleBattles)
+                        if (SettingsManager.EnsembleBattles > completedEnsembleBattles)
                             allGoalsComplete = false;
                         break;
 

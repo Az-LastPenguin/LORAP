@@ -115,48 +115,42 @@ namespace LORAP.Gameplay
             Dictionary<LorId, int> bookChapters = new Dictionary<LorId, int>();
 
             // Reception Requirements 
-            if (SlotDataManager.ReceptionsRequireBooks)
+            foreach (var pair in SlotDataManager.ReceptionBookRequirements)
             {
-                foreach (var pair in SlotDataManager.ReceptionBookRequirements)
-                {
-                    StageClassInfo info = StageClassInfoList.Instance.GetData(pair.Key);
+                StageClassInfo info = StageClassInfoList.Instance.GetData(pair.Key);
 
-                    foreach (var id in pair.Value)
-                    {
-                        if (SlotDataManager.BookContentsRandomization == BookContentsRandomization.BookChapter)
-                            bookChapters[new LorId(id)] = DropBookXmlList.Instance.GetData(id).chapter;
-                        else
-                            bookChapters[new LorId(id)] = info.chapter;
-                    }
+                foreach (var id in pair.Value)
+                {
+                    if (SettingsManager.BookContentsRandomization == BookContentsRandomization.BookChapter)
+                        bookChapters[new LorId(id)] = DropBookXmlList.Instance.GetData(id).chapter;
+                    else
+                        bookChapters[new LorId(id)] = info.chapter;
                 }
             }
 
             // Floor Requirements
-            if (SlotDataManager.FloorsRequireBooks)
+            foreach (var item in SlotDataManager.AbnoBookRequirements)
             {
-                foreach (var item in SlotDataManager.AbnoBookRequirements)
+                var seph = item.Key;
+                var stageOrder = SlotDataManager.AbnoFightOrder[seph];
+
+                for (int i = 0; i < item.Value.Count; i++)
                 {
-                    var seph = item.Key;
-                    var stageOrder = SlotDataManager.AbnoFightOrder[seph];
+                    int stageId = stageOrder[i];
+                    int logicalChapter = 1;
 
-                    for (int i = 0; i < item.Value.Count; i++)
+                    if (SlotDataManager.AbnoStageChapters != null &&
+                        SlotDataManager.AbnoStageChapters.TryGetValue(stageId, out int parsedChapter))
                     {
-                        int stageId = stageOrder[i];
-                        int logicalChapter = 1;
+                        logicalChapter = parsedChapter;
+                    }
 
-                        if (SlotDataManager.AbnoStageChapters != null &&
-                            SlotDataManager.AbnoStageChapters.TryGetValue(stageId, out int parsedChapter))
-                        {
-                            logicalChapter = parsedChapter;
-                        }
-
-                        foreach (var book in item.Value[i])
-                        {
-                            if (SlotDataManager.BookContentsRandomization == BookContentsRandomization.BookChapter)
-                                bookChapters[new LorId(book)] = DropBookXmlList.Instance.GetData(book).chapter;
-                            else
-                                bookChapters[new LorId(book)] = logicalChapter;
-                        }
+                    foreach (var book in item.Value[i])
+                    {
+                        if (SettingsManager.BookContentsRandomization == BookContentsRandomization.BookChapter)
+                            bookChapters[new LorId(book)] = DropBookXmlList.Instance.GetData(book).chapter;
+                        else
+                            bookChapters[new LorId(book)] = logicalChapter;
                     }
                 }
             }
@@ -170,7 +164,7 @@ namespace LORAP.Gameplay
                 return;
             }
 
-            if (SlotDataManager.BookContentsRandomization == BookContentsRandomization.Chaotic)
+            if (SettingsManager.BookContentsRandomization == BookContentsRandomization.Chaotic)
             {
                 List<LorId> books = bookChapters.Select(p => p.Key).ToList();
                 int dropsPerBook = allowedDrops.Count / books.Count;

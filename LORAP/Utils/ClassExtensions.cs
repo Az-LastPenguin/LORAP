@@ -68,19 +68,25 @@ namespace LORAP.Utils
 
 
         // Convert integer to a roman number (0 to 100) (Stolen)
-        public static string ToRoman(this int num) => num switch
+        public static string ToRoman(this int num)
         {
-            int n when n >= 100 => "C+",
-            int n when n >= 90 => "XC" + ToRoman(num - 90),
-            int n when n >= 50 => "L" + ToRoman(num - 50),
-            int n when n >= 40 => "XL" + ToRoman(num - 40),
-            int n when n >= 10 => "X" + ToRoman(num - 10),
-            int n when n >= 9 => "IX" + ToRoman(num - 9),
-            int n when n >= 5 => "V" + ToRoman(num - 5),
-            int n when n >= 4 => "IV" + ToRoman(num - 4),
-            int n when n >= 1 => "I" + ToRoman(num - 1),
-            int n when n <= 0 => "0",
-        };
+            if (num <= 0)
+                return "0";
+
+            return num switch
+            {
+                int n when n >= 100 => "C+",
+                int n when n >= 90 => "XC" + ToRoman(num - 90),
+                int n when n >= 50 => "L" + ToRoman(num - 50),
+                int n when n >= 40 => "XL" + ToRoman(num - 40),
+                int n when n >= 10 => "X" + ToRoman(num - 10),
+                int n when n >= 9 => "IX" + ToRoman(num - 9),
+                int n when n >= 5 => "V" + ToRoman(num - 5),
+                int n when n >= 4 => "IV" + ToRoman(num - 4),
+                int n when n >= 1 => "I" + ToRoman(num - 1),
+                _ => "",
+            };
+        }
 
         internal static void AddCallback(this EventTrigger evt, EventTriggerType type, UnityAction<BaseEventData> action)
         {

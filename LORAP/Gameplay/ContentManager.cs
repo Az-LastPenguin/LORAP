@@ -281,7 +281,7 @@ namespace LORAP.Gameplay
         private static void ShuffleAbnoPages()
         {
             // If we don't wanna shuffle pages, just ensure that list is same as vanilla
-            if (SlotDataManager.AbnoPageShuffle == AbnoPageShuffle.None)
+            if (SettingsManager.AbnoPageShuffle == AbnoPageShuffle.None)
             {
                 EmotionCardXmlList.Instance._list = AbnoPageInitialList.ToList();
 
@@ -319,7 +319,7 @@ namespace LORAP.Gameplay
             List<EmotionCardXmlInfo> abnoPages = allPages.Where(p => !GameUtils.FloorSephs.Contains(p.Sephirah)).ToList();
 
             // If we randomize in same floor, just shuffle them around, it's good enough, no need to ensure anything else
-            if (SlotDataManager.AbnoPageShuffle == AbnoPageShuffle.InFloor)
+            if (SettingsManager.AbnoPageShuffle == AbnoPageShuffle.InFloor)
             {
                 foreach (var seph in GameUtils.FloorSephs)
                 {
@@ -378,7 +378,7 @@ namespace LORAP.Gameplay
             }
 
             // Guarantee placement of certain exodia abno pages in the same floor
-            if (SlotDataManager.ExodiaGuarantee)
+            if (SettingsManager.ExodiaGuarantee)
             {
                 foreach ((SephirahType seph, List<int> pages) in exodiaPages.Select(x => (x.Key, x.Value)))
                 {
@@ -399,7 +399,7 @@ namespace LORAP.Gameplay
                         levelList.Add(exPage);
 
                         // If pages are randomized by sets, get other pages from same set and place them in same level
-                        if (SlotDataManager.AbnoPageShuffle != AbnoPageShuffle.Sets)
+                        if (SettingsManager.AbnoPageShuffle != AbnoPageShuffle.Sets)
                             continue;
 
                         foreach (var page in abnoPagePool.Where(p => p.Sephirah == seph && p.Level == exPage.Level).ToList())
@@ -421,7 +421,7 @@ namespace LORAP.Gameplay
 
                 levelList.Add(exPage);
 
-                if (SlotDataManager.AbnoPageShuffle != AbnoPageShuffle.Sets)
+                if (SettingsManager.AbnoPageShuffle != AbnoPageShuffle.Sets)
                     continue;
 
                 foreach (var page in abnoPagePool.Where(p => p.Sephirah == exPage.Sephirah && p.Level == exPage.Level).ToList())
@@ -449,7 +449,7 @@ namespace LORAP.Gameplay
 
         private static void RandomizeAbnoPages()
         {
-            if (SlotDataManager.AbnoPageRandomization == AbnoPageRandomization.None)
+            if (SettingsManager.AbnoPageRandomization == AbnoPageRandomization.None)
                 return;
 
             Debug.Log("[LORAP] Randomizing Abno Pages");
@@ -462,7 +462,7 @@ namespace LORAP.Gameplay
                 List<MentalState> statesPool = new List<MentalState>();
                 List<int> levelsPool = new List<int>();
 
-                if (SlotDataManager.AbnoPageRandomization == AbnoPageRandomization.Guarantee)
+                if (SettingsManager.AbnoPageRandomization == AbnoPageRandomization.Guarantee)
                 {
                     // Guarantee 4 of Positive and 4 of Negative pages
                     statesPool.AddRange(new List<MentalState>()
@@ -506,7 +506,7 @@ namespace LORAP.Gameplay
 
         private static void ShuffleEGOPages()
         {
-            if (SlotDataManager.EgoPageShuffle == false)
+            if (!SettingsManager.EgoPageShuffle)
             {
                 EmotionEgoXmlList.Instance._list = EGOPageInitialList;
 
@@ -593,7 +593,7 @@ namespace LORAP.Gameplay
                 [SephirahType.Hokma] = 70009,
                 [SephirahType.Keter] = 70010,
             };
-            if (SlotDataManager.ShuffleEnsembleFloors)
+            if (SettingsManager.ShuffleEnsembleFloors)
             {
                 List<int> values = EnsembleFloorToStage.Values.ToList();
                 System.Random Random = GameUtils.CreateRandom("ensemble_shuffle");
@@ -1120,7 +1120,7 @@ namespace LORAP.Gameplay
                 [SephirahType.Keter]     = new List<SephirahType>() { },
             };
 
-            if (SlotDataManager.Endgoals.Contains(Endgoal.BlackSilence) || SlotDataManager.Endgoals.Contains(Endgoal.DistortedEnsemble))
+            if (SettingsManager.Endgoals.GetValue().Contains(Endgoal.BlackSilence) || SettingsManager.Endgoals.GetValue().Contains(Endgoal.DistortedEnsemble))
             {
                 foreach (var pair in BSDEPositions)
                 {
@@ -1136,7 +1136,7 @@ namespace LORAP.Gameplay
                 }
             }
 
-            if (SlotDataManager.Endgoals.Contains(Endgoal.ReverberationEnsemble))
+            if (SettingsManager.Endgoals.GetValue().Contains(Endgoal.ReverberationEnsemble))
             {
                 foreach (var pair in DEPositions)
                 {

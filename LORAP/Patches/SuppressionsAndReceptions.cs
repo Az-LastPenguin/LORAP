@@ -319,7 +319,7 @@ namespace LORAP.Patches
             codeMatcher.MatchStartForward(OpCodes.Call, OpCodes.Callvirt, OpCodes.Stloc_S, OpCodes.Ldloc_S)
                 .RemoveInstructions(47)
                 .Insert(Transpilers.EmitDelegate<Action<BattleUnitModel>>((unit) => {
-                    if (SlotDataManager.EnemiesTurnIntoChecks && StageController.Instance.stageType == StageType.Invitation)
+                    if (SettingsManager.EnemiesTurnIntoChecks && StageController.Instance.stageType == StageType.Invitation)
                     {
                         string res = LocationManager.SendRandomReceptionCheck(StageController.Instance._stageModel.ClassInfo.id.id);
                         if (res != "")

@@ -3,53 +3,9 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 
 namespace LORAP.Archipelago
 {
-    internal enum Endgoal
-    {
-        ReverberationEnsemble,
-        BlackSilence,
-        KeterRealization,
-        DistortedEnsemble
-    }
-
-    internal enum AbnoPageShuffle
-    {
-        None,
-        InFloor,
-        Sets,
-        Pages
-    }
-
-    internal enum AbnoPageRandomization
-    {
-        None,
-        Guarantee,
-        Unbound
-    }
-
-    internal enum BookContentsRandomization
-    {
-        BookChapter,
-        StageChapter,
-        Chaotic
-    }
-
-    internal enum BattleNodeKind
-    {
-        Reception,
-        Stage
-    }
-
-    internal enum DeathlinkAction
-    {
-        UnitDeath,
-        FloorWipe,
-        StageLoss
-    }
-
     internal class BattleNode
     {
         public string Key;
@@ -87,54 +43,11 @@ namespace LORAP.Archipelago
         }
     }
 
+    // NOTE: This handles generation specific SlotData like reception tree, Reception requirements, etc. Options are handled in SettingsManager
     internal static class SlotDataManager
     {
-        /* ENDGOAL-RELATED */
-        internal static List<Endgoal> Endgoals;
-
-        internal static long EnsembleBattles;
-
-        /* RANDOMIZATION */
         internal static int ClientSeed;
-        internal static string EffectiveLORAPSeed;
 
-        internal static AbnoPageShuffle AbnoPageShuffle;
-
-        internal static AbnoPageRandomization AbnoPageRandomization;
-
-        internal static bool ExodiaGuarantee;
-
-        internal static bool EgoPageShuffle;
-
-        // Page randomization here (someday)
-
-        internal static bool RandomizeBlackSilencePage;
-
-        internal static BookContentsRandomization BookContentsRandomization;
-
-        internal static bool ShuffleAbnos;
-
-        internal static bool ShuffleRealizations;
-
-        internal static bool ShuffleEnsembleFloors;
-
-        /* PROGRESSION */
-        internal static bool ReceptionsRequireBooks;
-
-        internal static bool FloorsRequireBooks;
-
-        internal static bool EnemiesTurnIntoChecks;
-
-        internal static bool EndgoalsAlwaysUnlocked;
-
-        /* OTHER */
-        internal static bool Deathlink;
-
-        internal static DeathlinkAction OutgoingDeathlink;
-
-        internal static DeathlinkAction IncomingDeathlink;
-
-        /* SLOT DATA */
         internal static Dictionary<int, List<int>> ReceptionBookRequirements;
 
         internal static BattleTree BattleTree;
@@ -151,55 +64,10 @@ namespace LORAP.Archipelago
 
         internal static int LastReception;
 
-        internal static void Parse(Dictionary<string, object> slotData)
+        internal static void ParseSlotData(Dictionary<string, object> slotData)
         {
-            /* ENDGOAL-RELATED */
-            Endgoals = ((JArray)slotData["endgoals"]).Select(i => (Endgoal)Enum.Parse(typeof(Endgoal), i.Value<string>().Replace(" ", ""))).ToList();
-
-            EnsembleBattles = (long)slotData["ensemble_battles"];
-
-            /* RANDOMIZATION */
             ClientSeed = Convert.ToInt32(slotData["lorap_client_seed"]);
-            EffectiveLORAPSeed = slotData.ContainsKey("effective_lorap_seed") ? Convert.ToString(slotData["effective_lorap_seed"]) : "unknown";
-            Debug.Log($"[LORAP] Effective LORAP seed: {EffectiveLORAPSeed}");
 
-            AbnoPageShuffle = (AbnoPageShuffle)(long)slotData["abno_page_shuffle"];
-
-            AbnoPageRandomization = (AbnoPageRandomization)(long)slotData["abno_page_randomization"];
-
-            ExodiaGuarantee = (long)slotData["exodia_guaratnee"] == 1;
-
-            EgoPageShuffle = (long)slotData["ego_page_shuffle"] == 1;
-
-            // Page randomization here (someday)
-
-            RandomizeBlackSilencePage = (long)slotData["randomize_black_silence_page"] == 1;
-
-            BookContentsRandomization = (BookContentsRandomization)(long)slotData["book_contents_randomization"];
-
-            ShuffleAbnos = (long)slotData["shuffle_abnos"] == 1;
-
-            ShuffleRealizations = (long)slotData["shuffle_realizations"] == 1;
-
-            ShuffleEnsembleFloors = (long)slotData["shuffle_ensemble_floor"] == 1;
-
-            /* PROGRESSION */
-            ReceptionsRequireBooks = (long)slotData["receptions_require_books"] == 1;
-
-            FloorsRequireBooks = (long)slotData["floors_require_books"] == 1;
-
-            EnemiesTurnIntoChecks = (long)slotData["enemies_turn_into_checks"] == 1;
-
-            EndgoalsAlwaysUnlocked = (long)slotData["endgoals_always_unlocked"] == 1;
-
-            /* OTHER */
-            Deathlink = (long)slotData["deathlink"] == 1;
-
-            IncomingDeathlink = (DeathlinkAction)(long)slotData["incoming_deathlink"];
-
-            OutgoingDeathlink = (DeathlinkAction)(long)slotData["outgoing_deathlink"];
-
-            /* SLOT DATA */
             FirstReception = Convert.ToInt32(slotData["first_reception"]);
 
             LastReception = Convert.ToInt32(slotData["last_reception"]);
