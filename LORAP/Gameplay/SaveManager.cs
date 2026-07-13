@@ -137,11 +137,11 @@ namespace LORAP.Gameplay
                 }
             }
 
-            if (PlaythruManager.BinahUnlocked)
-                PlaythruManager.UnlockBinah(true);
-
-            if (PlaythruManager.BlackSilenceUnlocked)
-                PlaythruManager.UnlockBlackSilence(true);
+            // if (PlaythruManager.BinahUnlocked)
+            //     PlaythruManager.UnlockBinah(true);
+            // 
+            // if (PlaythruManager.BlackSilenceUnlocked)
+            //     PlaythruManager.UnlockBlackSilence(true);
         }
 
 

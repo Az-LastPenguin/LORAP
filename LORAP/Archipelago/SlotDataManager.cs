@@ -86,9 +86,6 @@ namespace LORAP.Archipelago
                 ReceptionBookRequirements[Int32.Parse(o.Key)] = o.Value.Select(v => (int)v.Value<long>()).ToList();
             }
 
-            int b = 0;
-            int a = 12 / b;
-
             AbnoBookRequirements = new Dictionary<SephirahType, List<List<int>>>();
             var abnoBooks = (JArray)GetSlotData(slotData, "abno_book_requirements");
             for (int i = 0; i < 10; i++)
