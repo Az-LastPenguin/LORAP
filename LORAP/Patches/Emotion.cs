@@ -1,5 +1,7 @@
 ﻿using HarmonyLib;
+using LORAP.Playthru;
 using LORAP.Utils;
+using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 using UnityEngine;
@@ -22,10 +24,15 @@ namespace LORAP.Patches
                 4 => 7,
                 5 => 9,
                 6 => 9,
-                7 => 10,
-                8 => 11,
-                9 => 12,
-                10 => 13,
+                7 => 9,
+                8 => 10,
+                9 => 10,
+                10 => 10,
+                11 => 11,
+                12 => 11,
+                13 => 12,
+                14 => 12,
+                15 => 13,
                 _ => 13,
             };
 
@@ -42,8 +49,9 @@ namespace LORAP.Patches
             __result = __instance.EmotionLevel switch
             {
                 int n when (n <= 5) => __instance.EmotionLevel,
-                int n when (n <= 10) => 5 + (__instance.EmotionLevel - 4) / 2,
-                int n when (n > 10) => 8 + (__instance.EmotionLevel - 8) / 3,
+                int n when (n <= 15) => 5 + (__instance.EmotionLevel - 5) / 2,
+                int n when (n <= 30) => 10 + (__instance.EmotionLevel - 15) / 3,
+                _ => 0,
             };
 
             return false;
@@ -85,7 +93,7 @@ namespace LORAP.Patches
                 return false;
             }
 
-            __instance._maximumEmotionLevel = 30;
+            __instance._maximumEmotionLevel = Math.Min(PlaythruManager.MaxEmotionLevel, 30);
 
             return false;
         }

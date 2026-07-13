@@ -347,6 +347,16 @@ namespace LORAP.Playthru
         internal static void UpMaxEmotion(bool silent = false)
         {
             MaxEmotionLevel++;
+
+            // If received during the battle, make it work
+            if (StageController.Instance.battleState == StageController.BattleState.Battle)
+            {
+                foreach (BattleUnitModel unit in StageController.Instance._librarianTeam.GetList())
+                {
+                    unit.emotionDetail.SetMaxEmotionLevel(MaxEmotionLevel);
+                }
+            }
+
             if (!silent)
                 MessagePopup.ShowMessage($"Max emotion level +1!");
         }

@@ -245,7 +245,7 @@ namespace LORAP.Archipelago
             }
         }
 
-        // Saving/Loading overriden values // TODO: Complete it
+        // Saving/Loading overriden values // TODO: Complete it after making the client
         internal static SaveData GetSaveData()
         {
             SaveData saveData = new SaveData();
