@@ -4,7 +4,11 @@ using LORAP.Utils;
 using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
+using TMPro;
+using UI;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using static UnityEngine.EventSystems.EventTrigger;
 
 namespace LORAP.Patches
 {
@@ -211,6 +215,56 @@ namespace LORAP.Patches
             pos2 = selected[1].position;
 
             __result = new Vector3[] { pos1, pos2 };
+
+            return false;
+        }
+
+        // Change Emotion Level info when hovering over unit's emotion level (This is a refactor + change of OnPointerEnter)
+        [HarmonyPatch(typeof(BattleUnitProfileInfoUI_EmotionLvTooltip), nameof(BattleUnitProfileInfoUI_EmotionLvTooltip.OnPointerEnter))]
+        [HarmonyPrefix]
+        static bool CustomEmotionLevelInfo(BattleUnitProfileInfoUI_EmotionLvTooltip __instance, PointerEventData eventData)
+        {
+            if (__instance._characterProfileUI == null)
+                return false;
+
+            BattleUnitModel unitModel = __instance._characterProfileUI.UnitModel;
+
+            if (unitModel == null)
+                return false;
+
+            __instance._layout.gameObject.SetActive(true);
+
+            foreach (var item in __instance._slotList)
+            {
+                item.gameObject.SetActive(false);
+            }
+
+            Faction faction = unitModel.faction;
+            Direction allyFormationDirection = StageController.Instance.AllyFormationDirection;
+
+            RectTransform component = __instance._layout.GetComponent<RectTransform>();
+            component.pivot = ((faction == Faction.Player) != (allyFormationDirection == Direction.RIGHT)) ? new Vector2(1f, 0f) : Vector2.zero;
+            Rect rect = component.rect;
+            rect.position = Vector2.zero;
+
+            // TooltipSlot.SetActivated()
+            BattleUnitProfileInfoUI_EmotionLvTooltip_Slot slot = __instance._slotList[0];
+
+            slot.gameObject.SetActive(true);
+
+            slot._imgLinearDodge.enabled = true;
+            slot._imgFrame._Saturation = 1f;
+            slot._textUI.text = "Emotion Level Rewards";
+            slot._textUI.gameObject.GetComponent<RectTransform>().sizeDelta = new Vector2(300, 40);
+            slot.gameObject.GetComponent<RectTransform>().sizeDelta = new Vector2(513, 400);
+
+            TextMeshProUGUI text = slot.transform.Find("[Layout]RewardList").gameObject.GetComponentInChildren<TextMeshProUGUI>();
+            text.gameObject.GetComponentInChildren<RectTransform>().sizeDelta = new Vector2(435, 280);
+            text.gameObject.GetComponentInChildren<UITextDataLoader>().enabled = false;
+            text.text = "Max Light + 1 at levels 1 - 5, 7, 9, 11, 13, 15, 18, 21, 24, 27 and 30;\n" +
+                "Speed Dice +1 every 4 levels;\n" +
+                "Level 5: After playing two or more Combat Pages in a Scene, draw an additional page next Scene.";
+            text.color = slot._activatedColor;
 
             return false;
         }
