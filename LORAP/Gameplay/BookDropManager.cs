@@ -1,5 +1,7 @@
 using GameSave;
+using LORAP.CustomUI;
 using LORAP.Archipelago;
+using LORAP.Playthru;
 using LORAP.Utils;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,10 +28,14 @@ namespace LORAP.Gameplay
             [Rarity.Special] = 1
         };
 
+        internal const int CombatPageMaxCopies = 150;
+
         internal static List<BookDrop> AllDrops = new List<BookDrop>();
 
         internal static Dictionary<LorId, List<BookDrop>> BookDrops = new Dictionary<LorId, List<BookDrop>>();
+        internal static List<List<BookDrop>> BookOfEverythingBundles = new List<List<BookDrop>>();
 
+        internal static int BookOfEverythingOpened = 0;
         internal static int BoosterPacksOpened = 0;
         internal static Dictionary<Rarity, List<BookDrop>> BoosterPackRarityDrops = new Dictionary<Rarity, List<BookDrop>>()
         {
@@ -51,9 +57,14 @@ namespace LORAP.Gameplay
             Debug.Log("[LORAP] Initializing Book Content Manager");
 
             AllDrops.Clear();
+            BookDrops.Clear();
+            BookOfEverythingBundles.Clear();
+            foreach (var rarityDrops in BoosterPackRarityDrops.Values)
+                rarityDrops.Clear();
 
-            // Parse every drop table to get every combat page and key ppage that can be acquired from books
-            List<LorId> collectiblePages = new List<LorId>();
+            // Parse every drop table to get every combat page and key page that can be acquired from books
+            HashSet<LorId> collectibleCombatPages = new HashSet<LorId>();
+            HashSet<LorId> collectibleKeyPages = new HashSet<LorId>();
 
             foreach (var info in DropBookXmlList.Instance._list)
             {
@@ -62,13 +73,15 @@ namespace LORAP.Gameplay
 
                 foreach (var page in info.DropItemList)
                 {
-                    if (!collectiblePages.Contains(page.id))
-                        collectiblePages.Add(page.id);
+                    if (page.itemType == DropItemType.Card)
+                        collectibleCombatPages.Add(page.id);
+                    else if (page.itemType == DropItemType.Equip)
+                        collectibleKeyPages.Add(page.id);
                 }
             }
 
             // Add combat pages that are acquired after receptions & game end
-            collectiblePages.AddRange(new List<LorId>()
+            collectibleCombatPages.UnionWith(new List<LorId>()
             {
                 new LorId(704008), new LorId(704003), new LorId(704018), new LorId(704005), new LorId(704016), new LorId(704006), new LorId(704015), new LorId(704007), new LorId(705032), new LorId(705033),
                 new LorId(704004), new LorId(704011), new LorId(704012), new LorId(704013), new LorId(704014), new LorId(704001), new LorId(704009), new LorId(704010), new LorId(705002), new LorId(705003),
@@ -85,7 +98,7 @@ namespace LORAP.Gameplay
                     id = card.id,
                     chapter = card.Chapter,
                     type = DropItemType.Card,
-                    collectible = collectiblePages.Contains(card.id),
+                    collectible = collectibleCombatPages.Contains(card.id),
                 });
             }
 
@@ -97,7 +110,7 @@ namespace LORAP.Gameplay
                     id = book.id,
                     chapter = book.Chapter,
                     type = DropItemType.Equip,
-                    collectible = collectiblePages.Contains(book.id),
+                    collectible = collectibleKeyPages.Contains(book.id),
                 });
             }
 
@@ -107,6 +120,12 @@ namespace LORAP.Gameplay
                 Rarity dropRarity = drop.type == DropItemType.Card ? ItemXmlDataList.instance.GetCardItem(drop.id).Rarity : BookXmlList.Instance.GetData(drop.id).Rarity;
 
                 BoosterPackRarityDrops[dropRarity].Add(drop);
+            }
+
+            if (SlotDataManager.BoESpheresEnabled)
+            {
+                BuildBookOfEverythingBundles();
+                return;
             }
 
             
@@ -227,7 +246,15 @@ namespace LORAP.Gameplay
             // Generate Drops
             if (bookID == new LorId("lorap", 123456)) // TODO: Make it. Also bias utility combat pages (?)
             {
+                if (!PlaythruManager.CanOpenBookOfEverything())
+                {
+                    MessagePopup.ShowMessage("No Book of Everything bundle is available yet.");
+                    return dropResults;
+                }
 
+                dropResults.AddRange(GrantBookOfEverythingBundle());
+
+                DropBookInventoryModel.Instance.RemoveBook(bookID);
             }
             else if (bookID == new LorId("lorap", 123457))
             {
@@ -245,31 +272,11 @@ namespace LORAP.Gameplay
                         }
                     }
 
-                    List<BookDrop> drops = BoosterPackRarityDrops[dropRarity].Where(
-                                                                                    d => d.type == DropItemType.Card
-                                                                                    ? InventoryModel.Instance.GetCardCount(d.id) < 150
-                                                                                    : BookInventoryModel.Instance.GetBookCount(d.id) < KeyPageRarityLimits[dropRarity]
-                                                                                   ).ToList();
+                    List<BookDrop> drops = BoosterPackRarityDrops[dropRarity].Where(CanReceiveDrop).ToList();
 
                     BookDrop selectedDrop = drops[Random.Next(0, drops.Count)];
 
-                    BookDropResult dropResult = new BookDropResult()
-                    {
-                        id = selectedDrop.id,
-                        itemType = selectedDrop.type,
-                        number = 1,
-                    };
-
-                    if (selectedDrop.type == DropItemType.Card)
-                    {
-                        InventoryModel.Instance.AddCard(selectedDrop.id, 1);
-                    }
-                    else
-                    {
-                        dropResult.bookInstanceId = BookInventoryModel.Instance.CreateBook(selectedDrop.id).instanceId;
-                    }
-
-                    dropResults.Add(dropResult);
+                    dropResults.AddRange(GrantDrop(selectedDrop, 1));
                 }
 
                 BoosterPacksOpened++;
@@ -315,12 +322,126 @@ namespace LORAP.Gameplay
             return dropResults;
         }
 
+        internal static void BuildBookOfEverythingBundles()
+        {
+            int bundleCount = SlotDataManager.BoEBundlesPerSphere?.Sum() ?? 0;
+            if (bundleCount <= 0)
+                return;
+
+            var Random = GameUtils.CreateRandom("book_of_everything_bundles");
+            List<BookDrop> combatPages = AllDrops
+                .Where(d => d.collectible && d.type == DropItemType.Card)
+                .GroupBy(d => d.id)
+                .Select(g => g.First())
+                .ToList();
+            List<BookDrop> keyPages = AllDrops
+                .Where(d => d.collectible && d.type == DropItemType.Equip)
+                .GroupBy(d => d.id)
+                .Select(g => g.First())
+                .ToList();
+
+            for (int i = 0; i < bundleCount; i++)
+                BookOfEverythingBundles.Add(new List<BookDrop>());
+
+            AddDropsToBundles(combatPages, Random);
+            AddDropsToBundles(keyPages, Random, bundleCount / 2);
+        }
+
+        private static void AddDropsToBundles(List<BookDrop> drops, System.Random random, int startIndex = 0)
+        {
+            int bundleCount = BookOfEverythingBundles.Count;
+            int bundleIndex = startIndex;
+
+            while (drops.Count > 0)
+            {
+                BookOfEverythingBundles[bundleIndex].Add(drops.TakeRandom(random));
+                bundleIndex = (bundleIndex + 1) % bundleCount;
+            }
+        }
+
+        internal static List<BookDropResult> GrantBookOfEverythingBundle()
+        {
+            List<BookDropResult> dropResults = new List<BookDropResult>();
+
+            if (BookOfEverythingOpened >= BookOfEverythingBundles.Count)
+                return dropResults;
+
+            foreach (BookDrop drop in BookOfEverythingBundles[BookOfEverythingOpened])
+                dropResults.AddRange(GrantDropToMaxStack(drop));
+
+            BookOfEverythingOpened++;
+            return dropResults;
+        }
+
+        internal static List<BookDropResult> GrantDropToMaxStack(BookDrop drop)
+        {
+            int missingCopies = GetMaxCopies(drop) - GetOwnedCopies(drop);
+            return GrantDrop(drop, missingCopies);
+        }
+
+        private static List<BookDropResult> GrantDrop(BookDrop drop, int copies)
+        {
+            List<BookDropResult> dropResults = new List<BookDropResult>();
+            int copiesToGrant = System.Math.Min(copies, GetMaxCopies(drop) - GetOwnedCopies(drop));
+
+            if (copiesToGrant <= 0)
+                return dropResults;
+
+            if (drop.type == DropItemType.Card)
+            {
+                InventoryModel.Instance.AddCard(drop.id, copiesToGrant);
+                dropResults.Add(new BookDropResult()
+                {
+                    id = drop.id,
+                    itemType = drop.type,
+                    number = copiesToGrant,
+                });
+            }
+            else
+            {
+                for (int i = 0; i < copiesToGrant; i++)
+                {
+                    BookDropResult dropResult = new BookDropResult()
+                    {
+                        id = drop.id,
+                        itemType = drop.type,
+                        number = 1,
+                    };
+
+                    dropResult.bookInstanceId = BookInventoryModel.Instance.CreateBook(drop.id).instanceId;
+                    dropResults.Add(dropResult);
+                }
+            }
+
+            return dropResults;
+        }
+
+        private static bool CanReceiveDrop(BookDrop drop)
+        {
+            return GetOwnedCopies(drop) < GetMaxCopies(drop);
+        }
+
+        private static int GetOwnedCopies(BookDrop drop)
+        {
+            return drop.type == DropItemType.Card
+                ? InventoryModel.Instance.GetCardCount(drop.id)
+                : BookInventoryModel.Instance.GetBookCount(drop.id);
+        }
+
+        private static int GetMaxCopies(BookDrop drop)
+        {
+            return drop.type == DropItemType.Card
+                ? CombatPageMaxCopies
+                : KeyPageRarityLimits[BookXmlList.Instance.GetData(drop.id).Rarity];
+        }
+
         // Saving/loading game state
         internal static SaveData GetSaveData()
         {
             SaveData saveData = new SaveData();
 
             // Save how many booster packs opened
+            saveData.AddData("bookOfEverythingOpened", new SaveData(BookOfEverythingOpened));
             saveData.AddData("boosterPacksOpened", new SaveData(BoosterPacksOpened));
 
             return saveData;
@@ -328,6 +449,7 @@ namespace LORAP.Gameplay
 
         internal static void LoadFromSaveData(SaveData saveData)
         {
+            BookOfEverythingOpened = saveData.GetInt("bookOfEverythingOpened");
             BoosterPacksOpened = saveData.GetInt("boosterPacksOpened");
         }
     }
