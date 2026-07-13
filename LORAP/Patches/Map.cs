@@ -37,7 +37,7 @@ namespace LORAP.Patches
                 60003, 60004,
                 70001, 70002, 70003, 70004, 70005, 70006, 70007, 70008, 70009, 70010
             };
-            if (endgoals.Contains(battleNode.Id))
+            if (SettingsManager.EndgoalsAlwaysUnlocked && endgoals.Contains(battleNode.Id))
             {
                 __result = StoryState.Clear;
                 return false;
