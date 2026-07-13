@@ -58,6 +58,7 @@ namespace LORAP.Archipelago
             // If we already have an active session, don't create a new one
             if (session != null && session.Socket.Connected)
                 return;
+
             // If we have don't an active session, or do but somehow it's not connected, create a new one
             session = ArchipelagoSessionFactory.CreateSession(IP);
 
@@ -99,7 +100,10 @@ namespace LORAP.Archipelago
             }
 
             // Parse Slot Data
-            SlotDataManager.Parse(((LoginSuccessful)result).SlotData);
+            var slotData = ((LoginSuccessful)result).SlotData;
+
+            SettingsManager.ParseSlotData(slotData);
+            SlotDataManager.ParseSlotData(slotData);
         }
 
         private static void OnMessageRecieved(LogMessage message)

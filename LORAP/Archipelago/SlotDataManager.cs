@@ -3,59 +3,9 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 
 namespace LORAP.Archipelago
 {
-    internal enum Endgoal
-    {
-        ReverberationEnsemble,
-        BlackSilence,
-        KeterRealization,
-        DistortedEnsemble
-    }
-
-    internal enum AbnoPageShuffle
-    {
-        None,
-        InFloor,
-        Sets,
-        Pages
-    }
-
-    internal enum AbnoPageRandomization
-    {
-        None,
-        Guarantee,
-        Unbound
-    }
-
-    internal enum BookContentsRandomization
-    {
-        BookChapter,
-        StageChapter,
-        Chaotic
-    }
-
-    internal enum ProgressionMode
-    {
-        BookRequirements,
-        BoESpheres
-    }
-
-    internal enum BattleNodeKind
-    {
-        Reception,
-        Stage
-    }
-
-    internal enum DeathlinkAction
-    {
-        UnitDeath,
-        FloorWipe,
-        StageLoss
-    }
-
     internal class BattleNode
     {
         public string Key;
@@ -110,60 +60,17 @@ namespace LORAP.Archipelago
         }
     }
 
+    // NOTE: This handles generation specific SlotData like reception tree, Reception requirements, etc. Options are handled in SettingsManager
     internal static class SlotDataManager
     {
-        /* ENDGOAL-RELATED */
-        internal static List<Endgoal> Endgoals;
-
-        internal static long EnsembleBattles;
-
-        /* RANDOMIZATION */
         internal static int ClientSeed;
-        internal static string EffectiveLORAPSeed;
-
-        internal static AbnoPageShuffle AbnoPageShuffle;
-
-        internal static AbnoPageRandomization AbnoPageRandomization;
-
-        internal static bool ExodiaGuarantee;
-
-        internal static bool EgoPageShuffle;
-
-        // Page randomization here (someday)
-
-        internal static bool RandomizeBlackSilencePage;
-
-        internal static BookContentsRandomization BookContentsRandomization;
 
         internal static ProgressionMode ProgressionMode;
 
         internal static bool BoESpheresEnabled => ProgressionMode == ProgressionMode.BoESpheres;
 
         internal static int SphereClearPercentage;
-
-        internal static bool ShuffleAbnos;
-
-        internal static bool ShuffleRealizations;
-
-        internal static bool ShuffleEnsembleFloors;
-
-        /* PROGRESSION */
-        internal static bool ReceptionsRequireBooks;
-
-        internal static bool FloorsRequireBooks;
-
-        internal static bool EnemiesTurnIntoChecks;
-
-        internal static bool EndgoalsAlwaysUnlocked;
-
-        /* OTHER */
-        internal static bool Deathlink;
-
-        internal static DeathlinkAction OutgoingDeathlink;
-
-        internal static DeathlinkAction IncomingDeathlink;
-
-        /* SLOT DATA */
+  
         internal static Dictionary<int, List<int>> ReceptionBookRequirements;
 
         internal static BattleTree BattleTree;
@@ -210,33 +117,17 @@ namespace LORAP.Archipelago
             int cleared = sphereNodes.Count(n => PlaythruManager.IsStageComplete(n.Id));
             return cleared >= required;
         }
-
-        internal static void Parse(Dictionary<string, object> slotData)
+      
+        private static object GetSlotData(Dictionary<string, object> slotData, string key)
         {
-            /* ENDGOAL-RELATED */
-            Endgoals = ((JArray)slotData["endgoals"]).Select(i => (Endgoal)Enum.Parse(typeof(Endgoal), i.Value<string>().Replace(" ", ""))).ToList();
+            if (!slotData.ContainsKey(key))
+                throw new Exception($"Data {key} is missing from SlotData! Possible mod and .apworld version mismatch?");
 
-            EnsembleBattles = (long)slotData["ensemble_battles"];
+            return slotData[key];
+        }
 
-            /* RANDOMIZATION */
-            ClientSeed = Convert.ToInt32(slotData["lorap_client_seed"]);
-            EffectiveLORAPSeed = slotData.ContainsKey("effective_lorap_seed") ? Convert.ToString(slotData["effective_lorap_seed"]) : "unknown";
-            Debug.Log($"[LORAP] Effective LORAP seed: {EffectiveLORAPSeed}");
-
-            AbnoPageShuffle = (AbnoPageShuffle)(long)slotData["abno_page_shuffle"];
-
-            AbnoPageRandomization = (AbnoPageRandomization)(long)slotData["abno_page_randomization"];
-
-            ExodiaGuarantee = (long)slotData["exodia_guaratnee"] == 1;
-
-            EgoPageShuffle = (long)slotData["ego_page_shuffle"] == 1;
-
-            // Page randomization here (someday)
-
-            RandomizeBlackSilencePage = (long)slotData["randomize_black_silence_page"] == 1;
-
-            BookContentsRandomization = (BookContentsRandomization)(long)slotData["book_contents_randomization"];
-
+        internal static void ParseSlotData(Dictionary<string, object> slotData)
+        {
             ProgressionMode = slotData.ContainsKey("progression_mode")
                 ? (ProgressionMode)(long)slotData["progression_mode"]
                 : ProgressionMode.BookRequirements;
@@ -244,61 +135,37 @@ namespace LORAP.Archipelago
             SphereClearPercentage = slotData.ContainsKey("sphere_clear_percentage")
                 ? Convert.ToInt32(slotData["sphere_clear_percentage"])
                 : 70;
+          
+            ClientSeed = Convert.ToInt32(GetSlotData(slotData, "lorap_client_seed"));
 
-            ShuffleAbnos = (long)slotData["shuffle_abnos"] == 1;
+            FirstReception = Convert.ToInt32(GetSlotData(slotData, "first_reception"));
 
-            ShuffleRealizations = (long)slotData["shuffle_realizations"] == 1;
-
-            ShuffleEnsembleFloors = (long)slotData["shuffle_ensemble_floor"] == 1;
-
-            /* PROGRESSION */
-            ReceptionsRequireBooks = (long)slotData["receptions_require_books"] == 1;
-
-            FloorsRequireBooks = (long)slotData["floors_require_books"] == 1;
-
-            EnemiesTurnIntoChecks = (long)slotData["enemies_turn_into_checks"] == 1;
-
-            EndgoalsAlwaysUnlocked = (long)slotData["endgoals_always_unlocked"] == 1;
-
-            /* OTHER */
-            Deathlink = (long)slotData["deathlink"] == 1;
-
-            IncomingDeathlink = (DeathlinkAction)(long)slotData["incoming_deathlink"];
-
-            OutgoingDeathlink = (DeathlinkAction)(long)slotData["outgoing_deathlink"];
-
-            /* SLOT DATA */
-            FirstReception = Convert.ToInt32(slotData["first_reception"]);
-
-            LastReception = Convert.ToInt32(slotData["last_reception"]);
+            LastReception = Convert.ToInt32(GetSlotData(slotData, "last_reception"));
 
             ReceptionBookRequirements = new Dictionary<int, List<int>>();
-            foreach (var o in (JObject)slotData["reception_book_requirements"])
+            foreach (var o in (JObject)GetSlotData(slotData, "reception_book_requirements"))
             {
                 ReceptionBookRequirements[Int32.Parse(o.Key)] = o.Value.Select(v => (int)v.Value<long>()).ToList();
             }
 
             AbnoBookRequirements = new Dictionary<SephirahType, List<List<int>>>();
-            var abnoBooks = (JArray)slotData["abno_book_requirements"];
+            var abnoBooks = (JArray)GetSlotData(slotData, "abno_book_requirements");
             for (int i = 0; i < 10; i++)
             {
                 AbnoBookRequirements[(SephirahType)(i + 1)] = abnoBooks[i].Select(j => j.Select(k => (int)k.Value<long>()).ToList()).ToList();
             }
 
             AbnoFightOrder = new Dictionary<SephirahType, List<int>>();
-            var abnoOrder = (JArray)slotData["abno_fight_order"];
+            var abnoOrder = (JArray)GetSlotData(slotData, "abno_fight_order");
             for (int i = 0; i < 10; i++)
             {
                 AbnoFightOrder[(SephirahType)(i + 1)] = abnoOrder[i].Select(j => (int)j.Value<long>()).ToList();
             }
 
             AbnoStageChapters = new Dictionary<int, int>();
-            if (slotData.ContainsKey("abno_stage_chapters"))
+            foreach (var o in (JObject)GetSlotData(slotData, "abno_stage_chapters"))
             {
-                foreach (var o in (JObject)slotData["abno_stage_chapters"])
-                {
-                    AbnoStageChapters[Int32.Parse(o.Key)] = o.Value.Value<int>();
-                }
+                AbnoStageChapters[Int32.Parse(o.Key)] = o.Value.Value<int>();
             }
 
             BoEBundlesPerSphere = slotData.ContainsKey("boe_bundles_per_sphere")

@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using HarmonyLib;
 
 namespace LORAP.Patches
@@ -17,7 +11,9 @@ namespace LORAP.Patches
             Harmony = new Harmony("LORAP");
 
             Harmony.PatchAll(typeof(AbnoAndEGOPages));
+            Harmony.PatchAll(typeof(EmotionPatches));
             Harmony.PatchAll(typeof(GachaPatches));
+            Harmony.PatchAll(typeof(MapPatches));
             Harmony.PatchAll(typeof(OtherPatches));
             Harmony.PatchAll(typeof(RemoveStory));
             Harmony.PatchAll(typeof(SuppressionsAndReceptions));

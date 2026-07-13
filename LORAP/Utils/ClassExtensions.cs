@@ -2,6 +2,7 @@ using LORAP.Playthru;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 
@@ -66,30 +67,30 @@ namespace LORAP.Utils
         }
 
 
-        // Convert integer to a roman number (0 to 100)
-        private static string[][] romanNumerals = new string[][] {
-            new string[] { "", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX" }, // Ones
-            new string[] { "", "X", "XX", "XXX", "XL", "L", "LX", "LXX", "LXXX", "XC" }, // Tens
-        };
-
-        internal static string ToRoman(this int number)
+        // Convert integer to a roman number (0 to 100) (Stolen)
+        internal static string ToRoman(this int num)
         {
-            if (number == 0)
+            if (num <= 0)
                 return "0";
 
-            char[] chars = number.ToString().ToCharArray();
+            return ToRomanRecursive(num);
+        }
 
-            if (chars.Count() > 2)
-                return "C";
-
-            string result = "";
-
-            for (int i = 0; i < chars.Count(); i++)
+        private static string ToRomanRecursive(int num)
+        {
+            return num switch
             {
-                result += romanNumerals[i][Int32.Parse(chars[i].ToString())];
-            }
-
-            return result;
+                int n when n >= 100 => "C+",
+                int n when n >= 90 => "XC" + ToRoman(num - 90),
+                int n when n >= 50 => "L" + ToRoman(num - 50),
+                int n when n >= 40 => "XL" + ToRoman(num - 40),
+                int n when n >= 10 => "X" + ToRoman(num - 10),
+                int n when n >= 9 => "IX" + ToRoman(num - 9),
+                int n when n >= 5 => "V" + ToRoman(num - 5),
+                int n when n >= 4 => "IV" + ToRoman(num - 4),
+                int n when n >= 1 => "I" + ToRoman(num - 1),
+                _ => "",
+            };
         }
 
         internal static void AddCallback(this EventTrigger evt, EventTriggerType type, UnityAction<BaseEventData> action)

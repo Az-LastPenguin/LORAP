@@ -25,7 +25,23 @@ namespace LORAP.Utils
             SephirahType.Keter,
         };
 
-        internal static int CreateSeed(string stream, int salt = 0)
+        private static uint MixHash(uint hash, int value)
+        {
+            unchecked
+            {
+                hash ^= (uint)value;
+                hash *= 16777619u;
+                hash ^= (uint)(value >> 8);
+                hash *= 16777619u;
+                hash ^= (uint)(value >> 16);
+                hash *= 16777619u;
+                hash ^= (uint)(value >> 24);
+                hash *= 16777619u;
+                return hash;
+            }
+        }
+
+        private static int CreateSeed(string stream, int salt = 0)
         {
             unchecked
             {
@@ -47,22 +63,6 @@ namespace LORAP.Utils
         internal static System.Random CreateRandom(string stream, int salt = 0)
         {
             return new System.Random(CreateSeed(stream, salt));
-        }
-
-        private static uint MixHash(uint hash, int value)
-        {
-            unchecked
-            {
-                hash ^= (uint)value;
-                hash *= 16777619u;
-                hash ^= (uint)(value >> 8);
-                hash *= 16777619u;
-                hash ^= (uint)(value >> 16);
-                hash *= 16777619u;
-                hash ^= (uint)(value >> 24);
-                hash *= 16777619u;
-                return hash;
-            }
         }
     }
 

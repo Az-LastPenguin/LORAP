@@ -125,6 +125,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Archipelago\SettingsManager.cs" />
     <Compile Include="Archipelago\SlotDataManager.cs" />
     <Compile Include="Archipelago\ItemManager.cs" />
     <Compile Include="Archipelago\LocationManager.cs" />
@@ -141,7 +142,9 @@
     <Compile Include="Gameplay\SaveManager.cs" />
     <Compile Include="LORAP.cs" />
     <Compile Include="Patches\AbnoAndEGOPages.cs" />
+    <Compile Include="Patches\Emotion.cs" />
     <Compile Include="Patches\Gacha.cs" />
+    <Compile Include="Patches\Map.cs" />
     <Compile Include="Patches\Other.cs" />
     <Compile Include="Patches\PatchManager.cs" />
     <Compile Include="Patches\RemoveStory.cs" />

@@ -146,7 +146,7 @@ namespace LORAP.Playthru
             LibraryModel.Instance._currentChapter = 7;
 
             // Put the player in the game, loading is done
-            GameSceneManager.Instance.ActivateUIController(initUIScene: true);
+            GameSceneManager.Instance.ActivateUIController(true);
             GlobalGameManager.Instance._gamePlayInitialized = true;
 
             // Can now start item pop coroutine
@@ -206,13 +206,13 @@ namespace LORAP.Playthru
         {
             bool allGoalsComplete = true;
 
-            foreach (Endgoal goal in SlotDataManager.Endgoals)
+            foreach (Endgoal goal in SettingsManager.Endgoals.GetValue())
             {
                 switch (goal)
                 {
                     case Endgoal.ReverberationEnsemble:
                         int completedEnsembleBattles = Enumerable.Range(70001, 10).Count(IsStageComplete);
-                        if (completedEnsembleBattles < SlotDataManager.EnsembleBattles)
+                        if (SettingsManager.EnsembleBattles > completedEnsembleBattles)
                             allGoalsComplete = false;
                         break;
 
@@ -386,6 +386,16 @@ namespace LORAP.Playthru
         internal static void UpMaxEmotion(bool silent = false)
         {
             MaxEmotionLevel++;
+
+            // If received during the battle, make it work
+            if (StageController.Instance.battleState == StageController.BattleState.Battle)
+            {
+                foreach (BattleUnitModel unit in StageController.Instance._librarianTeam.GetList())
+                {
+                    unit.emotionDetail.SetMaxEmotionLevel(MaxEmotionLevel);
+                }
+            }
+
             if (!silent)
                 MessagePopup.ShowMessage($"Max emotion level +1!");
         }
