@@ -1,12 +1,13 @@
-﻿using System;
-using LORAP.Archipelago;
+﻿using LORAP.Archipelago;
 using LORAP.Gameplay;
+using LORAP.Playthru;
 using LORAP.Utils;
-using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using LORAP.Playthru;
-using UnityEngine.UI;
+using System;
+using System.Diagnostics;
+using TMPro;
+using System.Linq;
 
 namespace LORAP.CustomUI 
 {
@@ -84,15 +85,14 @@ namespace LORAP.CustomUI
             }
             catch (Exception e)
             {
-                SetInfoText(e.Message);
+                string origin = $"{e.TargetSite.DeclaringType.FullName}.{e.TargetSite.Name}";
+                string exText = $"[{origin}]\n{e.Message}";
+                SetInfoText(exText);
 
                 SessionManager.EndSession();
 
-                Debug.LogException(e);
-                //Debug.LogError(e.StackTrace);
+                UnityEngine.Debug.LogException(e);
                 return;
-
-                //throw e;
             }
         }
 

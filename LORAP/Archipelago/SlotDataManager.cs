@@ -64,41 +64,49 @@ namespace LORAP.Archipelago
 
         internal static int LastReception;
 
+        private static object GetSlotData(Dictionary<string, object> slotData, string key)
+        {
+            if (!slotData.ContainsKey(key))
+                throw new Exception($"Data {key} is missing from SlotData! Possible mod and .apworld version mismatch?");
+
+            return slotData[key];
+        }
+
         internal static void ParseSlotData(Dictionary<string, object> slotData)
         {
-            ClientSeed = Convert.ToInt32(slotData["lorap_client_seed"]);
+            ClientSeed = Convert.ToInt32(GetSlotData(slotData, "lorap_client_seed"));
 
-            FirstReception = Convert.ToInt32(slotData["first_reception"]);
+            FirstReception = Convert.ToInt32(GetSlotData(slotData, "first_reception"));
 
-            LastReception = Convert.ToInt32(slotData["last_reception"]);
+            LastReception = Convert.ToInt32(GetSlotData(slotData, "last_reception"));
 
             ReceptionBookRequirements = new Dictionary<int, List<int>>();
-            foreach (var o in (JObject)slotData["reception_book_requirements"])
+            foreach (var o in (JObject)GetSlotData(slotData, "reception_book_requirements"))
             {
                 ReceptionBookRequirements[Int32.Parse(o.Key)] = o.Value.Select(v => (int)v.Value<long>()).ToList();
             }
 
+            int b = 0;
+            int a = 12 / b;
+
             AbnoBookRequirements = new Dictionary<SephirahType, List<List<int>>>();
-            var abnoBooks = (JArray)slotData["abno_book_requirements"];
+            var abnoBooks = (JArray)GetSlotData(slotData, "abno_book_requirements");
             for (int i = 0; i < 10; i++)
             {
                 AbnoBookRequirements[(SephirahType)(i + 1)] = abnoBooks[i].Select(j => j.Select(k => (int)k.Value<long>()).ToList()).ToList();
             }
 
             AbnoFightOrder = new Dictionary<SephirahType, List<int>>();
-            var abnoOrder = (JArray)slotData["abno_fight_order"];
+            var abnoOrder = (JArray)GetSlotData(slotData, "abno_fight_order");
             for (int i = 0; i < 10; i++)
             {
                 AbnoFightOrder[(SephirahType)(i + 1)] = abnoOrder[i].Select(j => (int)j.Value<long>()).ToList();
             }
 
             AbnoStageChapters = new Dictionary<int, int>();
-            if (slotData.ContainsKey("abno_stage_chapters"))
+            foreach (var o in (JObject)GetSlotData(slotData, "abno_stage_chapters"))
             {
-                foreach (var o in (JObject)slotData["abno_stage_chapters"])
-                {
-                    AbnoStageChapters[Int32.Parse(o.Key)] = o.Value.Value<int>();
-                }
+                AbnoStageChapters[Int32.Parse(o.Key)] = o.Value.Value<int>();
             }
 
             if (!slotData.ContainsKey("battle_nodes") || !slotData.ContainsKey("battle_edges"))

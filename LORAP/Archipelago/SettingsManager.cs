@@ -216,7 +216,7 @@ namespace LORAP.Archipelago
                     continue;
 
                 if (!slotData.ContainsKey(setting.SlotDataID))
-                    throw new Exception($"Option {setting.SlotDataID} ({setting.Name}) is missing from SlotData!\n Mod and .apworld version mismatch?");
+                    throw new Exception($"Option {setting.SlotDataID} ({setting.Name}) is missing from SlotData!\n Possible mod and .apworld version mismatch?");
 
                 // An exception for this option specfically. Might figure out automation later
                 if (setting == Endgoals)
@@ -245,7 +245,7 @@ namespace LORAP.Archipelago
             }
         }
 
-        // Saving/Loading overriden values
+        // Saving/Loading overriden values // TODO: Complete it
         internal static SaveData GetSaveData()
         {
             SaveData saveData = new SaveData();

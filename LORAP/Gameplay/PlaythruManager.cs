@@ -144,7 +144,7 @@ namespace LORAP.Playthru
             LibraryModel.Instance._currentChapter = 7;
 
             // Put the player in the game, loading is done
-            GameSceneManager.Instance.ActivateUIController(initUIScene: true);
+            GameSceneManager.Instance.ActivateUIController(true);
             GlobalGameManager.Instance._gamePlayInitialized = true;
 
             // Can now start item pop coroutine
