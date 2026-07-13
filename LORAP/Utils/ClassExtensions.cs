@@ -68,11 +68,16 @@ namespace LORAP.Utils
 
 
         // Convert integer to a roman number (0 to 100) (Stolen)
-        public static string ToRoman(this int num)
+        internal static string ToRoman(this int num)
         {
             if (num <= 0)
                 return "0";
 
+            return ToRomanRecursive(num);
+        }
+
+        private static string ToRomanRecursive(int num)
+        {
             return num switch
             {
                 int n when n >= 100 => "C+",
