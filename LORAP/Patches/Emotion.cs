@@ -261,7 +261,7 @@ namespace LORAP.Patches
             TextMeshProUGUI text = slot.transform.Find("[Layout]RewardList").gameObject.GetComponentInChildren<TextMeshProUGUI>();
             text.gameObject.GetComponentInChildren<RectTransform>().sizeDelta = new Vector2(435, 280);
             text.gameObject.GetComponentInChildren<UITextDataLoader>().enabled = false;
-            text.text = "Max Light + 1 at levels 1 - 5, 7, 9, 11, 13, 15, 18, 21, 24, 27 and 30;\n" +
+            text.text = "Max Light +1 at levels 1 - 5, 7, 9, 11, 13, 15, 18, 21, 24, 27 and 30;\n" +
                 "Speed Dice +1 every 4 levels;\n" +
                 "Level 5: After playing two or more Combat Pages in a Scene, draw an additional page next Scene.";
             text.color = slot._activatedColor;
