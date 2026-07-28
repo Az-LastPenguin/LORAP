@@ -80,7 +80,7 @@ namespace LORAP.Playthru
             ContentManager.SetupRunContent();
 
             // Init book drop manager
-            BookDropManager.Init();
+            BookDropManager.PrepareDrops();
 
             // Load Save
             SaveManager.LoadGame();
@@ -366,7 +366,7 @@ namespace LORAP.Playthru
 
         internal static bool CanOpenBookOfEverything()
         {
-            return BookDropManager.BookOfEverythingOpened < GetUnlockedBoEBundleLimit();
+            return BookDropManager.BooksOfEverythingOpened < GetUnlockedBoEBundleLimit();
         }
 
         internal static void UpMaxAttributionPoints(bool silent = false)

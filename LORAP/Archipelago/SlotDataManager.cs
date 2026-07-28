@@ -65,17 +65,15 @@ namespace LORAP.Archipelago
     {
         internal static int ClientSeed;
 
-        internal static ProgressionMode ProgressionMode;
+        //internal static ProgressionMode ProgressionMode;
 
-        internal static bool BoESpheresEnabled => ProgressionMode == ProgressionMode.BoESpheres;
+        //internal static bool BoESpheresEnabled => ProgressionMode == ProgressionMode.BoESpheres;
 
-        internal static int SphereClearPercentage;
+        //internal static int SphereClearPercentage;
   
         internal static Dictionary<int, List<int>> ReceptionBookRequirements;
 
         internal static BattleTree BattleTree;
-
-        internal static bool HasBattleTree => BattleTree != null && BattleTree.Nodes.Count > 0;
 
         internal static Dictionary<SephirahType, List<List<int>>> AbnoBookRequirements;
 
@@ -91,6 +89,11 @@ namespace LORAP.Archipelago
 
         internal static int LastReception;
 
+        // Utils
+        internal static bool HasBattleTree => BattleTree != null && BattleTree.Nodes.Count > 0;
+
+        internal static bool BoESpheresEnabled => SettingsManager.RunProgressionMode == ProgressionMode.BoESpheres;
+
         internal static int GetBoEBundlesRequiredThroughSphere(int sphere)
         {
             if (BoEBundlesCumulative == null || sphere <= 0)
@@ -102,14 +105,14 @@ namespace LORAP.Archipelago
 
         internal static bool IsSphereClearEnough(int sphere)
         {
-            if (!BoESpheresEnabled || BattleTree == null)
+            if (!BoESpheresEnabled)
                 return true;
 
             List<BattleNode> sphereNodes = BattleTree.Nodes.Values.Where(n => n.Sphere == sphere).ToList();
             if (sphereNodes.Count == 0)
                 return true;
 
-            int percentage = Math.Max(0, Math.Min(100, SphereClearPercentage));
+            int percentage = Math.Max(0, Math.Min(100, SettingsManager.SphereClearPercentage.GetValue()));
             int required = (int)Math.Ceiling(sphereNodes.Count * percentage / 100.0);
             if (required <= 0)
                 return true;
@@ -117,7 +120,8 @@ namespace LORAP.Archipelago
             int cleared = sphereNodes.Count(n => PlaythruManager.IsStageComplete(n.Id));
             return cleared >= required;
         }
-      
+
+        // Main Code
         private static object GetSlotData(Dictionary<string, object> slotData, string key)
         {
             if (!slotData.ContainsKey(key))
@@ -128,14 +132,6 @@ namespace LORAP.Archipelago
 
         internal static void ParseSlotData(Dictionary<string, object> slotData)
         {
-            ProgressionMode = slotData.ContainsKey("progression_mode")
-                ? (ProgressionMode)(long)slotData["progression_mode"]
-                : ProgressionMode.BookRequirements;
-
-            SphereClearPercentage = slotData.ContainsKey("sphere_clear_percentage")
-                ? Convert.ToInt32(slotData["sphere_clear_percentage"])
-                : 70;
-          
             ClientSeed = Convert.ToInt32(GetSlotData(slotData, "lorap_client_seed"));
 
             FirstReception = Convert.ToInt32(GetSlotData(slotData, "first_reception"));

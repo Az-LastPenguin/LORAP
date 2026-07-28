@@ -1,5 +1,7 @@
 using HarmonyLib;
+using LORAP.CustomUI;
 using LORAP.Gameplay;
+using LORAP.Playthru;
 using System.Collections.Generic; 
 using UI;
 using UnityEngine;
@@ -53,6 +55,20 @@ namespace LORAP.Patches
             return false;
         }
 
+        // Stop player from burning books if a book of everything is selected and there is no bundles available
+        [HarmonyPatch(typeof(UIBookPanel), nameof(UIBookPanel.ButtonDownFeedBook))]
+        [HarmonyPrefix]
+        static bool NoBoEBundle(UIBookPanel __instance)
+        {
+            if (!PlaythruManager.CanOpenBookOfEverything())
+            {
+                MessagePopup.ShowMessage("Book of Everything refuses to be burned at this time.");
+                return false;
+            }
+
+            return true;
+        }
+
         // Change the way contents of the books are shown in order to show random pages from BOE and show custom pools of pages
         [HarmonyPatch(typeof(UIShowUsingBookInfoPanel), nameof(UIShowUsingBookInfoPanel.ShowBookInfoData))]
         [HarmonyPrefix]
@@ -80,23 +96,24 @@ namespace LORAP.Patches
                 return false;
             }
 
-            if (BookDropManager.BookDrops.ContainsKey(dropBookInfo.id))
-            {
-                var drops = BookDropManager.BookDrops[dropBookInfo.id];
-
-                List<UIRewardBookData> list = new List<UIRewardBookData>();
-                List<UIRewardCardData> list2 = new List<UIRewardCardData>();
-
-                foreach (var d in drops)
-                {
-                    if (d.type == DropItemType.Card)
-                        list2.Add(new UIRewardCardData(new DiceCardItemModel(ItemXmlDataList.instance.GetCardItem(d.id)), 1, 0));
-                    else if (d.type == DropItemType.Equip)
-                        list.Add(new UIRewardBookData(BookXmlList.Instance.GetData(d.id), 1, 0));
-                }
-
-                __instance.rewardItemList.SetItemsData(list, list2);
-            }
+            // TODO: TO BE REMOVED
+            //if (BookDropManager.BookDrops.ContainsKey(dropBookInfo.id))
+            //{
+            //    var drops = BookDropManager.BookDrops[dropBookInfo.id];
+            //
+            //    List<UIRewardBookData> list = new List<UIRewardBookData>();
+            //    List<UIRewardCardData> list2 = new List<UIRewardCardData>();
+            //
+            //    foreach (var d in drops)
+            //    {
+            //        if (d.type == DropItemType.Card)
+            //            list2.Add(new UIRewardCardData(new DiceCardItemModel(ItemXmlDataList.instance.GetCardItem(d.id)), 1, 0));
+            //        else if (d.type == DropItemType.Equip)
+            //            list.Add(new UIRewardBookData(BookXmlList.Instance.GetData(d.id), 1, 0));
+            //    }
+            //
+            //    __instance.rewardItemList.SetItemsData(list, list2);
+            //}
 
             __instance.SetColor(UIColorManager.Manager.GetUIColor(UIColor.Default));
             __instance.img_BookIcon.color = Color.white;

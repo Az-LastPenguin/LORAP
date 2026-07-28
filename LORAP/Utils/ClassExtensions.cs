@@ -110,7 +110,7 @@ namespace LORAP.Utils
         /// <param name="list"></param>
         /// <param name="random"></param>
         /// <returns></returns>
-        internal static T TakeRandom<T>(this List<T> list, System.Random random)
+        internal static T TakeRandom<T>(this IList<T> list, System.Random random)
         {
             int rng = random.Next(list.Count);
             T element = list.ElementAt(rng);
@@ -124,11 +124,31 @@ namespace LORAP.Utils
         /// <typeparam name="T"></typeparam>
         /// <param name="list"></param>
         /// <returns></returns>
-        internal static T Pop<T>(this List<T> list)
+        internal static T Pop<T>(this IList<T> list)
         {
             T element = list.ElementAt(0);
             list.RemoveAt(0);
             return element;
+        }
+
+        // Stolen from some unity forum post (and modified a bit)
+        /// <summary>
+        /// In-place shuffle of the list.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <returns></returns>
+        internal static void Shuffle<T>(this IList<T> ts, System.Random random)
+        {
+            var count = ts.Count;
+            var last = count - 1;
+            for (var i = 0; i < last; ++i)
+            {
+                var r = random.Next(i, count);
+                var tmp = ts[i];
+                ts[i] = ts[r];
+                ts[r] = tmp;
+            }
         }
     }
 }
