@@ -1,7 +1,9 @@
 # Library of Ruina Archipelago (LORAP) Troubleshooting
 ## First and foremost!
 **If you're having trouble INSTALLING the mod, please make sure you followed the guides in Q&A to the T before reading this!**
+
 **Make sure the versions of .apworld and the mod are matching!**
+
 **If you still have trouble with something, don't hesitate to ask for help in the AP AfterDark server!**
 
 Some .apworld/mod versions can be mismatched by design (e.g. when .apworld/mod is updated without any changes on the other one) and every mod version starting from in-dev 1.0 has and will specify which .apworld version it works with.
