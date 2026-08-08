@@ -14,7 +14,7 @@ Installing testing versions is same as installing stable version of the mod, exc
 0. **Unsubscribe from the workshop version of the mod!**
 1. Download the LORAP.7z archive of the version you want to play.
 2. Unarchive it into LibraryOfRuina/LibraryOfRuina_Data/Mods folder. (Must be: Mods/LORAP/LORAP.dll)
-3. Download the relevant .apworld file and do same things as with the stable version. (Setting up YAML, generating, hosting)
+3. Download the relevant .apworld file and do same things as with the stable version. (Setting up YAML, generating, hosting, check the guide mentioned before if you forgot how to)
 
 Playing testing versions is always appreciated. Make sure to report bugs and share ideas!
 
