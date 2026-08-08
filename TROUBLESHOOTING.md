@@ -8,8 +8,8 @@
 
 Some .apworld/mod versions can be mismatched by design (e.g. when .apworld/mod is updated without any changes on the other one) and every mod version starting from in-dev 1.0 has and will specify which .apworld version it works with.
 
-## When starting the game with 1.0 in-dev version of the mod, the game doesn't load after selecting mods!
-That's a bug i still haven't fixed due to always forgetting about it, ignore and try again, it has a really small chance of happening.
+## When starting the game with 1.0 in-dev version of the mod, the game doesn't load after selecting mods without any errors!
+That's probably a bug i still haven't fixed due to always forgetting about it, ignore and try again, it has a really small chance of happening.
 
 ## When trying to connect i receive an error "The given key was not present in the dictionary" / "Option is missing from SlotData" / "battle node is missing visual coordinates"!
 There is 99% chance that your mod version is not matching the server's .apworld version. Make sure to follow the installation guide correctly, or if you're not the host, that the host has used the correct .apworld version.
