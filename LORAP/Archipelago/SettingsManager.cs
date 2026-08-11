@@ -55,6 +55,8 @@ namespace LORAP.Archipelago
     {
         string Name { get; set; }
 
+        string Description { get; set; }
+
         string SlotDataID { get; set; }
 
         bool Overridable { get; set; }
@@ -68,6 +70,8 @@ namespace LORAP.Archipelago
     {
         public string Name { get; set; } // Will be displayed in Settings menu
 
+        public string Description { get; set; }
+
         public string SlotDataID { get; set; } // If it has SlotDataID then it's AP option and mod will try to pull it from SlotData
 
         public T Value;
@@ -76,9 +80,10 @@ namespace LORAP.Archipelago
 
         public T Override; // If Overridable, the setting will always return Override instead of Value, Value is used to restore the original setting value
 
-        public Setting(string name, string slotdataid = "", bool overridable = false, T defaultValue = default)
+        public Setting(string name, string slotdataid = "", bool overridable = false, string desc = "", T defaultValue = default)
         {
             Name = name;
+            Description = desc;
             SlotDataID = slotdataid;
             Value = defaultValue;
             Overridable = overridable;
@@ -162,13 +167,13 @@ namespace LORAP.Archipelago
         }
     }
 
-    // NOTE: This does handle SlotData BUT it only handles OPTIONS from the SlotData. Everything else is handled by SlotDataManager
+    // NOTE: This does handle SlotData BUT it only handles OPTIONS from the SlotData. Everything else is handled by SlotDataManager // TODO: Add all descs
     internal static class SettingsManager
     {
         internal static readonly Dictionary<string, ISetting> AllSettings = new Dictionary<string, ISetting>(); // Used for automating saving and loading
 
         /** CLIENT OPTIONS **/
-        internal static Setting<bool> SendHintsOnReceptionScout = new Setting<bool>("Auto Reception Hints", defaultValue: true); // TODO: Change to false (or an Enum) after making AP Client
+        internal static Setting<bool> SendHintsOnReceptionScout = new Setting<bool>("Auto Reception Hints", defaultValue: false, desc: "Automatically creates hints for items in stages when opened on the map.");
 
         /** AP OPTIONS **/
         /* ENDGOAL-RELATED */
@@ -193,7 +198,7 @@ namespace LORAP.Archipelago
 
         internal static Setting<bool> ShuffleRealizations = new Setting<bool>("Shuffle Realizations", "shuffle_realizations");
 
-        internal static Setting<bool> ShuffleEnsembleFloors = new Setting<bool>("Shuffle Ensemble Floors", "shuffle_ensemble_floor", true);
+        internal static Setting<bool> ShuffleEnsembleFloors = new Setting<bool>("Shuffle Ensemble Floors", "shuffle_ensemble_floor", true, "!!Reconnect to the game after changing this setting in order for it to work properly!!");
 
         /* PROGRESSION */
         internal static Setting<bool> EnemiesTurnIntoChecks = new Setting<bool>("Enemies Turn Into Checks", "enemies_turn_into_checks", true);
@@ -245,7 +250,7 @@ namespace LORAP.Archipelago
             }
         }
 
-        // Saving/Loading overriden values // TODO: Complete it after making the client
+        // Saving/Loading overriden values
         internal static SaveData GetSaveData()
         {
             SaveData saveData = new SaveData();
@@ -274,7 +279,26 @@ namespace LORAP.Archipelago
 
         internal static void LoadFromSaveData(SaveData saveData)
         {
-            
+            foreach (KeyValuePair<string, SaveData> pair in saveData._dic)
+            {
+                if (!AllSettings.ContainsKey(pair.Key))
+                    continue;
+
+                ISetting setting = AllSettings[pair.Key];
+
+                switch (setting)
+                {
+                    case Setting<bool> s:
+                        setting.SetValue(pair.Value.GetIntSelf() == 1, true);
+                        break;
+                    case Setting<int> s:
+                        setting.SetValue(pair.Value.GetIntSelf() == 1, true);
+                        break;
+                    case var _ when setting.GetType().GetGenericArguments()[0].IsEnum:
+                        setting.SetValue(Enum.ToObject(setting.GetType().GetGenericArguments()[0], pair.Value.GetIntSelf()), true);
+                        break;
+                }
+            }   
         }
     }
 }

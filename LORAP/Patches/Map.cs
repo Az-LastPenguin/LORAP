@@ -5,6 +5,7 @@ using LORAP.CustomUI;
 using LORAP.Playthru;
 using LORAP.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UI;
@@ -95,7 +96,8 @@ namespace LORAP.Patches
                 if (battleNode.Kind == BattleNodeKind.Stage && storyData[0].currentState == StoryState.Clear)
                     icon.SetIcon(UIUtils.GetFloorIconSet(storyData[0]._id, battleNode.AssignedFloor));
 
-                if (storyData[0]._id >= 70001 && storyData[0]._id <= 70010)
+                // If it's an ensemble stage and i can be seen, set its icon
+                if (storyData[0]._id >= 70001 && storyData[0]._id <= 70010 && storyData[0].currentState == StoryState.Clear)
                     icon.SetIcon(UISpriteDataManager.instance.floorIconSet[(int)storyData[0].floorOnlyList[0]]);
 
                 // Show the icon on the map
@@ -143,9 +145,9 @@ namespace LORAP.Patches
             List<long> receptionLocations = LocationManager.GetUncheckedStageLocations(stage._id >= 210005 && stage._id <= 210008 ? 210009 : stage._id);
             List<long> locationsWithHints = receptionLocations.Where(l => LocationManager.KnownHints.Any(h => !h.Found && h.LocationId == l)).ToList();
 
-            // Scout all unchecked locations (they're already known, but this time we scout for hints.) // TODO: Make an option to toggle the hint scouting
+            // Scout all unchecked locations (they're already known, but this time we scout for hints.)
             // If this recepion is visible because of a hint, don't scout.
-            if (locationsWithHints.Count == 0)
+            if (locationsWithHints.Count == 0 && SettingsManager.SendHintsOnReceptionScout.Value)
                 SessionManager.Locations.ScoutLocationsAsync(HintCreationPolicy.CreateAndAnnounceOnce, receptionLocations.ToArray());
 
             // Fill the item list
@@ -237,7 +239,7 @@ namespace LORAP.Patches
 
             if (stage == null)
             {
-                MessagePopup.ShowMessage($"Stage is null.");
+                MessagePopup.Instance.ShowMessage($"Stage is null.");
 
                 UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Cancel);
 
@@ -247,7 +249,7 @@ namespace LORAP.Patches
             // If it's reverb ensemble stage, check if player has the floor for it
             if (stage._id >= 70001 && stage._id <= 70010 && !stage.floorOnlyList[0].IsOpen())
             {
-                MessagePopup.ShowMessage($"{stage.floorOnlyList[0].FloorName()} is not unlocked.");
+                MessagePopup.Instance.ShowMessage($"{stage.floorOnlyList[0].FloorName()} is not unlocked.");
 
                 UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Cancel);
 
@@ -263,7 +265,7 @@ namespace LORAP.Patches
 
             if (!battleNode.AssignedFloor.IsOpen())
             {
-                MessagePopup.ShowMessage($"{battleNode.AssignedFloor.FloorName()} is not unlocked.");
+                MessagePopup.Instance.ShowMessage($"{battleNode.AssignedFloor.FloorName()} is not unlocked.");
 
                 UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Cancel);
 
@@ -415,6 +417,19 @@ namespace LORAP.Patches
         static void FakeInfBooksForInvitation(UIInvitationDropBookSlot __instance, LorId bookId)
         {
             __instance.txt_bookNum.text = "∞";
+        }
+
+
+
+        // Make reception map regain inertia after zooming
+        [HarmonyPatch(typeof(UIStoryProgressPanel), nameof(UIStoryProgressPanel.ZoomProcess))]
+        [HarmonyPostfix]
+        static IEnumerator FixMapZoomInertia(IEnumerator __result, UIStoryProgressPanel __instance)
+        {
+            while (__result.MoveNext())
+                yield return __result.Current;
+
+            __instance.scroll_viewPort.inertia = true;
         }
     }
 }

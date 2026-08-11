@@ -51,7 +51,7 @@ namespace LORAP.Gameplay
             Debug.Log("[LORAP] Saving AP Run");
 
             // Save Last Session Data
-            SaveLastSessionData();
+            SessionManager.SaveLastSessionData();
 
             // Some vanilla shenanigans
             GameSave.SaveManager.Instance._packageIdTable = new Dictionary<string, int>();
@@ -62,12 +62,13 @@ namespace LORAP.Gameplay
 
             saveData.AddData("inventory", InventoryModel.Instance.GetSaveData()); // Combat Pages
             saveData.AddData("bookInventory", BookInventoryModel.Instance.GetSaveData()); // Key Pages
-            saveData.AddData("usingBookInventory", DropBookInventoryModel.Instance.GetSaveData()); // Books //GetDropBookData());
+            saveData.AddData("usingBookInventory", DropBookInventoryModel.Instance.GetSaveData()); // Books
             saveData.AddData("deckList", DeckListModel.Instance.GetSaveData()); // Decks
-            saveData.AddData("customStorage", LibraryModel.Instance._customStorage.GetSaveData()); // Custom storage for mods(?)
+            saveData.AddData("customStorage", LibraryModel.Instance._customStorage.GetSaveData()); // Custom storage for mods
             saveData.AddData("floorData", GetFloorData()); // Floor units
             saveData.AddData("playthrough", PlaythruManager.GetSaveData()); // Playthrough data
             saveData.AddData("itemManager", ItemManager.GetSaveData()); // Item Manager
+            saveData.AddData("settingsManager", SettingsManager.GetSaveData()); // Settings Manager
 
             // Save package ids (for modded books & other stuff)
             SaveData packageSaveData = new SaveData();
@@ -89,7 +90,7 @@ namespace LORAP.Gameplay
             // Init as empty object if there is no save file yet so that game knows
             SessionManager.DataStorage[Scope.Slot, "SaveData"].Initialize("");
 
-            string CompressedSaveData = SessionManager.DataStorage[Scope.Slot, "SaveData"];
+            string CompressedSaveData = SessionManager.DataStorage[Scope.Slot, "SaveData"]; // TODO: Make Async
 
             // If object is empty, it means save file is empty, skip loading
             if (CompressedSaveData == "")
@@ -122,6 +123,7 @@ namespace LORAP.Gameplay
             LibraryModel.Instance._customStorage.LoadFromSaveData(SaveData.GetData("customStorage"));
             PlaythruManager.LoadFromSaveData(SaveData.GetData("playthrough"));
             ItemManager.LoadFromSaveData(SaveData.GetData("itemManager"));
+            SettingsManager.LoadFromSaveData(SaveData.GetData("settingsManager"));
 
             SaveData data = SaveData.GetData("floorData");
             foreach (LibraryFloorModel floor in LibraryModel.Instance._floorList)
@@ -136,31 +138,7 @@ namespace LORAP.Gameplay
                     num++;
                 }
             }
-
-            // if (PlaythruManager.BinahUnlocked)
-            //     PlaythruManager.UnlockBinah(true);
-            // 
-            // if (PlaythruManager.BlackSilenceUnlocked)
-            //     PlaythruManager.UnlockBlackSilence(true);
         }
-
-
-        /*private static SaveData GetDropBookData()
-        {
-            SaveData saveData = new SaveData();
-            SaveData saveData2 = new SaveData();
-            foreach (OwnDropBookModel book in DropBookInventoryModel.Instance._bookList)
-            {
-                SaveData saveData3 = new SaveData();
-                saveData3.AddData("id", new SaveData(book.XmlInfo.id.id));
-                saveData3.AddData("pkg", new SaveData(book.XmlInfo.id.packageId));
-                saveData3.AddData("num", new SaveData(book.num));
-                saveData2.AddToList(saveData3);
-            }
-            saveData.AddData("bookList", saveData2);
-
-            return saveData;
-        }*/
 
         private static SaveData GetFloorData()
         {
@@ -178,59 +156,6 @@ namespace LORAP.Gameplay
 
             return saveData;
         }
-
-
-        internal static SessionData LoadLastSessionData() // TODO: Possibly make shorter 
-        {
-            if (!Directory.Exists($"{Application.persistentDataPath}/Archipelago"))
-                Directory.CreateDirectory($"{Application.persistentDataPath}/Archipelago");
-
-            if (!File.Exists($"{Application.persistentDataPath}/Archipelago/LastSession"))
-            {
-                SessionManager.sessionData = new SessionData();
-                return SessionManager.sessionData;
-            }
-
-            BinaryFormatter binaryFormatter = new BinaryFormatter();
-            try
-            {
-                SessionData Data;
-                using (FileStream fileStream = File.Open($"{Application.persistentDataPath}/Archipelago/LastSession", FileMode.Open))
-                {
-                    Data = binaryFormatter.Deserialize(fileStream) as SessionData;
-                }
-                if (Data == null)
-                {
-                    throw new Exception();
-                }
-
-                return Data;
-            }
-            catch (Exception)
-            {
-                return new SessionData() { IP = "", SlotName = "", Password = "", Progress = 0f };
-            }
-        }
-
-        internal static void SaveLastSessionData() // TODO: Make this shorter too
-        {
-            if (SessionManager.sessionData == null)
-                SessionManager.sessionData = new SessionData();
-
-            int allLocations = LocationManager.AllLocations.Count;
-            int checkedLocations = LocationManager.CheckedLocations.Count;
-            SessionManager.sessionData.Progress = allLocations > 0 ? (float)checkedLocations / allLocations : SessionManager.sessionData.Progress;
-            SessionManager.sessionData.Password = "";
-
-            if (!Directory.Exists($"{Application.persistentDataPath}/Archipelago"))
-                Directory.CreateDirectory($"{Application.persistentDataPath}/Archipelago");
-
-            using (FileStream serializationStream = File.Create($"{Application.persistentDataPath}/Archipelago/LastSession"))
-            {
-                new BinaryFormatter().Serialize(serializationStream, SessionManager.sessionData);
-            }
-        }
-
     }
 
     internal static class SaveDataExtension
@@ -298,11 +223,6 @@ namespace LORAP.Gameplay
                 saveData._type = SaveDataType.Int;
                 saveData._pdi = serialized.Value<int>();
             }
-            /*else if (serialized is ulong)
-            {
-                saveData._type = SaveDataType.UnsignedLong;
-                saveData._pdul = (ulong)serialized;
-            }*/
             else if (serialized.Type == JTokenType.String)
             {
                 saveData._type = SaveDataType.String;

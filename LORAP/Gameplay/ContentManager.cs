@@ -1,16 +1,11 @@
 using LORAP.Archipelago;
-using LORAP.CustomUI;
 using LORAP.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using TMPro;
 using UI;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using static BattleUnitInformationUI_PassiveList;
 
 namespace LORAP.Gameplay
 {
@@ -19,23 +14,11 @@ namespace LORAP.Gameplay
         private class MapNode
         {
             public string Key = "";
-            //public MapGraph Graph;
             public List<MapNode> Next = new List<MapNode>();
             public List<MapNode> Prev = new List<MapNode>();
             public float X = 0;
             public float Y = 0;
         }
-
-        //private class MapGraph
-        //{
-        //    public MapNode FirstNode;
-        //    public List<MapNode> Nodes = new List<MapNode>();
-        //    public List<MapGraph> NextGraphs = new List<MapGraph>();
-        //    public List<MapGraph> PrevGraphs = new List<MapGraph>();
-        //    public int Level = 0;
-        //}
-        //private static List<MapGraph> MapGraphs = new List<MapGraph>();
-
 
         private static UIStoryProgressIconSlot MapIconTemplate;
         private static GameObject LineTemplate;
@@ -65,159 +48,18 @@ namespace LORAP.Gameplay
             UIUtils.Init();
 
             // Initialize Custom UI
-            APConnectWindow.Init();
-            MessagePopup.Init();
-            AbnoEgoPagePopup.Init();
+            //APConnectWindow.Init();
+            //APChatWindow.Init();
+            //MessagePopup.Init();
+            //AbnoEgoPagePopup.Init();
+            //APClientWindow.Init();
 
             // Modify some parts of the game
-            ApplyUIChanges();
             ApplyMapChanges();
 
             // Add BOE and Booster Pack to book list // TODO: Make book icons
             CreateCustomBook(123456, "Book of Everything", "prog");
             CreateCustomBook(123457, "Booster Pack", "filler");
-        }
-
-        private static void ApplyUIChanges()
-        {
-            Debug.Log("[LORAP] Applying UI Changes");
-
-            // Make Esc menu above everything else
-            GameObject.Find("[Canvas][Script]PopupCanvas").GetComponent<Canvas>().sortingOrder = 90;
-            GameObject.Find("[Canvas][Script]PopupCanvas/[Script]PopupManager").transform.SetAsLastSibling();
-            Canvas newCanvas = GameObject.Find("[Canvas][Script]PopupCanvas/[Script]PopupManager").AddComponent<Canvas>();
-            newCanvas.overrideSorting = true;
-            newCanvas.sortingOrder = 100;
-            newCanvas.gameObject.AddComponent<GraphicRaycaster>();
-
-            // Change UIFloorPanel: Remove floor level (irrelevant in this mod) & move quest info up, also add more info lines
-            UIFloorPanel floorPanel = UI.UIController.Instance.GetUIPanel(UIPanelType.FloorInfo) as UIFloorPanel;
-            floorPanel.transform.Find("PanelActiveController/[Rect]Info_Panel/[Rect]LevelBg").gameObject.SetActive(false);
-            floorPanel.questPanel.transform.localPosition += new Vector3(0, 60f, 0);
-
-            // Hide amount of pages from burning books
-            UIBookPanel bookPanel = UI.UIController.Instance.GetUIPanel(UIPanelType.Book) as UIBookPanel;
-            foreach (UIRewardEquipPageSlot slot in bookPanel.DropBookInfoPanel.rewardItemList.equipPageSlotList)
-            {
-                slot.ob_PerAlarm.SetActive(false);
-            }
-            foreach (UIRewardCardSlot slot in bookPanel.DropBookInfoPanel.rewardItemList.cardSlotList)
-            {
-                slot.ob_peralarm.SetActive(false);
-            }
-
-            // Hide "Reset Rewards" button from the book burning screen
-            UIShowUsingBookInfoPanel dropBookPanel = (UI.UIController.Instance.Panels.ElementAt(3) as UIBookPanel).DropBookInfoPanel;
-            dropBookPanel.button_rewardResetButton.gameObject.SetActive(false);
-
-            // Add more slots (4 -> 16) for books in the passive succession menu
-            UIPassiveSuccessionEquipBookList passiveBookList = UIPassiveSuccessionPopup.Instance.equipBookList;
-
-            // Enable masking for left book panel
-            passiveBookList.rect_ViewPort.GetComponent<Mask>().enabled = true;
-
-            // Add slots to left book panel
-            for (int i = 0; i < 12; i++)
-            {
-                GameObject copy = GameObject.Instantiate(passiveBookList.bookslotlist[0].gameObject, passiveBookList.bookslotlist[0].transform.parent);
-                passiveBookList.bookslotlist[0].transform.parent.GetComponent<RectTransform>().sizeDelta += new Vector2(0, 28);
-                passiveBookList.bookslotlist.Add(copy.GetComponent<UIPassiveSuccessionEquipBookSlot>());
-            }
-
-            // Add event to left book slots for scrolling to pass it through to the scrollrect
-            ScrollRect bookListRect = passiveBookList.rect_ViewPort.parent.GetComponent<ScrollRect>();
-            foreach (var slot in passiveBookList.bookslotlist)
-            {
-                EventTrigger evt = slot.GetComponentInChildren<EventTrigger>();
-
-                evt.AddCallback(EventTriggerType.Scroll, (data) => { bookListRect.OnScroll((PointerEventData)data); });
-            }
-
-            // Add slots to center bool panel
-            UIPassiveSuccessionCenterPanel centerBookList = UIPassiveSuccessionPopup.Instance.centerBookListPanel;
-            for (int i = 0; i < 12; i++)
-            {
-                GameObject slot = centerBookList.rect_bookSlotsLayout.GetChild(0).gameObject;
-                GameObject.Instantiate(slot, slot.transform.parent);
-            }
-
-            // Add more left panel passive slots
-            UIPassiveSuccessionList passiveList = UIPassiveSuccessionPopup.Instance.equipPassiveList;
-            for (int i = 0; i < 40; i++)
-            {
-                GameObject slot = passiveList.rect_slotsLayout.transform.GetChild(0).gameObject;
-                GameObject.Instantiate(slot, slot.transform.parent);
-            }
-
-            // Add slots to library unit info
-            UICardPanel cardPanel = UI.UIController.Instance.GetUIPanel(UIPanelType.Page) as UICardPanel;
-            UISetInfoSlotListSc charPassiveSlotList = cardPanel.librarianInfoPanel.passiveSlotsPanel;
-            for (int i = 0; i < 46; i++)
-            {
-                GameObject slot = charPassiveSlotList._slotList[0].gameObject;
-                GameObject copy = GameObject.Instantiate(slot, slot.transform.parent);
-                charPassiveSlotList._slotList.Add(copy.GetComponent<UILibrarianEquipInfoSlot>());
-            }
-
-            // Add slots to enemy and library unit passive list in battle
-            BattleUnitInformationUI_PassiveList enemyPassive = BattleManagerUI.Instance.ui_unitInformation.passivelistManager;
-            for (int i = 0; i < 46; i++) // I HATE PROJECT MOON CODING
-            {
-                GameObject slot = enemyPassive.passiveSlotList[0].Rect.gameObject;
-                GameObject copy = GameObject.Instantiate(slot, slot.transform.parent);
-
-                BattleUnitInformationPassiveSlot ps = new BattleUnitInformationPassiveSlot();
-                ps.Rect = copy.GetComponent<RectTransform>();
-                ps.txt_PassiveDesc = copy.GetComponentInChildren<TextMeshProUGUI>();
-                ps.img_Icon = copy.transform.Find("[Image]Icon").GetComponent<Image>();
-                ps.img_IconGlow = copy.transform.Find("[Image]IconGlow").GetComponent<Image>();
-
-                enemyPassive.passiveSlotList.Add(ps);
-            }
-
-            BattleUnitInformationUI_PassiveList playerPassive = BattleManagerUI.Instance.ui_unitInformationPlayer.passivelistManager;
-            for (int i = 0; i < 46; i++) // I FUCKING HATE IT
-            {
-                GameObject slot = playerPassive.passiveSlotList[0].Rect.gameObject;
-                GameObject copy = GameObject.Instantiate(slot, slot.transform.parent);
-
-                BattleUnitInformationPassiveSlot ps = new BattleUnitInformationPassiveSlot();
-                ps.Rect = copy.GetComponent<RectTransform>();
-                ps.txt_PassiveDesc = copy.GetComponentInChildren<TextMeshProUGUI>();
-                ps.img_Icon = copy.transform.Find("[Image]Icon").GetComponent<Image>();
-                ps.img_IconGlow = copy.transform.Find("[Image]IconGlow").GetComponent<Image>();
-
-                playerPassive.passiveSlotList.Add(ps);
-            }
-
-            // Make floor icons be not shit
-            foreach (var icon in UISpriteDataManager.instance.floorIconSet)
-            {
-                icon.iconGlow = icon.icon;
-            }
-
-            // Add slots for abno pages for unit info in battle (For player only)
-            BattleUnitInformationUI unitInfo = BattleManagerUI._instance.ui_unitInformationPlayer;
-            GameObject abnoPageSlotBase = unitInfo.AbnormalityCardList[0].gameObject;
-
-            for (int i = 0; i < 10; i++)
-            {
-                GameObject copy = GameObject.Instantiate(abnoPageSlotBase, abnoPageSlotBase.transform.parent);
-                unitInfo.AbnormalityCardList.Add(copy.GetComponent<EmotionPassiveCardUI>());
-            }
-
-            // Make each of them a canvas to change the sorting order and make them be displayed on top when hovering
-            foreach (EmotionPassiveCardUI slot in unitInfo.AbnormalityCardList)
-            {
-                slot.gameObject.AddComponent<Canvas>();
-                slot.gameObject.AddComponent<GraphicRaycaster>();
-            }
-
-            // Make horizontal sort element place abno pages closer
-            abnoPageSlotBase.transform.parent.gameObject.GetComponent<HorizontalLayoutGroup>().childControlWidth = true;
-
-            // Hide sort buttons in book burn screen
-            bookPanel.invenFeedBookList.gradeFilter.transform.Find("[Rect]ToggleList").gameObject.SetActive(false);
         }
 
         private static void ApplyMapChanges()
@@ -749,6 +591,21 @@ namespace LORAP.Gameplay
             MapNode oliverNode = mapNodeByKey["reception:60002"];
             oliverNode.Next.Clear();
 
+            Vector2 endgoalPos = new Vector2(oliverNode.X, oliverNode.Y);
+            endgoalPos += new Vector2(0, MapNodes.Max(n => n.Y) - oliverNode.Y + 220);
+
+            MapNode spacingDummy = new MapNode()
+            {
+                Key = $"dummy_spacing",
+                Prev = new List<MapNode>() { oliverNode },
+                X = endgoalPos.x,
+                Y = endgoalPos.y,
+            };
+
+            oliverNode.Next.Add(spacingDummy);
+
+            MapNodes.Add(spacingDummy);
+
             Dictionary<int, Vector2> BSDEPositions = new Dictionary<int, Vector2>()
             {
                 [60003] = new Vector2(-240, 220),
@@ -790,10 +647,10 @@ namespace LORAP.Gameplay
                         continue;
 
                     MapNode node = mapNodeByKey[key];
-                    node.X = oliverNode.X + pair.Value.x;
-                    node.Y = oliverNode.Y + pair.Value.y;
+                    node.X = endgoalPos.x + pair.Value.x;
+                    node.Y = endgoalPos.y + pair.Value.y;
 
-                    oliverNode.Next.Add(node);
+                    spacingDummy.Next.Add(node);
                 }
             }
 
@@ -806,8 +663,8 @@ namespace LORAP.Gameplay
                         continue;
 
                     MapNode node = mapNodeByKey[key];
-                    node.X = oliverNode.X + pair.Value.x;
-                    node.Y = oliverNode.Y + pair.Value.y;
+                    node.X = endgoalPos.x + pair.Value.x;
+                    node.Y = endgoalPos.y + pair.Value.y;
 
                     foreach (SephirahType seph in DELinks[pair.Key])
                     {
@@ -815,7 +672,7 @@ namespace LORAP.Gameplay
                     }
                 }
 
-                oliverNode.Next.Add(mapNodeByKey[$"endgoal:{EnsembleFloorToStage[SephirahType.Malkuth]}"]);
+                spacingDummy.Next.Add(mapNodeByKey[$"endgoal:{EnsembleFloorToStage[SephirahType.Malkuth]}"]);
             }
 
             // Render the graph

@@ -25,15 +25,14 @@ namespace LORAP.Archipelago
 
     internal struct ItemLocationPair
     {
-        public int Slot; // Player Slot ID
+        public int Finding; // Player Slot ID
+        public int Receiving; // Player Slot ID
         public APLocationInfo Location;
         public APItemInfo Item;
     }
 
-    internal static class LocationManager
+    internal static class LocationManager // This class manages 3-in-1: Locations, Hints, Scouting.
     {
-        // This class manages 3-in-1: Locations, Hints, Scouting.
-
         private static readonly ReadOnlyCollection<long> EmptyLocations = new ReadOnlyCollection<long>(new List<long>());
 
         internal static ReadOnlyCollection<long> AllLocations => SessionManager.IsConnected ? SessionManager.Locations.AllLocations : EmptyLocations;
@@ -42,18 +41,20 @@ namespace LORAP.Archipelago
 
         internal static ReadOnlyCollection<long> UncheckedLocations => SessionManager.IsConnected ? SessionManager.Locations.AllMissingLocations : EmptyLocations;
 
-
         // All Scouted/Hinted Location-Item pairs
         internal static List<ItemLocationPair> KnownPairs = new List<ItemLocationPair>();
 
         // All Known Hints
         internal static List<Hint> KnownHints = new List<Hint>();
 
+        // Event for tracking hints
+        internal delegate void HintHandler();
+        internal static event HintHandler HintEvent;
 
+        // Utils
         internal static int GetStageIdFromLocationId(long id) => (int)(id & 0x0FFFFFFF);
         internal static List<long> GetUncheckedStageLocations(int id) => UncheckedLocations.Where(l => GetStageIdFromLocationId(l) == id).ToList();
         internal static List<long> GetStageLocations(int id) => AllLocations.Where(l => GetStageIdFromLocationId(l) == id).ToList();
-
 
         internal static void Init()
         {
@@ -72,7 +73,8 @@ namespace LORAP.Archipelago
 
                     KnownPairs.Add(new ItemLocationPair
                     {
-                        Slot = pair.Value.Player.Slot,
+                        Receiving = pair.Value.Player.Slot,
+                        Finding = SessionManager.Players.ActivePlayer.Slot,
                         Location = new APLocationInfo
                         {
                             Id = pair.Key,
@@ -98,15 +100,16 @@ namespace LORAP.Archipelago
                 // Add info about not reached location-item pairs
                 foreach (Hint hint in hints)
                 {
-                    if (hint.Found || KnownPairs.Any(p => p.Location.Id == hint.LocationId && p.Item.Id == hint.ItemId))
+                    if (KnownPairs.Any(p => p.Location.Id == hint.LocationId && p.Item.Id == hint.ItemId))
                         continue;
 
                     string LocationGame = SessionManager.Players.GetPlayerInfo(hint.FindingPlayer).Game;
                     string ItemGame = SessionManager.Players.GetPlayerInfo(hint.ReceivingPlayer).Game;
 
-                    KnownPairs.Add(new ItemLocationPair
+                    ItemLocationPair pair = new ItemLocationPair
                     {
-                        Slot = hint.FindingPlayer,
+                        Finding = hint.FindingPlayer,
+                        Receiving = hint.ReceivingPlayer,
                         Location = new APLocationInfo
                         {
                             Id = hint.LocationId,
@@ -120,7 +123,11 @@ namespace LORAP.Archipelago
                             Game = ItemGame,
                             Flags = hint.ItemFlags,
                         }
-                    });
+                    };
+
+                    KnownPairs.Add(pair);
+
+                    HintEvent.Invoke();
                 }
             });
         }
@@ -162,9 +169,9 @@ namespace LORAP.Archipelago
 
             ItemLocationPair pair = GetLocationPair(check);
 
-            return pair.Slot == SessionManager.CurrentSlot
+            return pair.Receiving == SessionManager.CurrentSlot
                 ? $"Found {pair.Item.Name}!"
-                : $"Sent {pair.Item.Name} to {SessionManager.Players.GetPlayerName(pair.Slot)}!";
+                : $"Sent {pair.Item.Name} to {SessionManager.Players.GetPlayerName(pair.Receiving)}!";
         }
 
         internal static List<ItemLocationPair> GetPairsWithItemAndHint(long id, bool ignoreFound = false)
@@ -185,7 +192,7 @@ namespace LORAP.Archipelago
             {
                 return new ItemLocationPair
                 {
-                    Slot = SessionManager.CurrentSlot,
+                    Finding = SessionManager.CurrentSlot,
                     Location = new APLocationInfo
                     {
                         Id = id,
@@ -208,12 +215,12 @@ namespace LORAP.Archipelago
 
         internal static string FormatPairLocation(ItemLocationPair pair)
         {
-            return $"{(pair.Slot == SessionManager.CurrentSlot ? "" : $"{SessionManager.Players.GetPlayerName(pair.Slot)}'s ")}{pair.Location.Name}";
+            return $"{(pair.Receiving == SessionManager.CurrentSlot ? "" : $"{SessionManager.Players.GetPlayerName(pair.Receiving)}'s")} {pair.Location.Name}";
         }
 
         internal static string FormatPairItem(ItemLocationPair pair)
         {
-            return $"{(pair.Slot == SessionManager.CurrentSlot ? "" : $"{SessionManager.Players.GetPlayerName(pair.Slot)}'s ")}{pair.Item.Name}";
+            return $"{(pair.Receiving == SessionManager.CurrentSlot ? "" : $"{SessionManager.Players.GetPlayerName(pair.Receiving)}'s")} {pair.Item.Name}";
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
+using LORAP.Archipelago;
 using LORAP.CustomUI;
 using TMPro;
 using UI;
@@ -87,7 +88,7 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool ContinuePatch(UITitleController __instance)
         {
-            APConnectWindow.Open();
+            APConnectWindow.Instance.Open();
 
             return false;
         }
@@ -99,7 +100,7 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool RuinTitlePatch(UITitleController __instance)
         {
-            if (Gameplay.SaveManager.LoadLastSessionData().Progress < 1f)
+            if (SessionManager.GetLastSessionData().Progress < 1f)
                 __instance.isRuinTitle = false;
             else
                 __instance.isRuinTitle = true;

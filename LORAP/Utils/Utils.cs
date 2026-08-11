@@ -2,6 +2,8 @@ using LORAP.Archipelago;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 using UI;
 using UnityEngine;
 using UnityEngine.UI;
@@ -64,6 +66,52 @@ namespace LORAP.Utils
         {
             return new System.Random(CreateSeed(stream, salt));
         }
+
+        internal static T DeseriallizeFromFile<T>(string path, string filename)
+        {
+            string fullPath = $"{path}/{filename}";
+
+            if (!Directory.Exists(path) || !File.Exists(fullPath))
+                return default;
+
+            try
+            {
+                T Data;
+                using (FileStream fileStream = File.Open(fullPath, FileMode.Open))
+                    Data = (T)new BinaryFormatter().Deserialize(fileStream);
+
+                if (Data == null)
+                    return default;
+
+                return Data;
+            }
+            catch (Exception)
+            {
+                return default;
+            }
+        }
+
+        internal static bool SerializeToFile(object wtvr, string path, string filename)
+        {
+            string fullPath = $"{path}/{filename}";
+
+            try
+            {
+                if (!Directory.Exists(path))
+                    Directory.CreateDirectory(path);
+
+                using (FileStream serializationStream = File.Create(fullPath))
+                    new BinaryFormatter().Serialize(serializationStream, wtvr);
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+
+                return false;
+            }
+        }
     }
 
     // Class to help work with UI
@@ -74,6 +122,17 @@ namespace LORAP.Utils
             normalColor = new Color(0.9372f, 0.7607f, 0.5058f, 1f),
             highlightedColor = new Color(0.1333f, 1f, 0.8941f, 1f),
             pressedColor = new Color(0.1069f, 0.802f, 0.7170f, 1f),
+            selectedColor = new Color(0.9372f, 0.7607f, 0.5058f, 1f),
+            colorMultiplier = 1f,
+            fadeDuration = 0f,
+        };
+
+        internal static ColorBlock TabButtonColors = new ColorBlock()
+        {
+            normalColor = new Color(0f, 0f, 0f, 0f),
+            highlightedColor = new Color(1f, 1f, 1f, 1f),
+            pressedColor = new Color(1f, 1f, 1f, 1f),
+            selectedColor = new Color(1f, 1f, 1f, 1f),
             colorMultiplier = 1f,
             fadeDuration = 0f,
         };
@@ -148,23 +207,16 @@ namespace LORAP.Utils
         }
     }
 
-    // Custom class made to access Coroutines without needing to create a new GameObject or search for one
+    // Class made to access Coroutines without needing to create a new GameObject or search for one // TODO: Remove it
     // Also has some utility functions for timing of things
-    internal class Timing : MonoBehaviour
+    internal class Timing : SingletonBehavior<Timing>
     {
-        internal static void Init(GameObject newInstance)
+        public Coroutine Coroutine(IEnumerator enumerator)
         {
-            instance = newInstance.GetComponent<Timing>();
+            return StartCoroutine(enumerator);
         }
 
-        private static Timing instance;
-
-        public static Coroutine Coroutine(IEnumerator enumerator)
-        {
-            return instance.StartCoroutine(enumerator);
-        }
-
-        public static Coroutine After(float time, Action func)
+        public Coroutine InvokeDelayed(Action func, float time)
         {
             IEnumerator Coroutine()
             {
@@ -173,7 +225,7 @@ namespace LORAP.Utils
                 func.Invoke();
             };
 
-            return instance.StartCoroutine(Coroutine());
+            return StartCoroutine(Coroutine());
         }
     }
 }

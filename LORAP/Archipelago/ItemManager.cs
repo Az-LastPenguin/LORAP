@@ -93,7 +93,7 @@ namespace LORAP.Archipelago
         internal static void Start()
         {
             if (_itemQueueCoroutine == null)
-                _itemQueueCoroutine = Timing.Coroutine(PopItemQueue());
+                _itemQueueCoroutine = Timing.Instance.Coroutine(PopItemQueue());
             else
                 Suspended = false;
         }

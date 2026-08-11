@@ -26,7 +26,7 @@ namespace LORAP.Patches
         static bool RedirectPanelClosure(UIGetAbnormalityPanel __instance)
         {
             // Try to show next message. If the queue is empty, it will just close
-            AbnoEgoPagePopup.NextMessage();
+            AbnoEgoPagePopup.Instance.NextMessage();
 
             return false;
         }

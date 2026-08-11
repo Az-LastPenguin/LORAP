@@ -1,10 +1,8 @@
 using System;
-using System.Collections;
 using Archipelago.MultiClient.Net;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
-using LORAP.CustomUI;
 using LORAP.Utils;
 using UnityEngine;
 
@@ -13,66 +11,71 @@ namespace LORAP.Archipelago
     [Serializable]
     internal class SessionData
     {
-        public string IP;
+        public string IP = "";
 
-        public string SlotName;
+        public string SlotName = "";
 
-        public string Password;
+        public string Password = "";
 
-        public float Progress;
+        public float Progress = 0f;
     }
 
     internal static class SessionManager // TODO: Make use of DataStore.TrackClientState()
     {
-        private static ArchipelagoSession session;
+        private static ArchipelagoSession Session;
 
-        internal static SessionData sessionData;
+        private static SessionData SessionData;
 
-        internal static IReceivedItemsHelper Items => session.Items;
+        internal static bool IsConnected => Session != null && Session.Socket != null && Session.Socket.Connected;
 
-        internal static IDataStorageHelper DataStorage => session.DataStorage;
+        internal static int CurrentSlot => IsConnected ? Players.ActivePlayer.Slot : -1;
 
-        internal static ILocationCheckHelper Locations => session.Locations;
+        internal static string RoomSeed => Session.RoomState.Seed;
 
-        internal static IHintsHelper Hints => session.Hints;
+        internal static IReceivedItemsHelper Items => Session.Items;
 
-        internal static IConnectionInfoProvider ConnectionInfo => session.ConnectionInfo;
+        internal static IDataStorageHelper DataStorage => Session.DataStorage;
 
-        internal static bool IsConnected => session != null && session.Socket != null && session.Socket.Connected;
+        internal static ILocationCheckHelper Locations => Session.Locations;
 
+        internal static IHintsHelper Hints => Session.Hints;
+
+        internal static IConnectionInfoProvider ConnectionInfo => Session.ConnectionInfo;
+
+        internal static IPlayerHelper Players => Session.Players;
+
+        // Event for message receive
+        internal delegate void MessageHandler(string message);
+        internal static event MessageHandler MessageEvent;
+
+        internal static string GetPlayerName(int player) => Players.GetPlayerName(player);
 
         internal static void SetGoalAchieved()
         {
             if (IsConnected)
-                session.SetGoalAchieved();
+                Session.SetGoalAchieved();
         }
 
-        internal static IPlayerHelper Players => session.Players;
-
-
-        internal static int CurrentSlot => IsConnected ? Players.ActivePlayer.Slot : -1;
-
-
-        internal static void CreateSession(string IP)
+        internal static void CreateSession()
         {
             // If we already have an active session, don't create a new one
-            if (session != null && session.Socket.Connected)
+            if (Session != null && Session.Socket.Connected)
                 return;
 
             // If we have don't an active session, or do but somehow it's not connected, create a new one
-            session = ArchipelagoSessionFactory.CreateSession(IP);
+            Session = ArchipelagoSessionFactory.CreateSession(SessionData.IP);
 
             // Also connect message & item receiving methods
-            session.MessageLog.OnMessageReceived += OnMessageRecieved;
+            Session.MessageLog.OnMessageReceived += OnMessageRecieved;
         }
 
         internal static void EndSession()
         {
-            if (session != null && session.Socket.Connected)
-                session.Socket.DisconnectAsync();
+            if (Session != null && Session.Socket.Connected)
+                Session.Socket.DisconnectAsync();
 
-            session = null;
-            sessionData = null;
+            Session = null;
+            SessionData = null;
         }
 
         internal static void TryConnect(string IP, string SlotName, string Password)
@@ -81,11 +84,19 @@ namespace LORAP.Archipelago
             SlotName = (SlotName ?? "").Trim();
             Password = (Password ?? "").Trim();
 
-            // Create AP session
-            CreateSession(IP);
+            // Set the Session Data
+            SessionData = new SessionData()
+            {
+                IP = IP,
+                SlotName = SlotName,
+                Password = Password,
+            };
+
+            // Create AP Session
+            CreateSession();
 
             // Connect to AP
-            var result = session.TryConnectAndLogin("Library of Ruina", SlotName, ItemsHandlingFlags.AllItems, password: Password, version: new Version(0, 6, 6));
+            var result = Session.TryConnectAndLogin("Library of Ruina", SlotName, ItemsHandlingFlags.AllItems, password: Password, version: new Version(0, 6, 7));
 
             // If not successful, show error
             if (!result.Successful)
@@ -114,19 +125,41 @@ namespace LORAP.Archipelago
                 var hex = part.Color.R.ToString("X2") + part.Color.G.ToString("X2") + part.Color.B.ToString("X2");
 
                 if (hex != "FFFFFF")
-                    text += $"<color=#{hex}>" + part + "</color>";
+                    text += $"<color=#{hex}>{part}</color>";
                 else
                     text += part;
             }
 
-            // TODO: Change to async?
-            IEnumerator AddLog() // a.k.a. WeirdFuckingFixOfCrash
-            {
-                yield return new WaitForSeconds(0);
-                APLog.AddLog(text);
-            }
+            // Why this crashes the game if not using SPECIFICALLY COROUTINES is still a mysetry to this day for me.
+            // I tried Threads, i tried Tasks, i tried async/await. Nothing works but Coroutines. Why.
+            Timing.Instance.InvokeDelayed(() => MessageEvent.Invoke(text), 0);
+        }
 
-            Timing.Coroutine(AddLog());
+        internal static void SayMessage(string message)
+        {
+            Session.Say(message);
+        }
+
+        internal static SessionData GetLastSessionData()
+        {
+            SessionData Data = GameUtils.DeseriallizeFromFile<SessionData>($"{Application.persistentDataPath}/Archipelago", "LastSession");
+
+            if (Data == null)
+                Data = new SessionData();
+
+            return Data;
+        }
+
+        internal static void SaveLastSessionData()
+        {
+            SessionData data = SessionData ?? new SessionData();
+            data.Password = "";
+
+            int allLocations = LocationManager.AllLocations.Count;
+            int checkedLocations = LocationManager.CheckedLocations.Count;
+            data.Progress = allLocations > 0 ? (float)checkedLocations / allLocations : data.Progress;
+
+            GameUtils.SerializeToFile(data, $"{Application.persistentDataPath}/Archipelago", "LastSession");
         }
     }
 }

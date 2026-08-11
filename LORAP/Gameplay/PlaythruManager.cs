@@ -150,8 +150,7 @@ namespace LORAP.Playthru
             // Can now start item pop coroutine
             ItemManager.Start();
 
-            APConnectWindow.Close();
-            APLog.Show();
+            UIManager.RunJoinReset();
 
             Debug.Log("[LORAP] Game Started");
         }
@@ -262,7 +261,7 @@ namespace LORAP.Playthru
 
             ChangeUIToFloor(seph);
             if (!silent)
-                MessagePopup.ShowMessage($"{seph.FloorName()} was opened!");
+                MessagePopup.Instance.ShowMessage($"{seph.FloorName()} was opened!");
         }
 
         internal static void GiveAbnoPages(SephirahType seph, bool silent = false)
@@ -274,7 +273,7 @@ namespace LORAP.Playthru
             if (!silent)
             {
                 ChangeUIToFloor(seph);
-                AbnoEgoPagePopup.ShowPages(seph.FloorModel(), Floors[seph].AbnoPages);
+                AbnoEgoPagePopup.Instance.ShowPages(seph.FloorModel(), Floors[seph].AbnoPages);
             }
             else if (UI.UIController.Instance.CurrentUIPhase == UIPhase.Sephirah)
             {
@@ -291,7 +290,7 @@ namespace LORAP.Playthru
             if (!silent)
             {
                 ChangeUIToFloor(seph);
-                AbnoEgoPagePopup.ShowPages(seph.FloorModel(), Floors[seph].EGO, true);
+                AbnoEgoPagePopup.Instance.ShowPages(seph.FloorModel(), Floors[seph].EGO, true);
             }
             else if (UI.UIController.Instance.CurrentUIPhase == UIPhase.Sephirah)
             {
@@ -312,7 +311,7 @@ namespace LORAP.Playthru
             if (!silent)
             {
                 ChangeUIToFloor(seph);
-                MessagePopup.ShowMessage($"{seph.FloorName()} awoken a Librarian!");
+                MessagePopup.Instance.ShowMessage($"{seph.FloorName()} awoken a Librarian!");
             }
             else if (UI.UIController.Instance.CurrentUIPhase == UIPhase.Sephirah)
             {
@@ -327,21 +326,21 @@ namespace LORAP.Playthru
             DropBookInventoryModel.Instance.AddBook(lid, num);
 
             if (!silent)
-                MessagePopup.ShowMessage($"You received {DropBookXmlList.Instance.GetData(lid).Name}!");
+                MessagePopup.Instance.ShowMessage($"You received {DropBookXmlList.Instance.GetData(lid).Name}!");
         }
 
         internal static void UpMaxAttributionPoints(bool silent = false)
         {
             MaxAttributionPoints += 2;
             if (!silent)
-                MessagePopup.ShowMessage($"Max Attribution points +2!");
+                MessagePopup.Instance.ShowMessage($"Max Attribution points +2!");
         }
 
         internal static void UpMaxPassives(bool silent = false)
         {
             MaxPassives++;
             if (!silent)
-                MessagePopup.ShowMessage($"Max Attributed Passives +1!");
+                MessagePopup.Instance.ShowMessage($"Max Attributed Passives +1!");
         }
 
         internal static void UpMaxEmotion(bool silent = false)
@@ -358,7 +357,7 @@ namespace LORAP.Playthru
             }
 
             if (!silent)
-                MessagePopup.ShowMessage($"Max emotion level +1!");
+                MessagePopup.Instance.ShowMessage($"Max emotion level +1!");
         }
 
         internal static void UnlockBinah(bool silent = false)
@@ -370,7 +369,7 @@ namespace LORAP.Playthru
             if (!silent)
             {
                 ChangeUIToFloor(SephirahType.Binah);
-                MessagePopup.ShowMessage($"Binah has been unlocked!");
+                MessagePopup.Instance.ShowMessage($"Binah has been unlocked!");
             }
         }
 
@@ -384,7 +383,7 @@ namespace LORAP.Playthru
             if (!silent)
             {
                 ChangeUIToFloor(SephirahType.Keter);
-                MessagePopup.ShowMessage($"The Black Silence's Page has been unlocked!");
+                MessagePopup.Instance.ShowMessage($"The Black Silence's Page has been unlocked!");
             }
         }
 

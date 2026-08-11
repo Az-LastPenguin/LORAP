@@ -231,8 +231,8 @@ namespace LORAP.Patches
                         });
 
                         // Just in case there were any messages while in battle
-                        MessagePopup.Open();
-                        AbnoEgoPagePopup.Open();
+                        MessagePopup.Instance.Open();
+                        AbnoEgoPagePopup.Instance.Open();
 
                         SaveManager.SaveGame();
                         break;

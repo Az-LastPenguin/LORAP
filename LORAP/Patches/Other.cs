@@ -7,7 +7,6 @@ using LORAP.Gameplay;
 using LORAP.Playthru;
 using LORAP.Utils;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
@@ -244,42 +243,6 @@ namespace LORAP.Patches
 
 
 
-        // Change position of AP messages when changing ui screens. // TODO: Remove after making in-game client
-        [HarmonyPatch(typeof(UI.UIController), nameof(UI.UIController.CallUIPhase), typeof(UIPhase))]
-        [HarmonyPrefix]
-        static void APMessagesPosition(UIController __instance, UIPhase phase)
-        {
-            switch (phase)
-            {
-                case UIPhase.Sepiroth:
-                case UIPhase.Sephirah:
-                case UIPhase.Librarian:
-                case UIPhase.Librarian_CardList:
-                case UIPhase.FloorFeedingBookFixed:
-                case UIPhase.GachaResult:
-                case UIPhase.Invitation:
-                case UIPhase.Main_ItemList:
-                    if (APLog.isAtBottom)
-                        break;
-                    APLog.Show();
-                    APLog.SetLogAtBottom(true);
-                    break;
-                case UIPhase.DUMMY:
-                    if (!APLog.isAtBottom)
-                        break;
-                    APLog.Show();
-                    APLog.SetLogAtBottom(false);
-                    break;
-                case UIPhase.Story:
-                case UIPhase.BattleSetting:
-                case UIPhase.BattleResult:
-                    APLog.Hide();
-                    break;
-            }
-        }
-
-
-
         // Replace library level with the AP Progress
         [HarmonyPatch(typeof(UILibrarySliderPanel), nameof(UILibrarySliderPanel.SetData))]
         [HarmonyPrefix]
@@ -358,8 +321,8 @@ namespace LORAP.Patches
             ItemManager.Suspended = true;
             SessionManager.EndSession();
 
-            // Hide the log
-            APLog.Hide();
+            // Hide AP Feed
+            APChatWindow.Instance.Close();
         }
 
 
@@ -407,7 +370,9 @@ namespace LORAP.Patches
             // Setup Coroutines
             var gameObject = new GameObject("LORAP Coroutines");
             gameObject.AddComponent<Timing>();
-            Timing.Init(gameObject);
+
+            // Init Custom UI
+            UIManager.Init();
 
             // Init Custom Content
             ContentManager.Init();

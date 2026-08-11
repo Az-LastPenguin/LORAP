@@ -103,10 +103,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.InputLegacyModule">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.InputModule">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.InputModule.dll</HintPath>
+      <HintPath>..\DLLs\UnityEngine.InputLegacyModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.TextRenderingModule">
       <HintPath>..\DLLs\UnityEngine.TextRenderingModule.dll</HintPath>
@@ -120,9 +117,6 @@
       <HintPath>..\DLLs\UnityEngine.UIModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEngine.XR.LegacyInputHelpers">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed\UnityEngine.XR.LegacyInputHelpers.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Archipelago\SettingsManager.cs" />
@@ -130,12 +124,20 @@
     <Compile Include="Archipelago\ItemManager.cs" />
     <Compile Include="Archipelago\LocationManager.cs" />
     <Compile Include="Archipelago\SessionManager.cs" />
-    <Compile Include="CustomUI\AbnoEgoPagePopup.cs" />
-    <Compile Include="CustomUI\APConnectWindow.cs" />
-    <Compile Include="CustomUI\APLog.cs" />
-    <Compile Include="CustomUI\Components\BasicButtonScript.cs" />
-    <Compile Include="CustomUI\Components\CustomSelectable.cs" />
-    <Compile Include="CustomUI\MessagePopup.cs" />
+    <Compile Include="UI\Components\SettingVariants\BoolSettingComponent.cs" />
+    <Compile Include="UI\Components\ClientTabs\DebugTab.cs" />
+    <Compile Include="UI\Components\ClientTabs\SettingsTab.cs" />
+    <Compile Include="UI\Components\ClientTabs\HintsTab.cs" />
+    <Compile Include="UI\Components\ClientTabs\ArchipelagoTab.cs" />
+    <Compile Include="UI\Components\ClientTabs\IClientTab.cs" />
+    <Compile Include="UI\Components\TabButton.cs" />
+    <Compile Include="UI\UIManager.cs" />
+    <Compile Include="UI\Windows\AbnoEgoPagePopup.cs" />
+    <Compile Include="UI\Windows\APClientWindow.cs" />
+    <Compile Include="UI\Windows\APConnectWindow.cs" />
+    <Compile Include="UI\Windows\APChatWindow.cs" />
+    <Compile Include="UI\Components\BasicButton.cs" />
+    <Compile Include="UI\Windows\MessagePopup.cs" />
     <Compile Include="Gameplay\BookDropManager.cs" />
     <Compile Include="Gameplay\ContentManager.cs" />
     <Compile Include="Gameplay\PlaythruManager.cs" />
