@@ -99,8 +99,8 @@ namespace LORAP.Gameplay
                 .Select(g => g.OrderBy(d => d.id).ThenBy(d => d.type).ToList())
                 .ToList();
 
-            if (dropsByChapter.Count < SlotDataManager.BoEBundlesPerSphere.Count)
-                throw new Exception("Not enough page chapters to build Book of Everything bundles.");
+            if (dropsByChapter.Count != SlotDataManager.BoEBundlesPerSphere.Count)
+                throw new Exception("Expected one page pool for every Book of Everything sphere.");
 
             if (allDrops.Count < bundleCount)
                 throw new Exception("Not enough unique pages to build Book of Everything bundles.");
@@ -143,32 +143,24 @@ namespace LORAP.Gameplay
 
             ChapterDrops = dropsByChapter;
 
-            // 4. Split everything between 70 BoEs as evenly as possible.
-            int dropsPerBundle = allDrops.Count / bundleCount;
-            int bundlesWithExtraDrop = allDrops.Count % bundleCount;
-            List<int> bundleCapacities = new List<int>(bundleCount);
-
-            for (int i = 0; i < bundleCount; i++)
+            // 4. Split each chapter between the BoEs of its own sphere.
+            // Spread leftovers around instead of dumping the whole pile into the last BoE.
+            for (int sphereIndex = 0; sphereIndex < dropsByChapter.Count; sphereIndex++)
             {
-                int bundleSize = dropsPerBundle + (i < bundlesWithExtraDrop ? 1 : 0);
-                bundleCapacities.Add(bundleSize);
-                Bundles.Add(new List<BookDrop>(bundleSize));
-            }
+                List<BookDrop> chapter = dropsByChapter[sphereIndex];
+                int bundlesInSphere = SlotDataManager.BoEBundlesPerSphere[sphereIndex];
+                if (bundlesInSphere <= 0 || chapter.Count < bundlesInSphere)
+                    throw new Exception($"Cannot split chapter {chapterNumbers[sphereIndex]} between {bundlesInSphere} Book of Everything bundles.");
 
-            // 5. Pour the chapter pools into those BoEs from early game to late game.
-            int bundleIndex = 0;
-            foreach (List<BookDrop> chapter in dropsByChapter)
-            {
-                foreach (BookDrop drop in chapter)
+                int dropsPerBundle = chapter.Count / bundlesInSphere;
+                int bundlesWithExtraDrop = chapter.Count % bundlesInSphere;
+                int chapterOffset = 0;
+
+                for (int bundleIndex = 0; bundleIndex < bundlesInSphere; bundleIndex++)
                 {
-                    while (bundleIndex < Bundles.Count
-                        && Bundles[bundleIndex].Count >= bundleCapacities[bundleIndex])
-                        bundleIndex++;
-
-                    if (bundleIndex >= Bundles.Count)
-                        throw new Exception("Book of Everything bundle capacity was exhausted before every page was assigned.");
-
-                    Bundles[bundleIndex].Add(drop);
+                    int bundleSize = dropsPerBundle + (bundleIndex < bundlesWithExtraDrop ? 1 : 0);
+                    Bundles.Add(chapter.GetRange(chapterOffset, bundleSize));
+                    chapterOffset += bundleSize;
                 }
             }
 
