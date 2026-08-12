@@ -167,7 +167,7 @@ namespace LORAP.Archipelago
         }
     }
 
-    // NOTE: This does handle SlotData BUT it only handles OPTIONS from the SlotData. Everything else is handled by SlotDataManager // TODO: Add all descs
+    // NOTE: This does handle SlotData BUT it only handles OPTIONS from the SlotData. Everything else is handled by SlotDataManager
     internal static class SettingsManager
     {
         internal static readonly Dictionary<string, ISetting> AllSettings = new Dictionary<string, ISetting>(); // Used for automating saving and loading

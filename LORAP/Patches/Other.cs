@@ -172,6 +172,8 @@ namespace LORAP.Patches
             return false;
         }
 
+
+
         [HarmonyPatch(typeof(LibraryModel), nameof(LibraryModel.IsBlackSilenceLockedInLibrary))]
         [HarmonyPrefix]
         static bool IsBlackSilenceLockedInLibrary(LibraryModel __instance, ref bool __result)
@@ -181,6 +183,8 @@ namespace LORAP.Patches
             return false;
         }
 
+
+
         [HarmonyPatch(typeof(LibraryModel), nameof(LibraryModel.IsBinahLockedInStage))]
         [HarmonyPrefix]
         static bool IsBinahLockedInStage(LibraryModel __instance, StageClassInfo stageInfo, ref bool __result)
@@ -189,6 +193,8 @@ namespace LORAP.Patches
 
             return false;
         }
+
+
 
         [HarmonyPatch(typeof(LibraryModel), nameof(LibraryModel.IsBlackSilenceLockedInStage))]
         [HarmonyPrefix]
@@ -222,6 +228,8 @@ namespace LORAP.Patches
 
             return false;
         }
+
+
 
         // Make it so keter floor is always left sided
         [HarmonyPatch(typeof(UIMainPanel), nameof(UIMainPanel.SetKetherTransform))]
@@ -281,6 +289,8 @@ namespace LORAP.Patches
 
             return false;
         }
+
+
 
         // Replace library level text with the AP Progress
         [HarmonyPatch(typeof(UITitlePanel), nameof(UITitlePanel.SetMainTitle))]
@@ -392,6 +402,8 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool DisableTooltips() => false;
 
+
+
         // Remove the tutorial highlight of "none" book in feed book menu
         [HarmonyPatch(typeof(UIInvenFeedBookList), nameof(UIInvenFeedBookList.OnOpen))]
         [HarmonyPostfix]
@@ -422,6 +434,8 @@ namespace LORAP.Patches
             return false;
         }
 
+
+
         // Increase max amount of passive attributed books
         [HarmonyPatch(typeof(BookModel), nameof(BookModel.IsNotFullEquipPassiveBook))]
         [HarmonyPrefix]
@@ -430,6 +444,8 @@ namespace LORAP.Patches
             __result = __instance.reservedData.equipedBookIdListInPassive.Count < 16;
             return false;
         }
+
+
 
         // Remove code that automatically fills keypages with empty passives
         [HarmonyPatch(typeof(BookModel), nameof(BookModel.TryGainUniquePassive))]
@@ -445,6 +461,8 @@ namespace LORAP.Patches
 
             return codeMatcher.Instructions();
         }
+
+
 
         // Prefix ensuring that when you open the attrib window keypage has enough empty passives
         [HarmonyPatch(typeof(UIPassiveSuccessionPopup), nameof(UIPassiveSuccessionPopup.SetData))]
@@ -463,6 +481,8 @@ namespace LORAP.Patches
 
             return true;
         }
+
+
 
         // Another prefix ensuring that when you open the attrib window keypage has enough empty passives (but for keypage list)
         [HarmonyPatch(typeof(UIPassiveSuccessionPopup), nameof(UIPassiveSuccessionPopup.SetDataOnly))]

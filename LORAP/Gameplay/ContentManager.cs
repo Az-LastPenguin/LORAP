@@ -57,7 +57,7 @@ namespace LORAP.Gameplay
             // Modify some parts of the game
             ApplyMapChanges();
 
-            // Add BOE and Booster Pack to book list // TODO: Make book icons
+            // Add BOE and Booster Pack to book list
             CreateCustomBook(123456, "Book of Everything", "prog");
             CreateCustomBook(123457, "Booster Pack", "filler");
         }

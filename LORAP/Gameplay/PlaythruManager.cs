@@ -72,7 +72,7 @@ namespace LORAP.Playthru
 
             // Init floors & Set all floors levels to max internally, makes life easier
             LibraryModel.Instance.Init();
-            LibraryModel.Instance._floorList.ForEach(f => f._level = 6); // TODO: Make it a patch
+            LibraryModel.Instance._floorList.ForEach(f => f._level = 6);
 
             // Setup run content
             ContentManager.SetupRunContent();

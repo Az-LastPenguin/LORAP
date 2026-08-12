@@ -381,7 +381,7 @@ namespace LORAP.Patches
             slot.img_emotionlevel.sprite = UISpriteDataManager.instance.EmotionLevelIcon[locations.Count < 6 ? locations.Count : 5];
 
             // Set texts
-            for (int i = 0; i < slot.rewardtexts.Count; i++) // TODO: Increase number of reward texts to 10 (vanilla is 4)
+            for (int i = 0; i < slot.rewardtexts.Count; i++)
             {
                 if (i >= locations.Count)
                 {
