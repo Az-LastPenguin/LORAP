@@ -35,6 +35,7 @@ namespace LORAP.Playthru
         internal static bool BinahUnlocked = false;
         internal static bool BlackSilenceUnlocked = false;
         internal static int BoEBundlesReceived = 0;
+        internal static int LayersUnlocked = 1;
 
         internal static void StartGame()
         {
@@ -50,6 +51,7 @@ namespace LORAP.Playthru
             BinahUnlocked = false;
             BlackSilenceUnlocked = false;
             BoEBundlesReceived = 0;
+            LayersUnlocked = 1;
 
             // Create list of floor infos to keep track of every floors state by our own
             Floors = Enum.GetValues(typeof(SephirahType)).Cast<SephirahType>().ToDictionary(k => k, v => new FloorInfo());
@@ -168,6 +170,7 @@ namespace LORAP.Playthru
 
             saveData.AddData("keterRealizationStage", new GameSave.SaveData(KeterRealizationStage));
             saveData.AddData("boeBundlesReceived", new GameSave.SaveData(BoEBundlesReceived));
+            saveData.AddData("layersUnlocked", new GameSave.SaveData(LayersUnlocked));
 
             return saveData;
         }
@@ -178,6 +181,7 @@ namespace LORAP.Playthru
 
             KeterRealizationStage = saveData.GetData("keterRealizationStage").GetIntSelf();
             BoEBundlesReceived = saveData.GetData("boeBundlesReceived").GetIntSelf();
+            LayersUnlocked = saveData.GetData("layersUnlocked").GetIntSelf();
         }
 
 
@@ -340,33 +344,85 @@ namespace LORAP.Playthru
             GiveBook(123456, 1, silent);
         }
 
-        internal static int GetUnlockedBoEBundleLimit()
+        internal static bool IsLayerUnlocked(int globalLayer)
         {
-            if (!SlotDataManager.BoESpheresEnabled || SlotDataManager.BattleTree == null)
-                return int.MaxValue;
+            return !SlotDataManager.BoELayersEnabled || globalLayer < LayersUnlocked;
+        }
 
-            int unlockedSphere = 1;
+        private static int GetLayerSphere(int globalLayer)
+        {
+            BattleNode node = SlotDataManager.BattleTree?.Nodes.Values.FirstOrDefault(n => n.GlobalLayer == globalLayer);
+            return node?.Sphere ?? 0;
+        }
 
-            for (int targetSphere = 2; targetSphere <= 7; targetSphere++)
+        internal static int GetUnlockableLayerCount()
+        {
+            if (!SlotDataManager.BoELayersEnabled || SlotDataManager.BattleTree == null)
+                return 0;
+
+            int simulatedUnlocked = LayersUnlocked;
+            while (simulatedUnlocked < SlotDataManager.LayerCount)
             {
-                bool sphereOpen = SlotDataManager.BattleTree.Nodes.Values
-                    .Where(n => n.Sphere == targetSphere)
-                    .Any(n => n.AreBattleParentsComplete());
+                int targetSphere = GetLayerSphere(simulatedUnlocked);
+                int previousSphere = GetLayerSphere(simulatedUnlocked - 1);
+                if (targetSphere <= 0)
+                    break;
 
-                if (sphereOpen)
-                    unlockedSphere = Math.Max(unlockedSphere, targetSphere);
+                if (targetSphere != previousSphere)
+                {
+                    if (!SlotDataManager.IsSphereClearEnough(previousSphere))
+                        break;
+                }
+
+                simulatedUnlocked++;
             }
 
-            BattleNode oliver = SlotDataManager.BattleTree.GetNodeById(SlotDataManager.LastReception);
-            if (oliver != null && IsStageComplete(oliver.Id))
-                unlockedSphere = 7;
+            return simulatedUnlocked - LayersUnlocked;
+        }
+
+        internal static bool TryUnlockNextLayer()
+        {
+            if (GetUnlockableLayerCount() <= 0)
+                return false;
+
+            LayersUnlocked++;
+            return true;
+        }
+
+        internal static string GetLayerUnlockBlockMessage()
+        {
+            if (LayersUnlocked >= SlotDataManager.LayerCount)
+                return "Every layer is already open.";
+
+            int targetSphere = GetLayerSphere(LayersUnlocked);
+            int previousSphere = GetLayerSphere(LayersUnlocked - 1);
+            if (targetSphere != previousSphere)
+            {
+                if (!SlotDataManager.IsSphereClearEnough(previousSphere))
+                    return "Clear more battles before opening the next layer.";
+            }
+
+            return "Not enough layers can be opened yet.";
+        }
+
+        internal static int GetUnlockedBoEBundleLimit()
+        {
+            if (!SlotDataManager.BoELayersEnabled || SlotDataManager.BattleTree == null)
+                return int.MaxValue;
+
+            int unlockedSphere = SlotDataManager.BattleTree.Nodes.Values
+                .Where(n => IsLayerUnlocked(n.GlobalLayer))
+                .Select(n => n.Sphere)
+                .DefaultIfEmpty(1)
+                .Max();
 
             return SlotDataManager.GetBoEBundlesRequiredThroughSphere(unlockedSphere);
         }
 
         internal static bool CanOpenBookOfEverything()
         {
-            return BookDropManager.BooksOfEverythingOpened < GetUnlockedBoEBundleLimit();
+            return BookDropManager.BooksOfEverythingOpened < SlotDataManager.BoERequiredTotal
+                && BookDropManager.BooksOfEverythingOpened < GetUnlockedBoEBundleLimit();
         }
 
         internal static void UpMaxAttributionPoints(bool silent = false)

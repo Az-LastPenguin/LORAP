@@ -84,70 +84,84 @@ namespace LORAP.Gameplay
             // 0. Check if the emount of bundles was received correctly
             int bundleCount = SlotDataManager.BoEBundlesPerSphere?.Sum() ?? 0;
             if (bundleCount <= 0)
-                throw new Exception("Book of Everything Bundle count was received incorrectly! Possible mod and .apworld version mismatch?");
-
-            // 1. Get all separate chapter page lists & sort them by their ID (their appearance in vanilla pretty much)
-            List<List<BookDrop>> dropsByChapter = allDrops.GroupBy(d => d.chapter).Select(g => g.OrderBy(d => d.id).ToList()).ToList();
-
-            // Pages are now sorted by id in ascending order, meaning pages with biggest id appear last in chapter
-            // and pages with smallest id appear first in chapter, so...
-            // 2. Mix random amount of early and late pages between adjacent chapters for a change
-            System.Random rng = GameUtils.CreateRandom("bundle_chapter_mixing");
-            for (int i = 0; i < dropsByChapter.Count; i++)
             {
-                if (i + 1 >= dropsByChapter.Count)
-                    break;
+                ChapterDrops = new List<List<BookDrop>>();
+                return;
+            }
 
+            // 1. Put combat and key pages into one pool per chapter.
+            // Sort first so the same seed stays the same even if GatherPages gets moody.
+            var chapterGroups = allDrops.GroupBy(d => d.chapter)
+                .OrderBy(g => g.Key)
+                .ToList();
+            List<int> chapterNumbers = chapterGroups.Select(g => g.Key).ToList();
+            List<List<BookDrop>> dropsByChapter = chapterGroups
+                .Select(g => g.OrderBy(d => d.id).ThenBy(d => d.type).ToList())
+                .ToList();
+
+            if (dropsByChapter.Count != SlotDataManager.BoEBundlesPerSphere.Count)
+                throw new Exception("Expected one page pool for every Book of Everything sphere.");
+
+            if (allDrops.Count < bundleCount)
+                throw new Exception("Not enough unique pages to build Book of Everything bundles.");
+
+            System.Random rng = GameUtils.CreateRandom("boe_bundle_shuffle");
+
+            // 2. Let neighboring chapters trade up to a quarter of their pages.
+            // Check the original chapter so no page accidentally travels across the whole game.
+            for (int i = 0; i + 1 < dropsByChapter.Count; i++)
+            {
                 List<BookDrop> curChapter = dropsByChapter[i];
                 List<BookDrop> nextChapter = dropsByChapter[i + 1];
+                List<BookDrop> curCandidates = curChapter
+                    .Where(drop => drop.chapter == chapterNumbers[i])
+                    .ToList();
+                List<BookDrop> nextCandidates = nextChapter
+                    .Where(drop => drop.chapter == chapterNumbers[i + 1])
+                    .ToList();
 
-                // We will mix 0-25% of the chapter with least pages between the chapters
-                int mixCount = rng.Next(0, Math.Min(curChapter.Count, nextChapter.Count) / 4);
+                curCandidates.Shuffle(rng);
+                nextCandidates.Shuffle(rng);
 
-                // And now, we mix
-                List<BookDrop> curPart = curChapter.GetRange(curChapter.Count - mixCount, mixCount);
-                curChapter.RemoveRange(curChapter.Count - mixCount, mixCount);
+                int maxMixCount = Math.Min(curCandidates.Count, nextCandidates.Count) / 4;
+                int mixCount = rng.Next(maxMixCount + 1);
+                for (int j = 0; j < mixCount; j++)
+                {
+                    BookDrop curDrop = curCandidates[j];
+                    BookDrop nextDrop = nextCandidates[j];
 
-                List<BookDrop> nextPart = nextChapter.GetRange(0, mixCount);
-                nextChapter.RemoveRange(0, mixCount);
-
-                curChapter.AddRange(nextPart);
-                nextChapter.InsertRange(0, curPart);
+                    curChapter.Remove(curDrop);
+                    nextChapter.Remove(nextDrop);
+                    curChapter.Add(nextDrop);
+                    nextChapter.Add(curDrop);
+                }
             }
 
-            // 3. Split every chapter in two, shuffle the halves and combine them
+            // 3. Now properly mix combat and key pages inside each slightly mixed chapter.
             foreach (List<BookDrop> chapter in dropsByChapter)
-            {
-                int halfCount = chapter.Count / 2;
-            
-                List<BookDrop> secondHalf = chapter.GetRange(chapter.Count - halfCount, halfCount);
-                chapter.RemoveRange(chapter.Count - halfCount, halfCount);
-            
                 chapter.Shuffle(rng);
-                secondHalf.Shuffle(rng);
-                
-                chapter.AddRange(secondHalf);
-            }
 
             ChapterDrops = dropsByChapter;
 
-            // 4. Split each chapter's drops into equal parts the amount of bundles in a chapter
-            for (int i = 0; i < SlotDataManager.BoEBundlesPerSphere.Count; i++)
+            // 4. Split each chapter between the BoEs of its own sphere.
+            // Spread leftovers around instead of dumping the whole pile into the last BoE.
+            for (int sphereIndex = 0; sphereIndex < dropsByChapter.Count; sphereIndex++)
             {
-                int bundlesNum = SlotDataManager.BoEBundlesPerSphere[i];
-                List<BookDrop> chapter = dropsByChapter[i];
-            
-                int dropsPerBundle = chapter.Count / bundlesNum;
-            
-                for (int j = 0; j < bundlesNum; j++)
-                {
-                    Bundles.Add(chapter.Take(dropsPerBundle).ToList());
-                    chapter.RemoveRange(0, Math.Min(dropsPerBundle, chapter.Count));
-                }
+                List<BookDrop> chapter = dropsByChapter[sphereIndex];
+                int bundlesInSphere = SlotDataManager.BoEBundlesPerSphere[sphereIndex];
+                if (bundlesInSphere <= 0 || chapter.Count < bundlesInSphere)
+                    throw new Exception($"Cannot split chapter {chapterNumbers[sphereIndex]} between {bundlesInSphere} Book of Everything bundles.");
 
-                // If there is still some drops left, just assign them to the last bundle of the chapter
-                if (chapter.Count > 0)
-                    Bundles.Last().AddRange(chapter);
+                int dropsPerBundle = chapter.Count / bundlesInSphere;
+                int bundlesWithExtraDrop = chapter.Count % bundlesInSphere;
+                int chapterOffset = 0;
+
+                for (int bundleIndex = 0; bundleIndex < bundlesInSphere; bundleIndex++)
+                {
+                    int bundleSize = dropsPerBundle + (bundleIndex < bundlesWithExtraDrop ? 1 : 0);
+                    Bundles.Add(chapter.GetRange(chapterOffset, bundleSize));
+                    chapterOffset += bundleSize;
+                }
             }
 
             // TODO: TO BE REMOVED
@@ -340,6 +354,9 @@ namespace LORAP.Gameplay
                     return dropResults;
                 }
 
+                if (BooksOfEverythingOpened >= Bundles.Count)
+                    return dropResults;
+
                 foreach (BookDrop drop in Bundles[BooksOfEverythingOpened])
                     dropResults.AddRange(GrantDropToMaxStack(drop));
 
@@ -349,9 +366,10 @@ namespace LORAP.Gameplay
             }
             else if (bookID == new LorId("lorap", 123457))
             {
-                for (int i = 0; i < 8; i++)
+                int boosterPackDrops = SlotDataManager.BoELayersEnabled ? 4 : 8;
+                for (int i = 0; i < boosterPackDrops; i++)
                 {
-                    var Random = GameUtils.CreateRandom("booster_packs", BoosterPacksOpened * 8 + i);
+                    var Random = GameUtils.CreateRandom("booster_packs", BoosterPacksOpened * boosterPackDrops + i);
 
                     float rng = (float)Random.NextDouble();
                     Rarity dropRarity = Rarity.Common;
@@ -371,6 +389,13 @@ namespace LORAP.Gameplay
                 }
 
                 BoosterPacksOpened++;
+
+                DropBookInventoryModel.Instance.RemoveBook(bookID);
+            }
+            else if (SlotDataManager.BoELayersEnabled && string.IsNullOrEmpty(bookID.packageId))
+            {
+                if (!PlaythruManager.TryUnlockNextLayer())
+                    return dropResults;
 
                 DropBookInventoryModel.Instance.RemoveBook(bookID);
             }
@@ -446,18 +471,23 @@ namespace LORAP.Gameplay
             }
             else
             {
+                int firstBookInstanceId = 0;
                 for (int i = 0; i < copiesToGrant; i++)
                 {
-                    BookDropResult dropResult = new BookDropResult()
-                    {
-                        id = drop.id,
-                        itemType = drop.type,
-                        number = 1,
-                        bookInstanceId = BookInventoryModel.Instance.CreateBook(drop.id).instanceId,
-                    };
-
-                    dropResults.Add(dropResult);
+                    int instanceId = BookInventoryModel.Instance.CreateBook(drop.id).instanceId;
+                    if (i == 0)
+                        firstBookInstanceId = instanceId;
                 }
+
+                // The inventory still needs every real copy, but showing all of them in the
+                // gacha popup is just spam
+                dropResults.Add(new BookDropResult()
+                {
+                    id = drop.id,
+                    itemType = drop.type,
+                    number = 1,
+                    bookInstanceId = firstBookInstanceId,
+                });
             }
 
             return dropResults;

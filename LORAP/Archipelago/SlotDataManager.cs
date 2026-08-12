@@ -1,4 +1,5 @@
 using LORAP.Playthru;
+using LORAP.Gameplay;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,7 @@ namespace LORAP.Archipelago
         public int Chapter;
         public int Sphere;
         public int SphereLayer;
+        public int GlobalLayer;
         public int RequiredLibrarians;
         public SephirahType AssignedFloor = SephirahType.None;
         public List<string> Next = new List<string>();
@@ -23,6 +25,14 @@ namespace LORAP.Archipelago
 
         public bool AreBattleParentsComplete()
         {
+            if (SlotDataManager.BoELayersEnabled)
+            {
+                if (!PlaythruManager.IsLayerUnlocked(GlobalLayer))
+                    return false;
+                if (Sphere <= 7)
+                    return true;
+            }
+
             List<BattleNode> parents = SlotDataManager.BattleTree?.GetPrevNodes(Key) ?? new List<BattleNode>();
             if (parents.Count == 0)
                 return true;
@@ -32,11 +42,7 @@ namespace LORAP.Archipelago
                 if (!PlaythruManager.IsStageComplete(parent.Id))
                     continue;
 
-                if (!SlotDataManager.BoESpheresEnabled || parent.Sphere == Sphere)
-                    return true;
-
-                if (parent.Sphere + 1 == Sphere && SlotDataManager.IsSphereClearEnough(parent.Sphere))
-                    return true;
+                return true;
             }
 
             return false;
@@ -65,9 +71,9 @@ namespace LORAP.Archipelago
     {
         internal static int ClientSeed;
 
-        //internal static ProgressionMode ProgressionMode;
+        internal const int SupportedSlotDataVersion = 3;
 
-        //internal static bool BoESpheresEnabled => ProgressionMode == ProgressionMode.BoESpheres;
+        internal static int SlotDataVersion;
 
         //internal static int SphereClearPercentage;
   
@@ -85,6 +91,16 @@ namespace LORAP.Archipelago
 
         internal static List<int> BoEBundlesCumulative;
 
+        internal static int BoERequiredTotal;
+
+        internal static int BoEPoolTotal;
+
+        internal static int LayerCount;
+
+        internal static int VanillaBooksRequiredTotal;
+
+        internal static int VanillaBooksPoolTotal;
+
         internal static int FirstReception;
 
         internal static int LastReception;
@@ -92,7 +108,7 @@ namespace LORAP.Archipelago
         // Utils
         internal static bool HasBattleTree => BattleTree != null && BattleTree.Nodes.Count > 0;
 
-        internal static bool BoESpheresEnabled => SettingsManager.RunProgressionMode == ProgressionMode.BoESpheres;
+        internal static bool BoELayersEnabled => SettingsManager.RunProgressionMode == ProgressionMode.BoELayers;
 
         internal static int GetBoEBundlesRequiredThroughSphere(int sphere)
         {
@@ -105,10 +121,10 @@ namespace LORAP.Archipelago
 
         internal static bool IsSphereClearEnough(int sphere)
         {
-            if (!BoESpheresEnabled)
+            if (!BoELayersEnabled)
                 return true;
 
-            List<BattleNode> sphereNodes = BattleTree.Nodes.Values.Where(n => n.Sphere == sphere).ToList();
+            List<BattleNode> sphereNodes = GetLogicalSphereNodes(sphere);
             if (sphereNodes.Count == 0)
                 return true;
 
@@ -119,6 +135,27 @@ namespace LORAP.Archipelago
 
             int cleared = sphereNodes.Count(n => PlaythruManager.IsStageComplete(n.Id));
             return cleared >= required;
+        }
+
+        internal static int GetSphereClearPercentage(int sphere)
+        {
+            if (!HasBattleTree)
+                return 0;
+
+            List<BattleNode> sphereNodes = GetLogicalSphereNodes(sphere);
+            if (sphereNodes.Count == 0)
+                return 100;
+
+            int cleared = sphereNodes.Count(n => PlaythruManager.IsStageComplete(n.Id));
+            return (int)Math.Floor(cleared * 100.0 / sphereNodes.Count);
+        }
+
+        private static List<BattleNode> GetLogicalSphereNodes(int sphere)
+        {
+            // 210005-210008 only exist on the client, so don't count them as four extra battles in the sphere.
+            return BattleTree.Nodes.Values
+                .Where(node => node.Sphere == sphere && (node.Id < 210005 || node.Id > 210008))
+                .ToList();
         }
 
         // Main Code
@@ -132,6 +169,10 @@ namespace LORAP.Archipelago
 
         internal static void ParseSlotData(Dictionary<string, object> slotData)
         {
+            SlotDataVersion = Convert.ToInt32(GetSlotData(slotData, "slot_data_version"));
+            if (SlotDataVersion != SupportedSlotDataVersion)
+                throw new Exception($"Unsupported LORAP slot data version {SlotDataVersion}; expected {SupportedSlotDataVersion}.");
+
             ClientSeed = Convert.ToInt32(GetSlotData(slotData, "lorap_client_seed"));
 
             FirstReception = Convert.ToInt32(GetSlotData(slotData, "first_reception"));
@@ -164,13 +205,15 @@ namespace LORAP.Archipelago
                 AbnoStageChapters[Int32.Parse(o.Key)] = o.Value.Value<int>();
             }
 
-            BoEBundlesPerSphere = slotData.ContainsKey("boe_bundles_per_sphere")
-                ? ((JArray)slotData["boe_bundles_per_sphere"]).Select(i => i.Value<int>()).ToList()
-                : Enumerable.Repeat(0, 7).ToList();
-
-            BoEBundlesCumulative = slotData.ContainsKey("boe_bundles_cumulative")
-                ? ((JArray)slotData["boe_bundles_cumulative"]).Select(i => i.Value<int>()).ToList()
-                : Enumerable.Repeat(0, 7).ToList();
+            BoEBundlesPerSphere = ((JArray)GetSlotData(slotData, "boe_bundles_per_sphere"))
+                .Select(i => i.Value<int>()).ToList();
+            BoEBundlesCumulative = ((JArray)GetSlotData(slotData, "boe_bundles_cumulative"))
+                .Select(i => i.Value<int>()).ToList();
+            BoERequiredTotal = Convert.ToInt32(GetSlotData(slotData, "boe_required_total"));
+            BoEPoolTotal = Convert.ToInt32(GetSlotData(slotData, "boe_pool_total"));
+            LayerCount = Convert.ToInt32(GetSlotData(slotData, "layer_count"));
+            VanillaBooksRequiredTotal = Convert.ToInt32(GetSlotData(slotData, "vanilla_books_required_total"));
+            VanillaBooksPoolTotal = Convert.ToInt32(GetSlotData(slotData, "vanilla_books_pool_total"));
 
             if (!slotData.ContainsKey("battle_nodes") || !slotData.ContainsKey("battle_edges"))
                 throw new Exception("LORAP slot data is missing battle tree data.");
@@ -196,6 +239,7 @@ namespace LORAP.Archipelago
                     Chapter = data["chapter"].Value<int>(),
                     Sphere = data.ContainsKey("sphere") ? data["sphere"].Value<int>() : data["chapter"].Value<int>(),
                     SphereLayer = data.ContainsKey("sphere_layer") ? data["sphere_layer"].Value<int>() : 0,
+                    GlobalLayer = data["global_layer"].Value<int>(),
                     RequiredLibrarians = data["req_librarians"].Value<int>(),
                     //VisualX = data["visual_x"].Value<int>(),
                     //VisualY = data["visual_y"].Value<int>(),

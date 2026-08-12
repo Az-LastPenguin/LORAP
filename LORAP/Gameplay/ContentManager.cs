@@ -39,9 +39,16 @@ namespace LORAP.Gameplay
 
         private static UIStoryProgressIconSlot MapIconTemplate;
         private static GameObject LineTemplate;
+        private static UIBlockChapterAlarm SphereSeparatorTemplate;
+
+        private const float SphereSeparatorGap = 230f;
+        private static readonly Vector2 SphereSeparatorOffset = new Vector2(-70f, -115f);
+        private const float FirstSphereSeparatorExtraDown = 100f;
 
         private static List<MapNode> MapNodes = new List<MapNode>();
         private static List<GameObject> NodeLines = new List<GameObject>();
+        private static List<GameObject> SphereSeparators = new List<GameObject>();
+        private static Dictionary<int, TextMeshProUGUI> SphereSeparatorLabels = new Dictionary<int, TextMeshProUGUI>();
 
         private static Dictionary<SephirahType, int> EnsembleFloorToStage = new Dictionary<SephirahType, int>();
 
@@ -232,6 +239,9 @@ namespace LORAP.Gameplay
             MapIconTemplate.connectLineList.Clear();
             MapPanel.iconList.Remove(MapIconTemplate);
             MapIconTemplate.SetActiveStory(false);
+
+            // Borrow a vanilla chapter divider and reuse it for the sphere headers.
+            SphereSeparatorTemplate = MapPanel.blockChapterList.FirstOrDefault();
 
             // Clear vanilla map
             foreach (UIStoryProgressIconSlot icon in MapPanel.iconList)
@@ -797,8 +807,17 @@ namespace LORAP.Gameplay
                 }
             }
 
+            bool hasKeterGoal = SettingsManager.Endgoals.GetValue().Contains(Endgoal.KeterRealization);
+            if (hasKeterGoal && mapNodeByKey.TryGetValue("endgoal:210009", out MapNode keterGoalNode))
+            {
+                keterGoalNode.X = oliverNode.X;
+                keterGoalNode.Y = oliverNode.Y + 220f;
+                oliverNode.Next.Add(keterGoalNode);
+            }
+
             if (SettingsManager.Endgoals.GetValue().Contains(Endgoal.ReverberationEnsemble))
             {
+                float ensembleVerticalOffset = hasKeterGoal ? 220f : 0f;
                 foreach (var pair in DEPositions)
                 {
                     string key = $"endgoal:{EnsembleFloorToStage[pair.Key]}";
@@ -807,7 +826,7 @@ namespace LORAP.Gameplay
 
                     MapNode node = mapNodeByKey[key];
                     node.X = oliverNode.X + pair.Value.x;
-                    node.Y = oliverNode.Y + pair.Value.y;
+                    node.Y = oliverNode.Y + pair.Value.y + ensembleVerticalOffset;
 
                     foreach (SephirahType seph in DELinks[pair.Key])
                     {
@@ -818,8 +837,31 @@ namespace LORAP.Gameplay
                 oliverNode.Next.Add(mapNodeByKey[$"endgoal:{EnsembleFloorToStage[SephirahType.Malkuth]}"]);
             }
 
+            AddSphereSpacing(mapNodeByKey);
+
             // Render the graph
             RenderGraph();
+        }
+
+        private static void AddSphereSpacing(Dictionary<string, MapNode> mapNodeByKey)
+        {
+            if (!SlotDataManager.BoELayersEnabled)
+                return;
+
+            List<float> sphereStarts = SlotDataManager.BattleTree.Nodes.Values
+                .Where(node => node.Sphere > 1 && node.Sphere <= 7 && mapNodeByKey.ContainsKey(node.Key))
+                .GroupBy(node => node.Sphere)
+                .OrderBy(group => group.Key)
+                .Select(group => group.Min(node => mapNodeByKey[node.Key].Y))
+                .ToList();
+
+            // Give every sphere header some breathing room, including the first one.
+            foreach (MapNode node in MapNodes)
+            {
+                float originalY = node.Y;
+                int boundariesBeforeNode = sphereStarts.Count(start => originalY >= start);
+                node.Y += SphereSeparatorGap * (boundariesBeforeNode + 1);
+            }
         }
 
         private static void RenderGraph()
@@ -840,6 +882,13 @@ namespace LORAP.Gameplay
                 GameObject.Destroy(line);
             }
             NodeLines.Clear();
+
+            foreach (GameObject separator in SphereSeparators)
+            {
+                GameObject.Destroy(separator);
+            }
+            SphereSeparators.Clear();
+            SphereSeparatorLabels.Clear();
 
             // Now, render allat
             Dictionary<string, UIStoryProgressIconSlot> icons = new Dictionary<string, UIStoryProgressIconSlot>();
@@ -863,6 +912,9 @@ namespace LORAP.Gameplay
                 }
             }
 
+            // Lines first, headers next. Otherwise the spaghetti lines win the header text.
+            RenderSphereSeparators(MapPanel, mapNodeByKey);
+
             // Place nodes on the map
             foreach (MapNode mapNode in MapNodes)
             {
@@ -885,6 +937,95 @@ namespace LORAP.Gameplay
             }
 
             ResizeMap();
+        }
+
+        private static void RenderSphereSeparators(UIStoryProgressPanel mapPanel, Dictionary<string, MapNode> mapNodeByKey)
+        {
+            if (!SlotDataManager.BoELayersEnabled || SphereSeparatorTemplate.root == null)
+                return;
+
+            List<(int Sphere, float MinY, float MaxY)> sphereRanges = SlotDataManager.BattleTree.Nodes.Values
+                .Where(node => node.Sphere > 0 && node.Sphere <= 7 && mapNodeByKey.ContainsKey(node.Key))
+                .GroupBy(node => node.Sphere)
+                .OrderBy(group => group.Key)
+                .Select(group => (
+                    Sphere: group.Key,
+                    MinY: group.Min(node => mapNodeByKey[node.Key].Y),
+                    MaxY: group.Max(node => mapNodeByKey[node.Key].Y)))
+                .ToList();
+
+            for (int index = 0; index < sphereRanges.Count; index++)
+            {
+                (int sphere, float minY, float maxY) = sphereRanges[index];
+                float separatorY = index == 0
+                    ? minY + 30f
+                    : (sphereRanges[index - 1].MaxY + minY) / 2f + 140f;
+
+                GameObject separator = UnityEngine.Object.Instantiate(
+                    SphereSeparatorTemplate.root,
+                    mapPanel.chapterList.First().transform);
+
+                separator.name = $"LORAP_SphereSeparator_{sphere}";
+                separator.transform.localPosition = new Vector3(
+                    SphereSeparatorOffset.x,
+                    separatorY + SphereSeparatorOffset.y - (sphere == 1 ? FirstSphereSeparatorExtraDown : 0f),
+                    0f);
+                separator.transform.localRotation = Quaternion.identity;
+                separator.SetActive(true);
+
+                DisableClonedTemplateImage(separator, SphereSeparatorTemplate.img_icon);
+                DisableClonedTemplateImage(separator, SphereSeparatorTemplate.img_iconglow);
+                DisableClonedSeparatorTail(separator);
+
+                TextMeshProUGUI label = separator
+                    .GetComponentsInChildren<TextMeshProUGUI>(true)
+                    .FirstOrDefault(text => SphereSeparatorTemplate.txt_alarm != null &&
+                        text.gameObject.name == SphereSeparatorTemplate.txt_alarm.gameObject.name)
+                    ?? separator.GetComponentInChildren<TextMeshProUGUI>(true);
+
+                if (label != null)
+                {
+                    label.enableWordWrapping = false;
+                    SphereSeparatorLabels[sphere] = label;
+                }
+
+                SphereSeparators.Add(separator);
+            }
+
+            UpdateSphereSeparators();
+        }
+
+        private static void DisableClonedTemplateImage(GameObject separator, Image templateImage)
+        {
+            if (templateImage == null)
+                return;
+
+            Image clonedImage = separator
+                .GetComponentsInChildren<Image>(true)
+                .FirstOrDefault(image => image.gameObject.name == templateImage.gameObject.name);
+
+            if (clonedImage != null)
+                clonedImage.gameObject.SetActive(false);
+        }
+
+        private static void DisableClonedSeparatorTail(GameObject separator)
+        {
+            Image tail = separator.GetComponentsInChildren<Image>(true)
+                .FirstOrDefault(image => image.gameObject.name == "[Image]Line (2)" || image.sprite?.name == "SettingPartNew_68");
+
+            if (tail != null)
+                tail.gameObject.SetActive(false);
+        }
+
+        internal static void UpdateSphereSeparators()
+        {
+            foreach (var entry in SphereSeparatorLabels)
+            {
+                if (entry.Value == null)
+                    continue;
+
+                entry.Value.text = $"Sphere {entry.Key} - {SlotDataManager.GetSphereClearPercentage(entry.Key)}% clear";
+            }
         }
 
         private static void ResizeMap()
@@ -935,6 +1076,9 @@ namespace LORAP.Gameplay
 
             // Make fake BattleNodes for I-IV stages of Keter Realization so that it can ACTUALLY FUCKING WORK
             BattleNode lastKeterNode = SlotDataManager.BattleTree.GetNodeById(210009);
+            if (lastKeterNode == null)
+                return;
+
             for (int i = 210005; i <= 210008; i++)
             {
                 BattleNode keterNode = new BattleNode()
@@ -944,6 +1088,9 @@ namespace LORAP.Gameplay
                     Name = "Keter Realization {i}",
                     Kind = BattleNodeKind.Stage,
                     Chapter = lastKeterNode.Chapter,
+                    Sphere = lastKeterNode.Sphere,
+                    SphereLayer = lastKeterNode.SphereLayer,
+                    GlobalLayer = lastKeterNode.GlobalLayer,
                     RequiredLibrarians = lastKeterNode.RequiredLibrarians,
                     AssignedFloor = lastKeterNode.AssignedFloor,
                 };
