@@ -1,8 +1,11 @@
 using HarmonyLib;
+using LORAP.Archipelago;
 using LORAP.CustomUI;
 using LORAP.Gameplay;
 using LORAP.Playthru;
+using System;
 using System.Collections.Generic; 
+using System.Linq;
 using UI;
 using UnityEngine;
 
@@ -15,7 +18,7 @@ namespace LORAP.Patches
         [HarmonyPostfix]
         static void FakeInfBooksForBurning(UIInvenFeedBookSlot __instance, int minusnum)
         {
-            if (__instance.BookId.packageId != "lorap") // For every vanilla book
+            if (!SlotDataManager.BoELayersEnabled && __instance.BookId.packageId != "lorap") // For every vanilla book
                 __instance.txt_bookNum.text = "∞";
         }
 
@@ -24,7 +27,7 @@ namespace LORAP.Patches
         [HarmonyPostfix]
         static void RedirectBookBurn(UIInvenFeedBookSlot __instance, LorId bookId)
         {
-            if (bookId.packageId != "lorap") // For every vanilla book
+            if (!SlotDataManager.BoELayersEnabled && bookId.packageId != "lorap") // For every vanilla book
                 __instance.remainBookNum = 20;
         }
 
@@ -35,14 +38,22 @@ namespace LORAP.Patches
         {
             LibraryFloorModel floor = LibraryModel.Instance.GetFloor(sep);
 
+            int layersBeforeBurn = PlaythruManager.LayersUnlocked;
+            bool hasPageDropBook = __instance._currentAddedBookIdList.Any(bookId =>
+                !SlotDataManager.BoELayersEnabled || !string.IsNullOrEmpty(bookId.packageId));
+
             List<BookDropResult> list = new List<BookDropResult>();
             foreach (LorId currentAddedBookId in __instance._currentAddedBookIdList)
             {
                 list.AddRange(BookDropManager.GenerateDrops(currentAddedBookId));
             }
 
-            UIGachaEffect.instance.StartGachaProcess(sep, floor.Level);
-            UIGachaResultPopup.Instance.SetData(list, sep);
+            int layersOpened = PlaythruManager.LayersUnlocked - layersBeforeBurn;
+            if (hasPageDropBook)
+            {
+                UIGachaEffect.instance.StartGachaProcess(sep, floor.Level);
+                UIGachaResultPopup.Instance.SetData(list, sep);
+            }
 
             LibraryModel.Instance.CheckAllCards();
             LibraryModel.Instance.CheckAllEquips();
@@ -52,6 +63,14 @@ namespace LORAP.Patches
 
             SaveManager.SaveGame();
 
+            if (layersOpened > 0 && !hasPageDropBook)
+            {
+                string message = layersOpened == 1
+                    ? $"New battle layer opened ({PlaythruManager.LayersUnlocked}/{SlotDataManager.LayerCount})."
+                    : $"{layersOpened} new battle layers opened ({PlaythruManager.LayersUnlocked}/{SlotDataManager.LayerCount}).";
+                MessagePopup.ShowMessage(message);
+            }
+
             return false;
         }
 
@@ -60,10 +79,32 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool NoBoEBundle(UIBookPanel __instance)
         {
-            if (!PlaythruManager.CanOpenBookOfEverything())
+            int selectedBoE = __instance._currentAddedBookIdList.Count(id => id == new LorId("lorap", 123456));
+            if (selectedBoE > 0 && BookDropManager.BooksOfEverythingOpened >= SlotDataManager.BoERequiredTotal)
             {
-                MessagePopup.ShowMessage("Book of Everything refuses to be burned at this time.");
+                MessagePopup.ShowMessage("You have read everything.");
                 return false;
+            }
+
+            int availableBoEBundles = PlaythruManager.GetUnlockedBoEBundleLimit()
+                - BookDropManager.BooksOfEverythingOpened;
+            if (selectedBoE > Math.Max(0, availableBoEBundles))
+            {
+                string message = availableBoEBundles <= 0
+                    ? "No unread Book of Everything bundles are available in the open spheres."
+                    : $"Only {availableBoEBundles} unread Book of Everything bundle(s) are available.";
+                MessagePopup.ShowMessage(message);
+                return false;
+            }
+
+            if (SlotDataManager.BoELayersEnabled)
+            {
+                int selectedVanillaBooks = __instance._currentAddedBookIdList.Count(id => string.IsNullOrEmpty(id.packageId));
+                if (selectedVanillaBooks > PlaythruManager.GetUnlockableLayerCount())
+                {
+                    MessagePopup.ShowMessage(PlaythruManager.GetLayerUnlockBlockMessage());
+                    return false;
+                }
             }
 
             return true;

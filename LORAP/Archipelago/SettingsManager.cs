@@ -54,7 +54,7 @@ namespace LORAP.Archipelago
     internal enum ProgressionMode
     {
         BookRequirements,
-        BoESpheres
+        BoELayers
     }
 
     // Setting class
@@ -181,6 +181,8 @@ namespace LORAP.Archipelago
         /* Start and Goals */
         internal static Setting<List<Endgoal>> Endgoals = new Setting<List<Endgoal>>("Endgoals", "endgoals");
 
+        internal static Setting<List<Endgoal>> PersistentGoals = new Setting<List<Endgoal>>("Persistent Goals", "persistent_goals");
+
         internal static Setting<int> EnsembleBattles = new Setting<int>("Ensemble Endgoal Battles", "ensemble_battles");
 
         internal static Setting<bool> EndgoalsAlwaysUnlocked = new Setting<bool>("Endgoals Always Unlocked", "endgoals_always_unlocked", true);
@@ -188,7 +190,7 @@ namespace LORAP.Archipelago
         /* Battle Graph and Progression */
         internal static Setting<ProgressionMode> RunProgressionMode = new Setting<ProgressionMode>("Progression Mode", "progression_mode");
 
-        internal static Setting<int> SphereClearPercentage = new Setting<int>("Sphere Clear Percentage", "sphere_clear_percentage", defaultValue: 70);
+        internal static Setting<int> SphereClearPercentage = new Setting<int>("Sphere Clear Percentage", "sphere_clear_percentage", defaultValue: 50);
 
         internal static Setting<bool> EnemiesTurnIntoChecks = new Setting<bool>("Enemies Turn Into Checks", "enemies_turn_into_checks", true);
 
@@ -233,12 +235,14 @@ namespace LORAP.Archipelago
                 if (!slotData.ContainsKey(setting.SlotDataID))
                     throw new Exception($"Option {setting.SlotDataID} ({setting.Name}) is missing from SlotData!\n Possible mod and .apworld version mismatch?");
 
-                // An exception for this option specfically. Might figure out automation later
-                if (setting == Endgoals)
+                // OptionSets are the odd ones here, AP sends them as JSON arrays, not numbers.
+                if (setting == Endgoals || setting == PersistentGoals)
                 {
-                    List<Endgoal> endgoals = (slotData[setting.SlotDataID] as JArray).Select(e => (Endgoal)Enum.Parse(typeof(Endgoal), e.Value<string>().Replace(" ", ""))).ToList();
+                    List<Endgoal> goals = (slotData[setting.SlotDataID] as JArray)
+                        .Select(e => (Endgoal)Enum.Parse(typeof(Endgoal), e.Value<string>().Replace(" ", "")))
+                        .ToList();
 
-                    setting.SetValue(endgoals);
+                    setting.SetValue(goals);
 
                     continue;
                 }
