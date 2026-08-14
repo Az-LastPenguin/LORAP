@@ -25,7 +25,7 @@ namespace LORAP.Archipelago
 
         public bool AreBattleParentsComplete()
         {
-            if (SlotDataManager.BoELayersEnabled)
+            if (SlotDataManager.LayeredModeEnabled)
             {
                 if (!PlaythruManager.IsLayerUnlocked(GlobalLayer))
                     return false;
@@ -108,7 +108,7 @@ namespace LORAP.Archipelago
         // Utils
         internal static bool HasBattleTree => BattleTree != null && BattleTree.Nodes.Count > 0;
 
-        internal static bool BoELayersEnabled => SettingsManager.RunProgressionMode == ProgressionMode.BoELayers;
+        internal static bool LayeredModeEnabled => SettingsManager.RunProgressionMode == ProgressionMode.Layered;
 
         internal static int GetBoEBundlesRequiredThroughSphere(int sphere)
         {
@@ -121,7 +121,7 @@ namespace LORAP.Archipelago
 
         internal static bool IsSphereClearEnough(int sphere)
         {
-            if (!BoELayersEnabled)
+            if (!LayeredModeEnabled)
                 return true;
 
             List<BattleNode> sphereNodes = GetLogicalSphereNodes(sphere);

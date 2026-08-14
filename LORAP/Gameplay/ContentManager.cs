@@ -845,7 +845,7 @@ namespace LORAP.Gameplay
 
         private static void AddSphereSpacing(Dictionary<string, MapNode> mapNodeByKey)
         {
-            if (!SlotDataManager.BoELayersEnabled)
+            if (!SlotDataManager.LayeredModeEnabled)
                 return;
 
             List<float> sphereStarts = SlotDataManager.BattleTree.Nodes.Values
@@ -941,7 +941,7 @@ namespace LORAP.Gameplay
 
         private static void RenderSphereSeparators(UIStoryProgressPanel mapPanel, Dictionary<string, MapNode> mapNodeByKey)
         {
-            if (!SlotDataManager.BoELayersEnabled || SphereSeparatorTemplate.root == null)
+            if (!SlotDataManager.LayeredModeEnabled || SphereSeparatorTemplate.root == null)
                 return;
 
             List<(int Sphere, float MinY, float MaxY)> sphereRanges = SlotDataManager.BattleTree.Nodes.Values

@@ -18,7 +18,7 @@ namespace LORAP.Patches
         [HarmonyPostfix]
         static void FakeInfBooksForBurning(UIInvenFeedBookSlot __instance, int minusnum)
         {
-            if (!SlotDataManager.BoELayersEnabled && __instance.BookId.packageId != "lorap") // For every vanilla book
+            if (!SlotDataManager.LayeredModeEnabled && __instance.BookId.packageId != "lorap") // For every vanilla book
                 __instance.txt_bookNum.text = "∞";
         }
 
@@ -27,7 +27,7 @@ namespace LORAP.Patches
         [HarmonyPostfix]
         static void RedirectBookBurn(UIInvenFeedBookSlot __instance, LorId bookId)
         {
-            if (!SlotDataManager.BoELayersEnabled && bookId.packageId != "lorap") // For every vanilla book
+            if (!SlotDataManager.LayeredModeEnabled && bookId.packageId != "lorap") // For every vanilla book
                 __instance.remainBookNum = 20;
         }
 
@@ -40,7 +40,7 @@ namespace LORAP.Patches
 
             int layersBeforeBurn = PlaythruManager.LayersUnlocked;
             bool hasPageDropBook = __instance._currentAddedBookIdList.Any(bookId =>
-                !SlotDataManager.BoELayersEnabled || !string.IsNullOrEmpty(bookId.packageId));
+                !SlotDataManager.LayeredModeEnabled || !string.IsNullOrEmpty(bookId.packageId));
 
             List<BookDropResult> list = new List<BookDropResult>();
             foreach (LorId currentAddedBookId in __instance._currentAddedBookIdList)
@@ -91,13 +91,13 @@ namespace LORAP.Patches
             if (selectedBoE > Math.Max(0, availableBoEBundles))
             {
                 string message = availableBoEBundles <= 0
-                    ? "No unread Book of Everything bundles are available in the open spheres."
-                    : $"Only {availableBoEBundles} unread Book of Everything bundle(s) are available.";
+                    ? "No unread Book of Everything chapters are available currently."
+                    : $"Only {availableBoEBundles} unread Book of Everything chapters are available.";
                 MessagePopup.ShowMessage(message);
                 return false;
             }
 
-            if (SlotDataManager.BoELayersEnabled)
+            if (SlotDataManager.LayeredModeEnabled)
             {
                 int selectedVanillaBooks = __instance._currentAddedBookIdList.Count(id => string.IsNullOrEmpty(id.packageId));
                 if (selectedVanillaBooks > PlaythruManager.GetUnlockableLayerCount())
@@ -137,29 +137,30 @@ namespace LORAP.Patches
                 return false;
             }
 
-            // TODO: TO BE REMOVED
-            //if (BookDropManager.BookDrops.ContainsKey(dropBookInfo.id))
-            //{
-            //    var drops = BookDropManager.BookDrops[dropBookInfo.id];
-            //
-            //    List<UIRewardBookData> list = new List<UIRewardBookData>();
-            //    List<UIRewardCardData> list2 = new List<UIRewardCardData>();
-            //
-            //    foreach (var d in drops)
-            //    {
-            //        if (d.type == DropItemType.Card)
-            //            list2.Add(new UIRewardCardData(new DiceCardItemModel(ItemXmlDataList.instance.GetCardItem(d.id)), 1, 0));
-            //        else if (d.type == DropItemType.Equip)
-            //            list.Add(new UIRewardBookData(BookXmlList.Instance.GetData(d.id), 1, 0));
-            //    }
-            //
-            //    __instance.rewardItemList.SetItemsData(list, list2);
-            //}
+            //--- Book Requirements progression is likely gonna be removed, remove this when it's time
+            if (BookDropManager.BookDrops.ContainsKey(dropBookInfo.id))
+            {
+                var drops = BookDropManager.BookDrops[dropBookInfo.id];
+            
+                List<UIRewardBookData> list = new List<UIRewardBookData>();
+                List<UIRewardCardData> list2 = new List<UIRewardCardData>();
+            
+                foreach (var d in drops)
+                {
+                    if (d.type == DropItemType.Card)
+                        list2.Add(new UIRewardCardData(new DiceCardItemModel(ItemXmlDataList.instance.GetCardItem(d.id)), 1, 0));
+                    else if (d.type == DropItemType.Equip)
+                        list.Add(new UIRewardBookData(BookXmlList.Instance.GetData(d.id), 1, 0));
+                }
+            
+                __instance.rewardItemList.SetItemsData(list, list2);
+            }
 
             __instance.SetColor(UIColorManager.Manager.GetUIColor(UIColor.Default));
             __instance.img_BookIcon.color = Color.white;
             __instance.img_BookIcon.sprite = dropBookInfo.bookIcon;
             __instance.img_BookIconGlow.sprite = dropBookInfo.bookIconGlow;
+            //---
 
             return false;
         }

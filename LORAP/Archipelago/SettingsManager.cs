@@ -54,7 +54,7 @@ namespace LORAP.Archipelago
     internal enum ProgressionMode
     {
         BookRequirements,
-        BoELayers
+        Layered
     }
 
     // Setting class
@@ -190,7 +190,7 @@ namespace LORAP.Archipelago
         /* Battle Graph and Progression */
         internal static Setting<ProgressionMode> RunProgressionMode = new Setting<ProgressionMode>("Progression Mode", "progression_mode");
 
-        internal static Setting<int> SphereClearPercentage = new Setting<int>("Sphere Clear Percentage", "sphere_clear_percentage", defaultValue: 50);
+        internal static Setting<int> SphereClearPercentage = new Setting<int>("Sphere Clear Percentage", "sphere_clear_percentage");
 
         internal static Setting<bool> EnemiesTurnIntoChecks = new Setting<bool>("Enemies Turn Into Checks", "enemies_turn_into_checks", true);
 

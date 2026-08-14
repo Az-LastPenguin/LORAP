@@ -36,9 +36,9 @@ namespace LORAP.Gameplay
 
         internal const int CombatPageMaxCopies = 150;
 
-        //internal static List<BookDrop> AllDrops = new List<BookDrop>();
+        internal static List<BookDrop> AllDrops = new List<BookDrop>();
+        internal static Dictionary<LorId, List<BookDrop>> BookDrops = new Dictionary<LorId, List<BookDrop>>();
 
-        // internal static Dictionary<LorId, List<BookDrop>> BookDrops = new Dictionary<LorId, List<BookDrop>>();
         internal static List<List<BookDrop>> ChapterDrops = new List<List<BookDrop>>();
         internal static List<List<BookDrop>> Bundles = new List<List<BookDrop>>();
 
@@ -164,8 +164,9 @@ namespace LORAP.Gameplay
                 }
             }
 
-            // TODO: TO BE REMOVED
-            /*
+
+
+            //--- Book Requirements progression is likely gonna be removed, remove this when it's time
             // Figure out drops for vanilla books
             // Decide of what chapter each book will be
             Dictionary<LorId, int> bookChapters = new Dictionary<LorId, int>();
@@ -200,7 +201,7 @@ namespace LORAP.Gameplay
                     {
                         logicalChapter = parsedChapter;
                     }
-            
+
                     foreach (var book in item.Value[i])
                     {
                         if (SettingsManager.BookContentsRandomization == BookContentsRandomization.BookChapter)
@@ -212,7 +213,7 @@ namespace LORAP.Gameplay
             }
 
             var Random = GameUtils.CreateRandom("book_drops");
-            List<BookDrop> allowedDrops = AllDrops.Where(d => d.collectible).ToList();
+            List<BookDrop> allowedDrops = AllDrops.ToList();
 
             if (bookChapters.Count == 0)
             {
@@ -273,7 +274,8 @@ namespace LORAP.Gameplay
                         BookDrops[book] = drops;
                     }
                 }
-            }*/
+            }
+            //---
         }
 
         private static List<BookDrop> GatherPages()
@@ -366,7 +368,7 @@ namespace LORAP.Gameplay
             }
             else if (bookID == new LorId("lorap", 123457))
             {
-                int boosterPackDrops = SlotDataManager.BoELayersEnabled ? 4 : 8;
+                int boosterPackDrops = SlotDataManager.LayeredModeEnabled ? 4 : 8;
                 for (int i = 0; i < boosterPackDrops; i++)
                 {
                     var Random = GameUtils.CreateRandom("booster_packs", BoosterPacksOpened * boosterPackDrops + i);
@@ -392,55 +394,25 @@ namespace LORAP.Gameplay
 
                 DropBookInventoryModel.Instance.RemoveBook(bookID);
             }
-            else if (SlotDataManager.BoELayersEnabled && string.IsNullOrEmpty(bookID.packageId))
+            else if (string.IsNullOrEmpty(bookID.packageId))// Vanilla books
             {
-                if (!PlaythruManager.TryUnlockNextLayer())
+                if (SlotDataManager.LayeredModeEnabled)
+                {
+                    if (PlaythruManager.TryUnlockNextLayer())
+                        DropBookInventoryModel.Instance.RemoveBook(bookID);
+
                     return dropResults;
+                }
 
-                DropBookInventoryModel.Instance.RemoveBook(bookID);
-            }
-
-            // TODO: TO BE REMOVED
-            /*
-            else
-            {
-                
-               
-                // Vanilla books
+                //--- Book Requirements progression is likely gonna be removed, remove this when it's time
                 if (!BookDrops.TryGetValue(bookID, out List<BookDrop> pool))
                     return dropResults;
 
                 foreach (BookDrop drop in pool)
-                {
-                    BookDropResult dropResult = new BookDropResult()
-                    {
-                        id = drop.id,
-                        itemType = drop.type,
-                        number = drop.type == DropItemType.Card ? 3 : 1,
-                    };
+                    dropResults.AddRange(GrantDropToMaxStack(drop));
 
-                    if (drop.type == DropItemType.Card && InventoryModel.Instance.GetCardCount(drop.id) < 150)
-                    {
-                        InventoryModel.Instance.AddCard(drop.id, 3);
-                    }
-                    else  //if (drop.type == DropItemType.Equip)
-                    {
-                        // If we can have more of those create a keypage and store the instanceid to show in the result screen
-                        if (BookInventoryModel.Instance.GetBookCount(drop.id) < KeyPageRarityLimits[BookXmlList.Instance.GetData(drop.id).Rarity])
-                            dropResult.bookInstanceId = BookInventoryModel.Instance.CreateBook(drop.id).instanceId;
-                        else
-                            continue; // Can't give, skip
-                    }
-                    //else // Don't add result into the table if we didn't give player anything // Why was this check even here in the first place?
-                    //{
-                    //    continue;
-                    //}
-
-                    dropResults.Add(dropResult);
-                }
-                
+                //---
             }
-            */
 
             return dropResults;
         }
@@ -480,7 +452,7 @@ namespace LORAP.Gameplay
                 }
 
                 // The inventory still needs every real copy, but showing all of them in the
-                // gacha popup is just spam
+                // gacha popup is just spam // TODO: Make gacha popup results show amount of dropped pages? (i think it's just hidden (i hope))
                 dropResults.Add(new BookDropResult()
                 {
                     id = drop.id,

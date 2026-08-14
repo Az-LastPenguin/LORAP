@@ -346,7 +346,7 @@ namespace LORAP.Playthru
 
         internal static bool IsLayerUnlocked(int globalLayer)
         {
-            return !SlotDataManager.BoELayersEnabled || globalLayer < LayersUnlocked;
+            return !SlotDataManager.LayeredModeEnabled || globalLayer < LayersUnlocked;
         }
 
         private static int GetLayerSphere(int globalLayer)
@@ -357,7 +357,7 @@ namespace LORAP.Playthru
 
         internal static int GetUnlockableLayerCount()
         {
-            if (!SlotDataManager.BoELayersEnabled || SlotDataManager.BattleTree == null)
+            if (!SlotDataManager.LayeredModeEnabled || SlotDataManager.BattleTree == null)
                 return 0;
 
             int simulatedUnlocked = LayersUnlocked;
@@ -407,7 +407,7 @@ namespace LORAP.Playthru
 
         internal static int GetUnlockedBoEBundleLimit()
         {
-            if (!SlotDataManager.BoELayersEnabled || SlotDataManager.BattleTree == null)
+            if (!SlotDataManager.LayeredModeEnabled || SlotDataManager.BattleTree == null)
                 return int.MaxValue;
 
             int unlockedSphere = SlotDataManager.BattleTree.Nodes.Values
