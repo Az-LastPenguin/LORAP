@@ -1,4 +1,5 @@
 ﻿using GameSave;
+using LORAP.Playthru;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -48,6 +49,12 @@ namespace LORAP.Archipelago
         UnitDeath,
         FloorWipe,
         StageLoss
+    }
+
+    internal enum ProgressionMode
+    {
+        BookRequirements,
+        Layered
     }
 
     // Setting class
@@ -176,12 +183,25 @@ namespace LORAP.Archipelago
         internal static Setting<bool> SendHintsOnReceptionScout = new Setting<bool>("Auto Reception Hints", defaultValue: false, desc: "Automatically creates hints for items in stages when opened on the map.");
 
         /** AP OPTIONS **/
-        /* ENDGOAL-RELATED */
+        /* Start and Goals */
         internal static Setting<List<Endgoal>> Endgoals = new Setting<List<Endgoal>>("Endgoals", "endgoals");
+
+        internal static Setting<List<Endgoal>> PersistentGoals = new Setting<List<Endgoal>>("Persistent Goals", "persistent_goals");
 
         internal static Setting<int> EnsembleBattles = new Setting<int>("Ensemble Endgoal Battles", "ensemble_battles");
 
-        /* RANDOMIZATION */
+        internal static Setting<bool> EndgoalsAlwaysUnlocked = new Setting<bool>("Endgoals Always Unlocked", "endgoals_always_unlocked", true);
+
+        /* Battle Graph and Progression */
+        internal static Setting<ProgressionMode> RunProgressionMode = new Setting<ProgressionMode>("Progression Mode", "progression_mode");
+
+        internal static Setting<int> SphereClearPercentage = new Setting<int>("Sphere Clear Percentage", "sphere_clear_percentage");
+
+        internal static Setting<bool> EnemiesTurnIntoChecks = new Setting<bool>("Enemies Turn Into Checks", "enemies_turn_into_checks", true);
+
+        /* Randomization */
+        internal static Setting<bool> ShuffleEnsembleFloors = new Setting<bool>("Shuffle Ensemble Floors", "shuffle_ensemble_floor", true, "!!Reconnect to the game after changing this setting in order for it to work properly!!");
+
         internal static Setting<AbnoPageShuffle> AbnoPageShuffle = new Setting<AbnoPageShuffle>("Abnormality Page Shuffle", "abno_page_shuffle");
 
         internal static Setting<AbnoPageRandomization> AbnoPageRandomization = new Setting<AbnoPageRandomization>("Abnormality Page Randomization", "abno_page_randomization");
@@ -192,26 +212,23 @@ namespace LORAP.Archipelago
 
         // Page randomization here (someday)
 
+        /* Book Contents and Filler */
         internal static Setting<BookContentsRandomization> BookContentsRandomization = new Setting<BookContentsRandomization>("Randomize Book Contents", "book_contents_randomization");
 
-        internal static Setting<bool> ShuffleAbnos = new Setting<bool>("Shuffle Abnormalities", "shuffle_abnos");
+        // Filler items here
 
-        internal static Setting<bool> ShuffleRealizations = new Setting<bool>("Shuffle Realizations", "shuffle_realizations");
+        // Filler pages here
 
-        internal static Setting<bool> ShuffleEnsembleFloors = new Setting<bool>("Shuffle Ensemble Floors", "shuffle_ensemble_floor", true, "!!Reconnect to the game after changing this setting in order for it to work properly!!");
+        // Remove exclusiveness here
 
-        /* PROGRESSION */
-        internal static Setting<bool> EnemiesTurnIntoChecks = new Setting<bool>("Enemies Turn Into Checks", "enemies_turn_into_checks", true);
-
-        internal static Setting<bool> EndgoalsAlwaysUnlocked = new Setting<bool>("Endgoals Always Unlocked", "endgoals_always_unlocked", true);
-
-        /* OTHER */
+        /* Deathlink */
         internal static Setting<bool> Deathlink = new Setting<bool>("Deathlink", "deathlink", true);
 
         internal static Setting<DeathlinkAction> IncomingDeathlink = new Setting<DeathlinkAction>("Incoming Deathlink", "incoming_deathlink", true);
 
         internal static Setting<DeathlinkAction> OutgoingDeathlink = new Setting<DeathlinkAction>("Outgoing Deathlink", "outgoing_deathlink", true);
 
+        // Main Code
         internal static void ParseSlotData(Dictionary<string, object> slotData)
         {
             // Try to get every AP Option listed above from the slotData
@@ -223,12 +240,14 @@ namespace LORAP.Archipelago
                 if (!slotData.ContainsKey(setting.SlotDataID))
                     throw new Exception($"Option {setting.SlotDataID} ({setting.Name}) is missing from SlotData!\n Possible mod and .apworld version mismatch?");
 
-                // An exception for this option specfically. Might figure out automation later
-                if (setting == Endgoals)
+                // OptionSets are the odd ones here, AP sends them as JSON arrays, not numbers.
+                if (setting == Endgoals || setting == PersistentGoals)
                 {
-                    List<Endgoal> endgoals = (slotData[setting.SlotDataID] as JArray).Select(e => (Endgoal)Enum.Parse(typeof(Endgoal), e.Value<string>().Replace(" ", ""))).ToList();
+                    List<Endgoal> goals = (slotData[setting.SlotDataID] as JArray)
+                        .Select(e => (Endgoal)Enum.Parse(typeof(Endgoal), e.Value<string>().Replace(" ", "")))
+                        .ToList();
 
-                    setting.SetValue(endgoals);
+                    setting.SetValue(goals);
 
                     continue;
                 }

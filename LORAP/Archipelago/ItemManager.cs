@@ -132,7 +132,10 @@ namespace LORAP.Archipelago
                     PlaythruManager.GiveLibrarian((SephirahType)item.RealId, silent);
                     break;
                 case APItemType.Book:
-                    PlaythruManager.GiveBook((int)item.RealId, 1, silent);
+                    if (item.RealId == 123456)
+                        PlaythruManager.GiveBookOfEverything(silent);
+                    else
+                        PlaythruManager.GiveBook((int)item.RealId, 1, silent);
                     break;
                 case APItemType.Other:
                     // Yay switch case of doom!!

@@ -2,6 +2,7 @@
 using HarmonyLib;
 using LORAP.Archipelago;
 using LORAP.CustomUI;
+using LORAP.Gameplay;
 using LORAP.Playthru;
 using LORAP.Utils;
 using System;
@@ -33,12 +34,15 @@ namespace LORAP.Patches
                 return false;
             }
 
-            List<int> endgoals = new List<int>()
-            {
-                60003, 60004,
-                70001, 70002, 70003, 70004, 70005, 70006, 70007, 70008, 70009, 70010
-            };
-            if (SettingsManager.EndgoalsAlwaysUnlocked && endgoals.Contains(battleNode.Id))
+            List<Endgoal> selectedEndgoals = SettingsManager.Endgoals.GetValue();
+            bool receptionEndgoal =
+                battleNode.Id == 60003 && selectedEndgoals.Contains(Endgoal.BlackSilence)
+                || battleNode.Id == 60004 && selectedEndgoals.Contains(Endgoal.DistortedEnsemble)
+                || battleNode.Id >= 70001 && battleNode.Id <= 70010
+                    && selectedEndgoals.Contains(Endgoal.ReverberationEnsemble);
+            bool keterEndgoal = selectedEndgoals.Contains(Endgoal.KeterRealization)
+                && battleNode.Id >= 210005 && battleNode.Id <= 210009;
+            if (SettingsManager.EndgoalsAlwaysUnlocked && (receptionEndgoal || keterEndgoal))
             {
                 __result = StoryState.Clear;
                 return false;
@@ -130,6 +134,8 @@ namespace LORAP.Patches
 
                 status.SetActive(false);
             }
+
+            ContentManager.UpdateSphereSeparators();
 
             return false;
         }

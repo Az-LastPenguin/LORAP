@@ -67,6 +67,7 @@ namespace LORAP.Gameplay
             saveData.AddData("customStorage", LibraryModel.Instance._customStorage.GetSaveData()); // Custom storage for mods
             saveData.AddData("floorData", GetFloorData()); // Floor units
             saveData.AddData("playthrough", PlaythruManager.GetSaveData()); // Playthrough data
+            saveData.AddData("dropData", BookDropManager.GetSaveData()); // Book drop data
             saveData.AddData("itemManager", ItemManager.GetSaveData()); // Item Manager
             saveData.AddData("settingsManager", SettingsManager.GetSaveData()); // Settings Manager
 
@@ -122,6 +123,7 @@ namespace LORAP.Gameplay
             DeckListModel.Instance.LoadFromSaveData(SaveData.GetData("deckList"));
             LibraryModel.Instance._customStorage.LoadFromSaveData(SaveData.GetData("customStorage"));
             PlaythruManager.LoadFromSaveData(SaveData.GetData("playthrough"));
+            BookDropManager.LoadFromSaveData(SaveData.GetData("dropData"));
             ItemManager.LoadFromSaveData(SaveData.GetData("itemManager"));
             SettingsManager.LoadFromSaveData(SaveData.GetData("settingsManager"));
 

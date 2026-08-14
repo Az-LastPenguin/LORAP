@@ -1,6 +1,11 @@
 using HarmonyLib;
+using LORAP.Archipelago;
+using LORAP.CustomUI;
 using LORAP.Gameplay;
+using LORAP.Playthru;
+using System;
 using System.Collections.Generic; 
+using System.Linq;
 using UI;
 using UnityEngine;
 
@@ -13,7 +18,7 @@ namespace LORAP.Patches
         [HarmonyPostfix]
         static void FakeInfBooksForBurning(UIInvenFeedBookSlot __instance, int minusnum)
         {
-            if (__instance.BookId.packageId != "lorap") // For every vanilla book
+            if (!SlotDataManager.LayeredModeEnabled && __instance.BookId.packageId != "lorap") // For every vanilla book
                 __instance.txt_bookNum.text = "∞";
         }
 
@@ -22,7 +27,7 @@ namespace LORAP.Patches
         [HarmonyPostfix]
         static void RedirectBookBurn(UIInvenFeedBookSlot __instance, LorId bookId)
         {
-            if (bookId.packageId != "lorap") // For every vanilla book
+            if (!SlotDataManager.LayeredModeEnabled && bookId.packageId != "lorap") // For every vanilla book
                 __instance.remainBookNum = 20;
         }
 
@@ -33,14 +38,22 @@ namespace LORAP.Patches
         {
             LibraryFloorModel floor = LibraryModel.Instance.GetFloor(sep);
 
+            int layersBeforeBurn = PlaythruManager.LayersUnlocked;
+            bool hasPageDropBook = __instance._currentAddedBookIdList.Any(bookId =>
+                !SlotDataManager.LayeredModeEnabled || !string.IsNullOrEmpty(bookId.packageId));
+
             List<BookDropResult> list = new List<BookDropResult>();
             foreach (LorId currentAddedBookId in __instance._currentAddedBookIdList)
             {
                 list.AddRange(BookDropManager.GenerateDrops(currentAddedBookId));
             }
 
-            UIGachaEffect.instance.StartGachaProcess(sep, floor.Level);
-            UIGachaResultPopup.Instance.SetData(list, sep);
+            int layersOpened = PlaythruManager.LayersUnlocked - layersBeforeBurn;
+            if (hasPageDropBook)
+            {
+                UIGachaEffect.instance.StartGachaProcess(sep, floor.Level);
+                UIGachaResultPopup.Instance.SetData(list, sep);
+            }
 
             LibraryModel.Instance.CheckAllCards();
             LibraryModel.Instance.CheckAllEquips();
@@ -50,7 +63,51 @@ namespace LORAP.Patches
 
             SaveManager.SaveGame();
 
+            if (layersOpened > 0 && !hasPageDropBook)
+            {
+                string message = layersOpened == 1
+                    ? $"New battle layer opened ({PlaythruManager.LayersUnlocked}/{SlotDataManager.LayerCount})."
+                    : $"{layersOpened} new battle layers opened ({PlaythruManager.LayersUnlocked}/{SlotDataManager.LayerCount}).";
+                MessagePopup.ShowMessage(message);
+            }
+
             return false;
+        }
+
+        // Stop player from burning books if a book of everything is selected and there is no bundles available
+        [HarmonyPatch(typeof(UIBookPanel), nameof(UIBookPanel.ButtonDownFeedBook))]
+        [HarmonyPrefix]
+        static bool NoBoEBundle(UIBookPanel __instance)
+        {
+            int selectedBoE = __instance._currentAddedBookIdList.Count(id => id == new LorId("lorap", 123456));
+            if (selectedBoE > 0 && BookDropManager.BooksOfEverythingOpened >= SlotDataManager.BoERequiredTotal)
+            {
+                MessagePopup.ShowMessage("You have read everything.");
+                return false;
+            }
+
+            int availableBoEBundles = PlaythruManager.GetUnlockedBoEBundleLimit()
+                - BookDropManager.BooksOfEverythingOpened;
+            if (selectedBoE > Math.Max(0, availableBoEBundles))
+            {
+                string message = availableBoEBundles <= 0
+                    ? "No unread Book of Everything chapters are available currently."
+                    : $"Only {availableBoEBundles} unread Book of Everything chapters are available.";
+                MessagePopup.ShowMessage(message);
+                return false;
+            }
+
+            if (SlotDataManager.LayeredModeEnabled)
+            {
+                int selectedVanillaBooks = __instance._currentAddedBookIdList.Count(id => string.IsNullOrEmpty(id.packageId));
+                if (selectedVanillaBooks > PlaythruManager.GetUnlockableLayerCount())
+                {
+                    MessagePopup.ShowMessage(PlaythruManager.GetLayerUnlockBlockMessage());
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         // Change the way contents of the books are shown in order to show random pages from BOE and show custom pools of pages
@@ -80,13 +137,14 @@ namespace LORAP.Patches
                 return false;
             }
 
+            //--- Book Requirements progression is likely gonna be removed, remove this when it's time
             if (BookDropManager.BookDrops.ContainsKey(dropBookInfo.id))
             {
                 var drops = BookDropManager.BookDrops[dropBookInfo.id];
-
+            
                 List<UIRewardBookData> list = new List<UIRewardBookData>();
                 List<UIRewardCardData> list2 = new List<UIRewardCardData>();
-
+            
                 foreach (var d in drops)
                 {
                     if (d.type == DropItemType.Card)
@@ -94,7 +152,7 @@ namespace LORAP.Patches
                     else if (d.type == DropItemType.Equip)
                         list.Add(new UIRewardBookData(BookXmlList.Instance.GetData(d.id), 1, 0));
                 }
-
+            
                 __instance.rewardItemList.SetItemsData(list, list2);
             }
 
@@ -102,6 +160,7 @@ namespace LORAP.Patches
             __instance.img_BookIcon.color = Color.white;
             __instance.img_BookIcon.sprite = dropBookInfo.bookIcon;
             __instance.img_BookIconGlow.sprite = dropBookInfo.bookIconGlow;
+            //---
 
             return false;
         }
