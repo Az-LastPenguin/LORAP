@@ -154,14 +154,14 @@ namespace LORAP.Patches
         static bool ReceptionEnd(StageController __instance)
         {
             StageController controller = __instance;
-            Debug.Log("D");
+            //Debug.Log("D");
             StageModel stageModel = controller.GetStageModel();
             StageWaveModel wave = controller._stageModel.GetWave(controller._currentWave);
             StageLibraryFloorModel stageFloorModel = controller._stageModel.GetFloor(controller._currentFloor);
 
             if (controller._forceFloorChange)
             {
-                Debug.Log("E");
+                //Debug.Log("E");
                 BattleManagerUI.Instance.ui_TargetArrow.ActiveTargetParent(on: false);
                 BattleManagerUI.Instance.ui_TargetArrow.ClearCloneArrows();
                 BattleManagerUI.Instance.ui_emotionInfoBar.targetingToggle.SetDefault();
@@ -192,7 +192,7 @@ namespace LORAP.Patches
             }
             else if (stageModel.GetFrontAvailableWave() == null || stageModel.GetFrontAvailableFloor() == null)
             {
-                Debug.Log("C");
+                //Debug.Log("C");
                 bool won = stageModel.GetFrontAvailableWave() == null;
 
                 controller.battleState = BattleState.None;
@@ -218,7 +218,7 @@ namespace LORAP.Patches
                         SaveManager.SaveGame();
                         break;
                     default:
-                        Debug.Log("A");
+                        //Debug.Log("A"); // TODO: Fix a bug somewhere here...
                         GameSceneManager.Instance.ActivateUIController();
                         UI.UIController.Instance.CallUIPhase(UIPhase.BattleResult);
 
@@ -242,7 +242,7 @@ namespace LORAP.Patches
             }
             else
             {
-                Debug.Log("B");
+                //Debug.Log("B");
                 controller.battleState = BattleState.Setting;
 
                 if (wave.IsUnavailable())
