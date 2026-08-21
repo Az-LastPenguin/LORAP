@@ -1,4 +1,5 @@
 using LORAP.Archipelago;
+using LORAP.CustomUI.Components;
 using LORAP.Utils;
 using System;
 using System.Collections.Generic;
@@ -9,7 +10,7 @@ using UnityEngine.UI;
 
 namespace LORAP.Gameplay
 {
-    internal static class ContentManager
+    internal static class ContentManager // TODO: Separate Map / Stage / Abno&Ego pages into different classes // TODO: This whole fucking class needs a refactor god motherfucking damn it
     {
         private class MapNode
         {
@@ -20,24 +21,33 @@ namespace LORAP.Gameplay
             public float Y = 0;
         }
 
-        private static UIStoryProgressIconSlot MapIconTemplate;
-        private static GameObject LineTemplate;
-        private static UIBlockChapterAlarm SphereSeparatorTemplate;
-
-        private const float SphereSeparatorGap = 230f;
-        private static readonly Vector2 SphereSeparatorOffset = new Vector2(-70f, -115f);
+        private const float SphereSeparatorGap = 300f;
+        private static readonly Vector2 SphereSeparatorOffset = new Vector2(0f,-10f);
         private const float FirstSphereSeparatorExtraDown = 100f;
 
-        private static List<MapNode> MapNodes = new List<MapNode>();
+        private static Dictionary<SephirahType, int> EnsembleFloorToStage = new Dictionary<SephirahType, int>()
+        {
+            [SephirahType.Malkuth] = 70001,
+            [SephirahType.Yesod] = 70002,
+            [SephirahType.Hod] = 70003,
+            [SephirahType.Netzach] = 70004,
+            [SephirahType.Tiphereth] = 70005,
+            [SephirahType.Gebura] = 70006,
+            [SephirahType.Chesed] = 70007,
+            [SephirahType.Binah] = 70008,
+            [SephirahType.Hokma] = 70009,
+            [SephirahType.Keter] = 70010,
+        };
+
+
+        private static UIStoryProgressIconSlot MapIconTemplate;
+        private static GameObject LineTemplate;
+        private static GameObject ChapterSeparatorTemplate = AssetBundleHelper.GetAsset("ChapterSeparator");
+
         private static List<GameObject> NodeLines = new List<GameObject>();
-        private static List<GameObject> SphereSeparators = new List<GameObject>();
-        private static Dictionary<int, TextMeshProUGUI> SphereSeparatorLabels = new Dictionary<int, TextMeshProUGUI>();
-
-        private static Dictionary<SephirahType, int> EnsembleFloorToStage = new Dictionary<SephirahType, int>();
-
+        internal static List<ChapterSeparator> ChapterSeparators = new List<ChapterSeparator>();
 
         internal static Dictionary<int, DropBookXmlInfo> CustomBooks = new Dictionary<int, DropBookXmlInfo>();
-
 
         private static List<EmotionCardXmlInfo> AbnoPageInitialList;
 
@@ -51,18 +61,31 @@ namespace LORAP.Gameplay
             AbnoPageInitialList = EmotionCardXmlList.Instance._list.ToList();
             EGOPageInitialList = EmotionEgoXmlList.Instance._list.ToList();
 
-            // Init UI Utils
-            UIUtils.Init();
-
-            // Initialize Custom UI
-            //APConnectWindow.Init();
-            //APChatWindow.Init();
-            //MessagePopup.Init();
-            //AbnoEgoPagePopup.Init();
-            //APClientWindow.Init();
-
             // Modify some parts of the game
             ApplyMapChanges();
+
+            // Add names for realization stages so map doesn't show them all as "Unknown" (yay hardcoding)
+            Dictionary<int, string> stageNames = new Dictionary<int, string>()
+            {
+                [201005] = $"{SephirahType.Malkuth.FloorName()} Realization",
+                [202005] = $"{SephirahType.Yesod.FloorName()} Realization",
+                [203005] = $"{SephirahType.Hod.FloorName()} Realization",
+                [204005] = $"{SephirahType.Netzach.FloorName()} Realization",
+                [205005] = $"{SephirahType.Tiphereth.FloorName()} Realization",
+                [206005] = $"{SephirahType.Gebura.FloorName()} Realization",
+                [207005] = $"{SephirahType.Chesed.FloorName()} Realization",
+                [208004] = $"{SephirahType.Binah.FloorName()} Realization",
+                [209004] = $"{SephirahType.Hokma.FloorName()} Realization",
+
+                [210005] = $"{SephirahType.Keter.FloorName()} Realization",
+                [210006] = $"{SephirahType.Keter.FloorName()} Realization",
+                [210007] = $"{SephirahType.Keter.FloorName()} Realization",
+                [210008] = $"{SephirahType.Keter.FloorName()} Realization",
+                [210009] = $"{SephirahType.Keter.FloorName()} Realization",
+            };
+
+            foreach (KeyValuePair<int, string> pair in stageNames) // I do it this way so it doesn't throw an error due to 210005-210009 names already existing
+                StageNameXmlList._instance._dictionary[pair.Key] = pair.Value;
 
             // Add BOE and Booster Pack to book list
             CreateCustomBook(123456, "Book of Everything", "prog");
@@ -73,17 +96,15 @@ namespace LORAP.Gameplay
         {
             Debug.Log("[LORAP] Applying Map Changes");
 
-            UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
+            UIStoryProgressPanel MapPanel = UIControlManager.Instance.GetInvitationPanel().InvCenterStoryPanel;
 
             // Save an icon to later use as a template and hide it
             MapIconTemplate = MapPanel.iconList.First();
             LineTemplate = MapIconTemplate.connectLineList.First();
+            LineTemplate.SetActive(false);
             MapIconTemplate.connectLineList.Clear();
             MapPanel.iconList.Remove(MapIconTemplate);
             MapIconTemplate.SetActiveStory(false);
-
-            // Borrow a vanilla chapter divider and reuse it for the sphere headers.
-            SphereSeparatorTemplate = MapPanel.blockChapterList.FirstOrDefault();
 
             // Clear vanilla map
             foreach (UIStoryProgressIconSlot icon in MapPanel.iconList)
@@ -108,9 +129,6 @@ namespace LORAP.Gameplay
             }
 
             MapPanel.iconList.Clear();
-
-            // Hide chapter shortcuts from map
-            MapPanel.gradeFilter.transform.Find("[Rect]ToggleList").gameObject.SetActive(false);
         }
 
         internal static void SetupRunContent()
@@ -123,11 +141,9 @@ namespace LORAP.Gameplay
 
             ShuffleEGOPages();
 
-            PrepareSuppressions();
+            PrepareStages();
 
             PrepareMap();
-
-            PrepareStages();
         }
 
         private static void ShuffleAbnoPages()
@@ -386,10 +402,91 @@ namespace LORAP.Gameplay
             EmotionEgoXmlList.Instance._list = shuffledEGO;
         }
 
-        private static void PrepareSuppressions()
+        private static void PrepareStages()
         {
-            Debug.Log("[LORAP] Preparing Suppressions and Realizations");
+            Debug.Log("[LORAP] Preparing different Stages");
 
+            // Reset Ensemble floors & Shuffle Ensemble floors if needed
+            List<int> ensembleStages = EnsembleFloorToStage.Values.ToList();
+            if (SettingsManager.ShuffleEnsembleFloors)
+            {
+                System.Random rng = GameUtils.CreateRandom("ensemble_shuffle");
+                ensembleStages.Shuffle(rng);
+            }
+
+            foreach (SephirahType seph in GameUtils.FloorSephs)
+            {
+                StageClassInfo stage = StageClassInfoList.Instance.GetData(ensembleStages[(int)seph - 1]);
+                stage.floorOnlyList.Clear();
+                stage.floorOnlyList.Add(seph);
+            }
+
+            // Make stages require books if needed
+            foreach (BattleNode node in SlotDataManager.BattleTree.Nodes.Values) // TODO: Write a manager to reset game data (so i don't have to save anything and reset manually)
+            {
+                StageClassInfo info = StageClassInfoList.Instance.GetData(node.Id);
+                if (info == null)
+                    continue;
+
+                info.invitationInfo.combine = StageCombineType.BookRecipe;
+
+                if (node.Kind == BattleNodeKind.Reception)
+                {
+                    info.invitationInfo.needsBooks = SlotDataManager.ReceptionBookRequirements.ContainsKey(node.Id)
+                        ? SlotDataManager.ReceptionBookRequirements[node.Id].Select(b => new LorId(b)).ToList()
+                        : new List<LorId>();
+                }
+                else
+                {
+                    List<LorId> requirements = new List<LorId>();
+
+                    int stageIndex = SlotDataManager.AbnoFightOrder[node.AssignedFloor].IndexOf(node.Id);
+                    if (SlotDataManager.AbnoBookRequirements[node.AssignedFloor].Count > stageIndex)
+                        requirements = SlotDataManager.AbnoBookRequirements[node.AssignedFloor][stageIndex].Select(b => new LorId(b)).ToList();
+
+                    info.invitationInfo.needsBooks = requirements;
+
+                    // If this was the last stage of keter realization, also make same requirements for every other stage of it
+                    if (node.Id == 210009)
+                    {
+                        for (int i = 210005; i <= 210008; i++)
+                        {
+                            StageClassInfo keterInfo = StageClassInfoList.Instance.GetData(i);
+                            keterInfo.invitationInfo.needsBooks = requirements;
+                        }
+                    }
+                }
+            }
+
+            // Make fake BattleNodes for I-IV stages of Keter Realization so that it can ACTUALLY FUCKING WORK
+            //BattleNode lastKeterNode = SlotDataManager.BattleTree.GetNodeById(210009);
+            //if (lastKeterNode == null)
+            //    return;
+            //
+            //for (int i = 210005; i <= 210008; i++)
+            //{
+            //    BattleNode keterNode = new BattleNode()
+            //    {
+            //        Key = $"stage:{i}",
+            //        Id = i,
+            //        Name = "Keter Realization {i}",
+            //        Kind = BattleNodeKind.Stage,
+            //        Chapter = lastKeterNode.Chapter,
+            //        Sphere = lastKeterNode.Sphere,
+            //        SphereLayer = lastKeterNode.SphereLayer,
+            //        GlobalLayer = lastKeterNode.GlobalLayer,
+            //        RequiredLibrarians = lastKeterNode.RequiredLibrarians,
+            //        AssignedFloor = lastKeterNode.AssignedFloor,
+            //    };
+            //
+            //    SlotDataManager.BattleTree.Nodes[keterNode.Key] = keterNode;
+            //    foreach (BattleNode prev in SlotDataManager.BattleTree.GetPrevNodesById(210009))
+            //    {
+            //        prev.Next.Add(keterNode.Key);
+            //    }
+            //}
+
+            // Make floor stages based on received abno fight order
             List<FloorLevelXmlInfo> floorLevels = new List<FloorLevelXmlInfo>();
 
             foreach ((SephirahType seph, List<int> abnos) in SlotDataManager.AbnoFightOrder.Select(p => (p.Key, p.Value)))
@@ -431,36 +528,9 @@ namespace LORAP.Gameplay
 
             Debug.Log("[LORAP/MAP] Preparing Map");
 
-            // Reset Ensemble floors & Shuffle Ensemble floors if needed
-            EnsembleFloorToStage = new Dictionary<SephirahType, int>()
-            {
-                [SephirahType.Malkuth] = 70001,
-                [SephirahType.Yesod] = 70002,
-                [SephirahType.Hod] = 70003,
-                [SephirahType.Netzach] = 70004,
-                [SephirahType.Tiphereth] = 70005,
-                [SephirahType.Gebura] = 70006,
-                [SephirahType.Chesed] = 70007,
-                [SephirahType.Binah] = 70008,
-                [SephirahType.Hokma] = 70009,
-                [SephirahType.Keter] = 70010,
-            };
-            if (SettingsManager.ShuffleEnsembleFloors)
-            {
-                List<int> values = EnsembleFloorToStage.Values.ToList();
-                System.Random Random = GameUtils.CreateRandom("ensemble_shuffle");
-                foreach (SephirahType seph in EnsembleFloorToStage.Keys.ToList())
-                {
-                    EnsembleFloorToStage[seph] = values.TakeRandom(Random);
-                    StageClassInfo stage = StageClassInfoList.Instance.GetData(EnsembleFloorToStage[seph]);
-                    stage.floorOnlyList.Clear();
-                    stage.floorOnlyList.Add(seph);
-                }
-            }
-
             // Convert BattleNodes into MapNodes for convenience
-            MapNodes = SlotDataManager.BattleTree.Nodes.Values.Select(n => new MapNode() { Key = n.Key }).ToList();
-            Dictionary<string, MapNode> mapNodeByKey = MapNodes.ToDictionary(n => n.Key, n => n);
+            List<MapNode> mapNodes = SlotDataManager.BattleTree.Nodes.Values.Select(n => new MapNode() { Key = n.Key }).ToList();
+            Dictionary<string, MapNode> mapNodeByKey = mapNodes.ToDictionary(n => n.Key, n => n);
             foreach (BattleNode bNode in SlotDataManager.BattleTree.Nodes.Values)
             {
                 MapNode mNode = mapNodeByKey[bNode.Key];
@@ -468,12 +538,120 @@ namespace LORAP.Gameplay
                 mNode.Prev.AddRange(mapNodeByKey.Values.Where(n => n.Next.Contains(mNode)));
             }
 
+            // Depending on the selected Progression more, we prepare the map differently.
+            if (SettingsManager.RunProgressionMode == ProgressionMode.BattleGraph)
+            {
+                CreateGraphUsingSugiyama(ref mapNodes, ref mapNodeByKey);
+            }
+            else
+            {
+                CreateLayeredGraph(ref mapNodes, ref mapNodeByKey);
+            }
+
+            Debug.Log("[LORAP/MAP] Finalizing Map");
+
+            // Space out nodes in every chapter in order to make space for separators
+            AddChapterSpacing(mapNodes, mapNodeByKey);
+
+            // Before rendering, place endogal receptions in a cool way (Yeah i know, hardcoding this doesn't look that good but oh well)
+            MapNode oliverNode = mapNodeByKey["reception:60002"];
+            oliverNode.Next.Clear();
+
+            Vector2 endgoalPos = new Vector2(oliverNode.X, oliverNode.Y);
+            endgoalPos += new Vector2(0, mapNodes.Max(n => n.Y) - oliverNode.Y + 220);
+
+            MapNode spacingDummy = new MapNode()
+            {
+                Key = $"dummy_spacing",
+                Prev = new List<MapNode>() { oliverNode },
+                X = endgoalPos.x,
+                Y = endgoalPos.y,
+            };
+
+            oliverNode.Next.Add(spacingDummy);
+
+            mapNodes.Add(spacingDummy);
+
+            // Place every endgoal except for Distorted Ensemble
+            Dictionary<int, Vector2> EndgoalPositions = new Dictionary<int, Vector2>()
+            {
+                [60003] = new Vector2(-240, -110),
+                [210009] = new Vector2(-240, 110),
+                [60004] = new Vector2(240, 0),
+            };
+
+            foreach (var pair in EndgoalPositions)
+            {
+                string key = $"endgoal:{pair.Key}";
+                if (!mapNodeByKey.TryGetValue(key, out MapNode endgoalNode))
+                    continue;
+
+                endgoalNode.X = spacingDummy.X + pair.Value.x;
+                endgoalNode.Y = spacingDummy.Y + pair.Value.y;
+
+                spacingDummy.Next.Add(endgoalNode);
+            }
+
+            // Place Distorted Ensemble in the shape of tree of life
+            Dictionary<SephirahType, Vector2> DEPositions = new Dictionary<SephirahType, Vector2>()
+            {
+                [SephirahType.Malkuth]   = new Vector2(0, 240),
+                [SephirahType.Yesod]     = new Vector2(0, 460),
+                [SephirahType.Hod]       = new Vector2(-250, 670),
+                [SephirahType.Netzach]   = new Vector2(250, 670),
+                [SephirahType.Tiphereth] = new Vector2(0, 870),
+                [SephirahType.Gebura]    = new Vector2(-250, 1070),
+                [SephirahType.Chesed]    = new Vector2(250, 1070),
+                [SephirahType.Binah]     = new Vector2(-250, 1320),
+                [SephirahType.Hokma]     = new Vector2(250, 1320),
+                [SephirahType.Keter]     = new Vector2(0, 1470),
+            };
+            Dictionary<SephirahType, List<SephirahType>> DELinks = new Dictionary<SephirahType, List<SephirahType>>()
+            {
+                [SephirahType.Malkuth]   = new List<SephirahType>() { SephirahType.Hod, SephirahType.Yesod, SephirahType.Netzach },
+                [SephirahType.Yesod]     = new List<SephirahType>() { SephirahType.Hod, SephirahType.Netzach, SephirahType.Tiphereth },
+                [SephirahType.Hod]       = new List<SephirahType>() { SephirahType.Tiphereth, SephirahType.Gebura },
+                [SephirahType.Netzach]   = new List<SephirahType>() { SephirahType.Tiphereth, SephirahType.Chesed },
+                [SephirahType.Tiphereth] = new List<SephirahType>() { SephirahType.Gebura, SephirahType.Chesed, SephirahType.Keter },
+                [SephirahType.Gebura]    = new List<SephirahType>() { SephirahType.Binah, SephirahType.Hokma },
+                [SephirahType.Chesed]    = new List<SephirahType>() { SephirahType.Binah, SephirahType.Hokma },
+                [SephirahType.Binah]     = new List<SephirahType>() { SephirahType.Keter },
+                [SephirahType.Hokma]     = new List<SephirahType>() { SephirahType.Keter },
+                [SephirahType.Keter]     = new List<SephirahType>() { },
+            };
+
+            if (SettingsManager.Endgoals.GetValue().Contains(Endgoal.ReverberationEnsemble))
+            {
+                foreach (var pair in DEPositions)
+                {
+                    string key = $"endgoal:{EnsembleFloorToStage[pair.Key]}";
+
+                    MapNode node = mapNodeByKey[key];
+                    node.X = spacingDummy.X + pair.Value.x;
+                    node.Y = spacingDummy.Y + pair.Value.y;
+
+                    foreach (SephirahType seph in DELinks[pair.Key])
+                    {
+                        node.Next.Add(mapNodeByKey[$"endgoal:{EnsembleFloorToStage[seph]}"]);
+                    }
+                }
+
+                spacingDummy.Next.Add(mapNodeByKey[$"endgoal:{EnsembleFloorToStage[SephirahType.Malkuth]}"]);
+            }
+
+            // Render the graph
+            RenderGraph(mapNodes);
+        }
+
+        private static void CreateGraphUsingSugiyama(ref List<MapNode> mapNodes, ref Dictionary<string, MapNode> mapNodeByKey)
+        {
             // Create a graph using Sugiyama network
-            Debug.Log("[LORAP] Graph Creation Step 1");
+            Debug.Log("[LORAP/MAP] Creating graph using Sugiyama");
+
             // Step 1.1 Is skipped because reception tree is always a DAG.
             // Step 1.2 Divide all nodes into layers such that if node A is in layer x, then next node B is in layer x+1
             // BattleNodes are topologically sorted by the server already we just get to use them
-            foreach (MapNode node in MapNodes)
+            foreach (MapNode node in mapNodes)
             {
                 foreach (MapNode next in node.Next)
                 {
@@ -481,9 +659,9 @@ namespace LORAP.Gameplay
                         next.Y = node.Y + 220f;
                 }
             }
-            
+
             // Step 1.3 Make the tree into a "proper hierarchy" by inserting dummy nodes in the skipped layers
-            foreach (MapNode node in MapNodes.ToList())
+            foreach (MapNode node in mapNodes.ToList())
             {
                 foreach (MapNode next in node.Next.ToList())
                 {
@@ -491,7 +669,7 @@ namespace LORAP.Gameplay
 
                     if (diff <= 0)
                         continue;
-                    
+
                     node.Next.Remove(next);
                     next.Prev.Remove(node);
 
@@ -505,24 +683,24 @@ namespace LORAP.Gameplay
                             Prev = new List<MapNode>() { prev },
                             Y = prev.Y + 220f,
                         };
-                        MapNodes.Add(dummy);
+                        mapNodes.Add(dummy);
                         mapNodeByKey[dummy.Key] = dummy;
                         prev.Next.Add(dummy);
                         prev = dummy;
                         i++;
                     }
-            
+
                     prev.Next.Add(next);
                     next.Prev.Add(prev);
                 }
             }
 
             // Place nodes inside levels
-            List<float> levels = MapNodes.Select(n => n.Y).Distinct().OrderBy(n => n).ToList();
+            List<float> levels = mapNodes.Select(n => n.Y).Distinct().OrderBy(n => n).ToList();
 
             foreach (float level in levels)
             {
-                List<MapNode> nodesAtLevel = MapNodes.Where(n => n.Y == level).ToList();
+                List<MapNode> nodesAtLevel = mapNodes.Where(n => n.Y == level).ToList();
 
                 for (int i = 0; i < nodesAtLevel.Count; i++)
                 {
@@ -530,7 +708,6 @@ namespace LORAP.Gameplay
                 }
             }
 
-            Debug.Log("[LORAP] Graph Creation Step 2");
             // Step 2 Minimize edge crossing using the Down-Up Procedure (25 passes)
             for (int _ = 0; _ < 25; _++)
             {
@@ -540,7 +717,7 @@ namespace LORAP.Gameplay
                 do
                 {
                     // Get nodes at level i-1
-                    List<MapNode> nextNodes = MapNodes.Where(n => n.Y == levels[i - 1]).OrderBy(n => n.X).ToList();
+                    List<MapNode> nextNodes = mapNodes.Where(n => n.Y == levels[i - 1]).OrderBy(n => n.X).ToList();
 
                     //Calculate barycenters for every node at that level
                     Dictionary<MapNode, float> barycenters = new Dictionary<MapNode, float>();
@@ -572,7 +749,7 @@ namespace LORAP.Gameplay
                 do
                 {
                     // Get nodes at level i+1
-                    List<MapNode> nextNodes = MapNodes.Where(n => n.Y == levels[i + 1]).OrderBy(n => n.X).ToList();
+                    List<MapNode> nextNodes = mapNodes.Where(n => n.Y == levels[i + 1]).OrderBy(n => n.X).ToList();
 
                     //Calculate barycenters for every node at that level
                     Dictionary<MapNode, float> barycenters = new Dictionary<MapNode, float>();
@@ -595,116 +772,76 @@ namespace LORAP.Gameplay
                 } while (i < levels.Count - 1);
             }
 
-            Debug.Log("[LORAP] Graph Creation Step 3");
-            // Step 3 Make the graph real
-            // Before rendering, place endogal receptions in a cool way (Yeah i know, hardcoding this doesn't look that good but oh well)
-            MapNode oliverNode = mapNodeByKey["reception:60002"];
-            oliverNode.Next.Clear();
-
-            Vector2 endgoalPos = new Vector2(oliverNode.X, oliverNode.Y);
-            endgoalPos += new Vector2(0, MapNodes.Max(n => n.Y) - oliverNode.Y + 220);
-
-            MapNode spacingDummy = new MapNode()
+            // Add a dummy node so that rats reception has a tail line
+            MapNode ratsNode = mapNodeByKey["reception:2"];
+            MapNode tailDummy = new MapNode()
             {
-                Key = $"dummy_spacing",
-                Prev = new List<MapNode>() { oliverNode },
-                X = endgoalPos.x,
-                Y = endgoalPos.y,
+                Key = $"dummy_tail",
+                Next = new List<MapNode>() { ratsNode },
+                X = ratsNode.X,
+                Y = ratsNode.Y - 1000,
             };
-
-            oliverNode.Next.Add(spacingDummy);
-
-            MapNodes.Add(spacingDummy);
-
-            Dictionary<int, Vector2> BSDEPositions = new Dictionary<int, Vector2>()
-            {
-                [60003] = new Vector2(-240, 220),
-                [60004] = new Vector2(240, 220),
-            };
-            Dictionary<SephirahType, Vector2> DEPositions = new Dictionary<SephirahType, Vector2>()
-            {
-                [SephirahType.Malkuth]   = new Vector2(0, 240),
-                [SephirahType.Yesod]     = new Vector2(0, 460),
-                [SephirahType.Hod]       = new Vector2(-250, 670),
-                [SephirahType.Netzach]   = new Vector2(250, 670),
-                [SephirahType.Tiphereth] = new Vector2(0, 870),
-                [SephirahType.Gebura]    = new Vector2(-250, 1070),
-                [SephirahType.Chesed]    = new Vector2(250, 1070),
-                [SephirahType.Binah]     = new Vector2(-250, 1320),
-                [SephirahType.Hokma]     = new Vector2(250, 1320),
-                [SephirahType.Keter]     = new Vector2(0, 1470),
-            };
-            Dictionary<SephirahType, List<SephirahType>> DELinks = new Dictionary<SephirahType, List<SephirahType>>()
-            {
-                [SephirahType.Malkuth]   = new List<SephirahType>() { SephirahType.Hod, SephirahType.Yesod, SephirahType.Netzach },
-                [SephirahType.Yesod]     = new List<SephirahType>() { SephirahType.Hod, SephirahType.Netzach, SephirahType.Tiphereth },
-                [SephirahType.Hod]       = new List<SephirahType>() { SephirahType.Tiphereth, SephirahType.Gebura },
-                [SephirahType.Netzach]   = new List<SephirahType>() { SephirahType.Tiphereth, SephirahType.Chesed },
-                [SephirahType.Tiphereth] = new List<SephirahType>() { SephirahType.Gebura, SephirahType.Chesed, SephirahType.Keter },
-                [SephirahType.Gebura]    = new List<SephirahType>() { SephirahType.Binah, SephirahType.Hokma },
-                [SephirahType.Chesed]    = new List<SephirahType>() { SephirahType.Binah, SephirahType.Hokma },
-                [SephirahType.Binah]     = new List<SephirahType>() { SephirahType.Keter },
-                [SephirahType.Hokma]     = new List<SephirahType>() { SephirahType.Keter },
-                [SephirahType.Keter]     = new List<SephirahType>() { },
-            };
-
-            if (SettingsManager.Endgoals.GetValue().Contains(Endgoal.BlackSilence) || SettingsManager.Endgoals.GetValue().Contains(Endgoal.DistortedEnsemble))
-            {
-                foreach (var pair in BSDEPositions)
-                {
-                    string key = $"endgoal:{pair.Key}";
-                    if (!mapNodeByKey.ContainsKey(key))
-                        continue;
-
-                    MapNode node = mapNodeByKey[key];
-                    node.X = endgoalPos.x + pair.Value.x;
-                    node.Y = endgoalPos.y + pair.Value.y;
-
-                    spacingDummy.Next.Add(node);
-                }
-            }
-
-            bool hasKeterGoal = SettingsManager.Endgoals.GetValue().Contains(Endgoal.KeterRealization);
-            if (hasKeterGoal && mapNodeByKey.TryGetValue("endgoal:210009", out MapNode keterGoalNode))
-            {
-                keterGoalNode.X = oliverNode.X;
-                keterGoalNode.Y = oliverNode.Y + 220f;
-                oliverNode.Next.Add(keterGoalNode);
-            }
-
-            if (SettingsManager.Endgoals.GetValue().Contains(Endgoal.ReverberationEnsemble))
-            {
-                float ensembleVerticalOffset = hasKeterGoal ? 220f : 0f;
-                foreach (var pair in DEPositions)
-                {
-                    string key = $"endgoal:{EnsembleFloorToStage[pair.Key]}";
-                    if (!mapNodeByKey.ContainsKey(key))
-                        continue;
-
-                    MapNode node = mapNodeByKey[key];
-                    node.X = oliverNode.X + pair.Value.x;
-                    node.Y = oliverNode.Y + pair.Value.y + ensembleVerticalOffset;
-
-                    foreach (SephirahType seph in DELinks[pair.Key])
-                    {
-                        node.Next.Add(mapNodeByKey[$"endgoal:{EnsembleFloorToStage[seph]}"]);
-                    }
-                }
-
-                spacingDummy.Next.Add(mapNodeByKey[$"endgoal:{EnsembleFloorToStage[SephirahType.Malkuth]}"]);
-            }
-
-            AddSphereSpacing(mapNodeByKey);
-
-            // Render the graph
-            RenderGraph();
+            mapNodes.Add(tailDummy);
         }
 
-        private static void AddSphereSpacing(Dictionary<string, MapNode> mapNodeByKey)
+        private static void CreateLayeredGraph(ref List<MapNode> mapNodes, ref Dictionary<string, MapNode> mapNodeByKey)
         {
-            if (!SlotDataManager.LayeredModeEnabled)
-                return;
+            List<List<MapNode>> layers = mapNodes.Where(n => SlotDataManager.BattleTree.GetNode(n.Key).Sphere <= 7).GroupBy(n => SlotDataManager.BattleTree.GetNode(n.Key).GlobalLayer).Select(l => l.ToList()).ToList();
+            MapNode prevCenterDummy = new MapNode()
+            {
+                Key = $"dummy_center_start",
+                Y = -1000f,
+            };
+            mapNodes.Add(prevCenterDummy);
+            for (int layer = 0; layer < layers.Count; layer++)
+            {
+                List<MapNode> nodes = layers[layer];
 
+                // Remove nodes' connections & Place all nodes in the layer
+                for (int node = 0; node < nodes.Count; node++)
+                {
+                    nodes[node].Prev.Clear();
+                    nodes[node].Next.Clear();
+
+                    nodes[node].Y = 220f * layer;
+                    nodes[node].X = (-120f * (nodes.Count - 1)) + (240f * node);
+                }
+
+                // Place dummy nodes for lines
+                MapNode centerDummy = new MapNode() {
+                    Key = $"dummy_center_{layer}",
+                    Y = 220f * layer,
+                };
+                prevCenterDummy.Next.Add(centerDummy);
+                centerDummy.Prev.Add(prevCenterDummy);
+                mapNodes.Add(centerDummy);
+
+                MapNode leftDummy = new MapNode()
+                {
+                    Key = $"dummy_left_{layer}",
+                    Y = 220f * layer,
+                    X = -120f * (nodes.Count - 1),
+                };
+                leftDummy.Prev.Add(centerDummy);
+                centerDummy.Next.Add(leftDummy);
+                mapNodes.Add(leftDummy);
+
+                MapNode rightDummy = new MapNode()
+                {
+                    Key = $"dummy_right_{layer}",
+                    Y = 220f * layer,
+                    X = 120f * (nodes.Count - 1),
+                };
+                rightDummy.Prev.Add(centerDummy);
+                centerDummy.Next.Add(rightDummy);
+                mapNodes.Add(rightDummy);
+
+                prevCenterDummy = centerDummy;
+            }
+        }
+
+        private static void AddChapterSpacing(List<MapNode> mapNodes, Dictionary<string, MapNode> mapNodeByKey)
+        {
             List<float> sphereStarts = SlotDataManager.BattleTree.Nodes.Values
                 .Where(node => node.Sphere > 1 && node.Sphere <= 7 && mapNodeByKey.ContainsKey(node.Key))
                 .GroupBy(node => node.Sphere)
@@ -713,7 +850,7 @@ namespace LORAP.Gameplay
                 .ToList();
 
             // Give every sphere header some breathing room, including the first one.
-            foreach (MapNode node in MapNodes)
+            foreach (MapNode node in mapNodes)
             {
                 float originalY = node.Y;
                 int boundariesBeforeNode = sphereStarts.Count(start => originalY >= start);
@@ -721,10 +858,10 @@ namespace LORAP.Gameplay
             }
         }
 
-        private static void RenderGraph()
+        private static void RenderGraph(List<MapNode> mapNodes)
         {
-            UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
-            Dictionary<string, MapNode> mapNodeByKey = MapNodes.ToDictionary(n => n.Key, n => n);
+            UIStoryProgressPanel MapPanel = UIControlManager.Instance.GetInvitationPanel().InvCenterStoryPanel;
+            Dictionary<string, MapNode> mapNodeByKey = mapNodes.ToDictionary(n => n.Key, n => n);
 
             // Clear the map
             foreach (UIStoryProgressIconSlot icon in MapPanel.iconList)
@@ -740,18 +877,17 @@ namespace LORAP.Gameplay
             }
             NodeLines.Clear();
 
-            foreach (GameObject separator in SphereSeparators)
+            foreach (ChapterSeparator separator in ChapterSeparators)
             {
-                GameObject.Destroy(separator);
+                GameObject.Destroy(separator.gameObject);
             }
-            SphereSeparators.Clear();
-            SphereSeparatorLabels.Clear();
+            ChapterSeparators.Clear();
 
             // Now, render allat
             Dictionary<string, UIStoryProgressIconSlot> icons = new Dictionary<string, UIStoryProgressIconSlot>();
 
             // Connect nodes
-            foreach (MapNode node in MapNodes)
+            foreach (MapNode node in mapNodes)
             {
                 foreach (MapNode nextNode in node.Next)
                 {
@@ -770,10 +906,10 @@ namespace LORAP.Gameplay
             }
 
             // Lines first, headers next. Otherwise the spaghetti lines win the header text.
-            RenderSphereSeparators(MapPanel, mapNodeByKey);
+            RenderChapterSeparators(MapPanel, mapNodeByKey);
 
             // Place nodes on the map
-            foreach (MapNode mapNode in MapNodes)
+            foreach (MapNode mapNode in mapNodes)
             {
                 if (mapNode.Key.Contains("dummy_"))
                     continue;
@@ -793,14 +929,11 @@ namespace LORAP.Gameplay
                 icons[node.Key] = PlaceBattleNodeOnMap(node.Id, storyline, position);
             }
 
-            ResizeMap();
+            ResizeMap(mapNodes);
         }
 
-        private static void RenderSphereSeparators(UIStoryProgressPanel mapPanel, Dictionary<string, MapNode> mapNodeByKey)
+        private static void RenderChapterSeparators(UIStoryProgressPanel mapPanel, Dictionary<string, MapNode> mapNodeByKey)
         {
-            if (!SlotDataManager.LayeredModeEnabled || SphereSeparatorTemplate.root == null)
-                return;
-
             List<(int Sphere, float MinY, float MaxY)> sphereRanges = SlotDataManager.BattleTree.Nodes.Values
                 .Where(node => node.Sphere > 0 && node.Sphere <= 7 && mapNodeByKey.ContainsKey(node.Key))
                 .GroupBy(node => node.Sphere)
@@ -818,146 +951,30 @@ namespace LORAP.Gameplay
                     ? minY + 30f
                     : (sphereRanges[index - 1].MaxY + minY) / 2f + 140f;
 
-                GameObject separator = UnityEngine.Object.Instantiate(
-                    SphereSeparatorTemplate.root,
-                    mapPanel.chapterList.First().transform);
-
-                separator.name = $"LORAP_SphereSeparator_{sphere}";
+                GameObject separator = GameObject.Instantiate(ChapterSeparatorTemplate, mapPanel.chapterList.First().transform);
                 separator.transform.localPosition = new Vector3(
                     SphereSeparatorOffset.x,
                     separatorY + SphereSeparatorOffset.y - (sphere == 1 ? FirstSphereSeparatorExtraDown : 0f),
                     0f);
-                separator.transform.localRotation = Quaternion.identity;
-                separator.SetActive(true);
 
-                DisableClonedTemplateImage(separator, SphereSeparatorTemplate.img_icon);
-                DisableClonedTemplateImage(separator, SphereSeparatorTemplate.img_iconglow);
-                DisableClonedSeparatorTail(separator);
+                ChapterSeparator sepComponent = separator.AddComponent<ChapterSeparator>();
+                sepComponent.Chapter = sphere;
 
-                TextMeshProUGUI label = separator
-                    .GetComponentsInChildren<TextMeshProUGUI>(true)
-                    .FirstOrDefault(text => SphereSeparatorTemplate.txt_alarm != null &&
-                        text.gameObject.name == SphereSeparatorTemplate.txt_alarm.gameObject.name)
-                    ?? separator.GetComponentInChildren<TextMeshProUGUI>(true);
-
-                if (label != null)
-                {
-                    label.enableWordWrapping = false;
-                    SphereSeparatorLabels[sphere] = label;
-                }
-
-                SphereSeparators.Add(separator);
+                ChapterSeparators.Add(sepComponent);
             }
-
-            UpdateSphereSeparators();
-        }
-
-        private static void DisableClonedTemplateImage(GameObject separator, Image templateImage)
-        {
-            if (templateImage == null)
-                return;
-
-            Image clonedImage = separator
-                .GetComponentsInChildren<Image>(true)
-                .FirstOrDefault(image => image.gameObject.name == templateImage.gameObject.name);
-
-            if (clonedImage != null)
-                clonedImage.gameObject.SetActive(false);
-        }
-
-        private static void DisableClonedSeparatorTail(GameObject separator)
-        {
-            Image tail = separator.GetComponentsInChildren<Image>(true)
-                .FirstOrDefault(image => image.gameObject.name == "[Image]Line (2)" || image.sprite?.name == "SettingPartNew_68");
-
-            if (tail != null)
-                tail.gameObject.SetActive(false);
         }
 
         internal static void UpdateSphereSeparators()
         {
-            foreach (var entry in SphereSeparatorLabels)
-            {
-                if (entry.Value == null)
-                    continue;
-
-                entry.Value.text = $"Sphere {entry.Key} - {SlotDataManager.GetSphereClearPercentage(entry.Key)}% clear";
-            }
+            foreach (ChapterSeparator separator in ChapterSeparators)
+                separator.UpdateSeparator();
         }
 
-        private static void ResizeMap()
+        private static void ResizeMap(List<MapNode> mapNodes)
         {
-            UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
+            UIStoryProgressPanel MapPanel = UIControlManager.Instance.GetInvitationPanel().InvCenterStoryPanel;
 
-            MapPanel.posRect.sizeDelta = new Vector2(MapNodes.Max(n => n.X) - MapNodes.Min(n => n.X) + 1800f, MapNodes.Max(n => n.Y) + 1800f);
-        }
-
-        private static void PrepareStages()
-        {
-            // Make stages require
-            foreach (BattleNode node in SlotDataManager.BattleTree.Nodes.Values)
-            {
-                StageClassInfo info = StageClassInfoList.Instance.GetData(node.Id);
-                if (info == null)
-                    continue;
-
-                info.invitationInfo.combine = StageCombineType.BookRecipe;
-
-                if (node.Kind == BattleNodeKind.Reception)
-                {
-                    info.invitationInfo.needsBooks = SlotDataManager.ReceptionBookRequirements.ContainsKey(node.Id)
-                        ? SlotDataManager.ReceptionBookRequirements[node.Id].Select(b => new LorId(b)).ToList()
-                        : new List<LorId>();
-                }
-                else
-                {
-                    List<LorId> requirements = new List<LorId>();
-
-                    int stageIndex = SlotDataManager.AbnoFightOrder[node.AssignedFloor].IndexOf(node.Id);
-                    if (SlotDataManager.AbnoBookRequirements[node.AssignedFloor].Count > stageIndex)
-                        requirements = SlotDataManager.AbnoBookRequirements[node.AssignedFloor][stageIndex].Select(b => new LorId(b)).ToList();
-
-                    info.invitationInfo.needsBooks = requirements;
-
-                    // If this was the last stage of keter realization, also make same requirements for every other stage of it
-                    if (node.Id == 210009)
-                    {
-                        for (int i = 210005; i <= 210008; i++)
-                        {
-                            StageClassInfo keterInfo = StageClassInfoList.Instance.GetData(i);
-                            keterInfo.invitationInfo.needsBooks = requirements;
-                        }
-                    }
-                }
-            }
-
-            // Make fake BattleNodes for I-IV stages of Keter Realization so that it can ACTUALLY FUCKING WORK
-            BattleNode lastKeterNode = SlotDataManager.BattleTree.GetNodeById(210009);
-            if (lastKeterNode == null)
-                return;
-
-            for (int i = 210005; i <= 210008; i++)
-            {
-                BattleNode keterNode = new BattleNode()
-                {
-                    Key = $"stage:{i}",
-                    Id = i,
-                    Name = "Keter Realization {i}",
-                    Kind = BattleNodeKind.Stage,
-                    Chapter = lastKeterNode.Chapter,
-                    Sphere = lastKeterNode.Sphere,
-                    SphereLayer = lastKeterNode.SphereLayer,
-                    GlobalLayer = lastKeterNode.GlobalLayer,
-                    RequiredLibrarians = lastKeterNode.RequiredLibrarians,
-                    AssignedFloor = lastKeterNode.AssignedFloor,
-                };
-
-                SlotDataManager.BattleTree.Nodes[keterNode.Key] = keterNode;
-                foreach (BattleNode prev in SlotDataManager.BattleTree.GetPrevNodesById(210009))
-                {
-                    prev.Next.Add(keterNode.Key);
-                }
-            }
+            MapPanel.posRect.sizeDelta = new Vector2(mapNodes.Max(n => n.X) - mapNodes.Min(n => n.X) + 1800f, mapNodes.Max(n => n.Y) + 1800f);
         }
 
         private static DropBookXmlInfo CreateCustomBook(int id, string name, string icon)
@@ -977,7 +994,7 @@ namespace LORAP.Gameplay
 
         private static UIStoryProgressIconSlot PlaceBattleNodeOnMap(int id, UIStoryLine story, Vector3 position)
         {
-            UIStoryProgressPanel MapPanel = (UI.UIController.Instance.GetUIPanel(UIPanelType.Invitation) as UIInvitationPanel).InvCenterStoryPanel;
+            UIStoryProgressPanel MapPanel = UIControlManager.Instance.GetInvitationPanel().InvCenterStoryPanel;
 
             var icon = GameObject.Instantiate(MapIconTemplate, MapPanel.chapterList.First().transform);
             icon.transform.localPosition = position;

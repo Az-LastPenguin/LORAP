@@ -34,15 +34,13 @@ namespace LORAP.Patches
                 return false;
             }
 
-            List<Endgoal> selectedEndgoals = SettingsManager.Endgoals.GetValue();
-            bool receptionEndgoal =
-                battleNode.Id == 60003 && selectedEndgoals.Contains(Endgoal.BlackSilence)
-                || battleNode.Id == 60004 && selectedEndgoals.Contains(Endgoal.DistortedEnsemble)
-                || battleNode.Id >= 70001 && battleNode.Id <= 70010
-                    && selectedEndgoals.Contains(Endgoal.ReverberationEnsemble);
-            bool keterEndgoal = selectedEndgoals.Contains(Endgoal.KeterRealization)
-                && battleNode.Id >= 210005 && battleNode.Id <= 210009;
-            if (SettingsManager.EndgoalsAlwaysUnlocked && (receptionEndgoal || keterEndgoal))
+            if (SettingsManager.EndgoalsAlwaysUnlocked && GameUtils.IsStageEndgoal(battleNode.Id))
+            {
+                __result = StoryState.Clear;
+                return false;
+            }
+
+            if (LocationManager.StageHasHintedItems(stageId))
             {
                 __result = StoryState.Clear;
                 return false;
@@ -83,8 +81,8 @@ namespace LORAP.Patches
                 List<StageClassInfo> storyData = icon.storyData;
 
                 // If it's one of the stages stage of keter realization, make it show the current realization stage player is at
-                if (storyData[0]._id >= 210005 && storyData[0]._id <= 210009)
-                    storyData = new List<StageClassInfo>() { StageClassInfoList.Instance.GetData(210005 + PlaythruManager.KeterRealizationStage) };
+                //if (storyData[0]._id >= 210005 && storyData[0]._id <= 210009)
+                //    storyData = new List<StageClassInfo>() { StageClassInfoList.Instance.GetData(210005 + PlaythruManager.KeterRealizationStage) };
 
                 // If the stage is not on the randomized tree, hide it entirely
                 BattleNode battleNode = SlotDataManager.BattleTree?.GetNodeById(storyData[0]._id);
@@ -100,14 +98,14 @@ namespace LORAP.Patches
                 if (battleNode.Kind == BattleNodeKind.Stage && storyData[0].currentState == StoryState.Clear)
                     icon.SetIcon(UIUtils.GetFloorIconSet(storyData[0]._id, battleNode.AssignedFloor));
 
-                // If it's an ensemble stage and i can be seen, set its icon
+                // If it's an ensemble stage and it can be seen, set its icon
                 if (storyData[0]._id >= 70001 && storyData[0]._id <= 70010 && storyData[0].currentState == StoryState.Clear)
                     icon.SetIcon(UISpriteDataManager.instance.floorIconSet[(int)storyData[0].floorOnlyList[0]]);
 
                 // Show the icon on the map
                 icon.SetActiveStory(true);
 
-                // Show status of the stage (Complete/Clearable)
+                // Show status of the stage (Complete/Clearable/Hinted)
                 if (icon.transform.Find("Status") == null)
                     continue;
 
@@ -117,6 +115,15 @@ namespace LORAP.Patches
                 if (PlaythruManager.IsStageComplete(storyData[0]._id) && LocationManager.GetUncheckedStageLocations(storyData[0]._id).Count == 0)
                 {
                     status.GetComponent<Image>().sprite = UIUtils.CheckmarkSprite;
+                    status.SetActive(true);
+
+                    continue;
+                }
+
+                // If the stage contains a check that is hinted, not collected and is not marked as "Avoid"
+                if (LocationManager.StageHasPriorityHintedItems(storyData[0]._id))
+                {
+                    status.GetComponent<Image>().sprite = UIUtils.StarSprite;
                     status.SetActive(true);
 
                     continue;
@@ -148,7 +155,7 @@ namespace LORAP.Patches
         static void OnSelectStage(UIInvitationStageInfoPanel __instance, StageClassInfo stage, UIStoryLine story = UIStoryLine.None)
         {
             // If it's one of the keter realization stages make sure to get the last one since it's the only one that technically has items
-            List<long> receptionLocations = LocationManager.GetUncheckedStageLocations(stage._id >= 210005 && stage._id <= 210008 ? 210009 : stage._id);
+            List<long> receptionLocations = LocationManager.GetUncheckedStageLocations(stage._id);
             List<long> locationsWithHints = receptionLocations.Where(l => LocationManager.KnownHints.Any(h => !h.Found && h.LocationId == l)).ToList();
 
             // Scout all unchecked locations (they're already known, but this time we scout for hints.)
@@ -216,6 +223,37 @@ namespace LORAP.Patches
 
 
 
+        // Make game show current keter realization stage enemies when selecting keter realization
+        [HarmonyPatch(typeof(UIEnemyCharacterListPanel), nameof(UIEnemyCharacterListPanel.SetEnemyInfo))]
+        [HarmonyPrefix]
+        static bool SetEnemyListKeterStage(UIEnemyCharacterListPanel __instance, ref StageClassInfo data)
+        {
+            if (data?._id == 210009)
+                data = StageClassInfoList.Instance.GetData(210005 + PlaythruManager.KeterRealizationStage);
+
+            return true;
+        }
+
+
+
+        // Make chapter goto buttons work with new separators
+        [HarmonyPatch(typeof(UIStoryProgressPanel), nameof(UIStoryProgressPanel.MoveChapterTarget), typeof(int), typeof(bool))]
+        [HarmonyPrefix]
+        static bool SetEnemyListKeterStage(UIStoryProgressPanel __instance, int chapter, bool immediately)
+        {
+            __instance.scroll_viewPort.inertia = false;
+
+            __instance.SetRectSize(.5f, immediately);
+            __instance.defaultZoom = .5f;
+            __instance.SetRectPos(new Vector2(0, -ContentManager.ChapterSeparators[chapter - 1].transform.localPosition.y - 1200f));
+
+            __instance.scroll_viewPort.inertia = true;
+
+            return false;
+        }
+
+
+
         // Change icon of the stage for floor stages on right invitation panel
         [HarmonyPatch(typeof(UIInvitationRightMainPanel), nameof(UIInvitationRightMainPanel.SetLowerIconData))]
         [HarmonyPostfix]
@@ -262,12 +300,18 @@ namespace LORAP.Patches
                 return false;
             }
 
-            // If it's one of the keter stages, make sure to get the last one instead since only it technically exists on the tree
             BattleNode battleNode = SlotDataManager.BattleTree?.GetNodeById(stage._id);
             if (battleNode == null || battleNode.Kind != BattleNodeKind.Stage)
                 return true;
 
-            __instance.confirmAreaRoot.SetActive(false);
+            if (!battleNode.AreBattleParentsComplete())
+            {
+                MessagePopup.Instance.ShowMessage($"You haven't reached this stage yet.");
+
+                UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Cancel);
+
+                return false;
+            }
 
             if (!battleNode.AssignedFloor.IsOpen())
             {
@@ -278,6 +322,7 @@ namespace LORAP.Patches
                 return false;
             }
 
+            __instance.confirmAreaRoot.SetActive(false);
             UISoundManager.instance.PlayEffectSound(UISoundType.Ui_Invite);
 
             UI.UIController UIController = UI.UIController.Instance;
@@ -286,8 +331,11 @@ namespace LORAP.Patches
             UI.UIController.Instance.SetCurrentSephirah(battleNode.AssignedFloor);
 
             // If it's one of the stages of keter realization, we start it differently
-            if (stage._id >= 210005 && stage._id <= 210009)
+            if (stage._id == 210009)
             {
+                // Get actual keter stage the player should be at
+                stage = StageClassInfoList.Instance.GetData(210005 + PlaythruManager.KeterRealizationStage);
+
                 // StartEndContentsStage
                 UIController.SetStageInfo(stage);
 

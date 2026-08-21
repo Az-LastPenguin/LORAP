@@ -18,7 +18,10 @@ namespace LORAP.CustomUI
 
         internal static void Init()
         {
-            // Init mod's custom UI
+            // Init UI Utils
+            UIUtils.Init();
+
+            // Init LORAP's custom UI
             // APChatWindow (Archipelago Live Feed)
             GameObject.Instantiate(APChatWindowPrefab).AddComponent<APChatWindow>();
 
@@ -31,7 +34,7 @@ namespace LORAP.CustomUI
             // AbnoEgoPagePopup (Received Abno/EGO pages)
             UIGetAbnormalityPanel.instance.gameObject.AddComponent<AbnoEgoPagePopup>();
 
-            // APClientWindow (Archipelago Client & LORAP Settings & Debug window)
+            // APClientWindow (Archipelago Client, LORAP Settings & Debug window)
             GameObject.Instantiate(APClienntWindowPrefab).AddComponent<APClientWindow>();
 
             // Apply other general UI changes

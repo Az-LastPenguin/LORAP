@@ -20,7 +20,7 @@ namespace LORAP.Playthru
 
     internal static class PlaythruManager
     {
-        // Gameplay stuff
+        // Run-specific stuff
         internal static Dictionary<SephirahType, FloorInfo> Floors = Enum.GetValues(typeof(SephirahType)).Cast<SephirahType>().ToDictionary(k => k, v => new FloorInfo());
         internal static List<int> StagesCompleted = new List<int>();
 
@@ -398,7 +398,7 @@ namespace LORAP.Playthru
             if (targetSphere != previousSphere)
             {
                 if (!SlotDataManager.IsSphereClearEnough(previousSphere))
-                    return "Clear more battles before opening the next layer.";
+                    return "Unlock access to the next chapter before opening more layers.";
             }
 
             return "Not enough layers can be opened yet.";

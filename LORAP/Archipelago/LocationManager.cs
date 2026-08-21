@@ -222,5 +222,19 @@ namespace LORAP.Archipelago
         {
             return $"{(pair.Receiving == SessionManager.CurrentSlot ? "" : $"{SessionManager.Players.GetPlayerName(pair.Receiving)}'s")} {pair.Item.Name}";
         }
+
+        internal static bool StageHasHintedItems(int stageId)
+        {
+            List<long> locations = GetStageLocations(stageId);
+
+            return KnownHints.Any(h => locations.Contains(h.LocationId));
+        }
+
+        internal static bool StageHasPriorityHintedItems(int stageId)
+        {
+            List<long> locations = GetStageLocations(stageId);
+
+            return KnownHints.Any(h => locations.Contains(h.LocationId) && (h.Status == HintStatus.Priority));
+        }
     }
 }

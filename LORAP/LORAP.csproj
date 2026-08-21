@@ -124,6 +124,7 @@
     <Compile Include="Archipelago\ItemManager.cs" />
     <Compile Include="Archipelago\LocationManager.cs" />
     <Compile Include="Archipelago\SessionManager.cs" />
+    <Compile Include="UI\Components\ChapterSeparator.cs" />
     <Compile Include="UI\Components\SettingVariants\BoolSettingComponent.cs" />
     <Compile Include="UI\Components\ClientTabs\DebugTab.cs" />
     <Compile Include="UI\Components\ClientTabs\SettingsTab.cs" />

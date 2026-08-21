@@ -135,10 +135,11 @@ namespace LORAP.Patches
         [HarmonyPrefix]
         static bool FakeClear(StageClearInfoListModel __instance, LorId stageId, ref int __result)
         {
-            if (stageId.id == 210005 || stageId.id == 210006 || stageId.id == 210007 || stageId.id == 210008 || stageId.id == 210009)
-            {
-                return true;
-            }
+            // TODO: Check if this is still needed
+            //if (stageId.id == 210005 || stageId.id == 210006 || stageId.id == 210007 || stageId.id == 210008 || stageId.id == 210009)
+            //{
+            //    return true;
+            //}
 
             __result = 1;
 

@@ -43,8 +43,8 @@ namespace LORAP.CustomUI.Components.ClientTabs
             KeterStage.text = $"Keter Stage: {PlaythruManager.KeterRealizationStage}";
             MaxEmotion.text = $"Max Emotion: {PlaythruManager.MaxEmotionLevel}";
             BoostersOpened.text = $"Booster Packs Opened: {BookDropManager.BoosterPacksOpened}";
-            BoEOpened.text = $"Books of Everything Opened: {""}";
-            BoEAvailable.text = $"Books of Everything Available: {""}";
+            BoEOpened.text = $"Books of Everything Opened: {BookDropManager.BoosterPacksOpened}";
+            BoEAvailable.text = $"Books of Everything Available: {PlaythruManager.GetUnlockedBoEBundleLimit()}";
             ModVersion.text = $"Mod Version: {LORAP.ModVersion}";
             ItemsReceived.text = $"Items Received: {ItemManager.ItemsReceived}";
         }

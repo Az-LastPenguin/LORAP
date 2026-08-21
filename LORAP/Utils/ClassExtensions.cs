@@ -68,7 +68,7 @@ namespace LORAP.Utils
 
 
         // Convert integer to a roman number (0 to 100) (Stolen)
-        internal static string ToRoman(this int num)
+        internal static string ToRoman(this int num) // TODO: Make better (refactor)
         {
             if (num <= 0)
                 return "0";
@@ -81,14 +81,14 @@ namespace LORAP.Utils
             return num switch
             {
                 int n when n >= 100 => "C+",
-                int n when n >= 90 => "XC" + ToRoman(num - 90),
-                int n when n >= 50 => "L" + ToRoman(num - 50),
-                int n when n >= 40 => "XL" + ToRoman(num - 40),
-                int n when n >= 10 => "X" + ToRoman(num - 10),
-                int n when n >= 9 => "IX" + ToRoman(num - 9),
-                int n when n >= 5 => "V" + ToRoman(num - 5),
-                int n when n >= 4 => "IV" + ToRoman(num - 4),
-                int n when n >= 1 => "I" + ToRoman(num - 1),
+                int n when n >= 90 => "XC" + ToRomanRecursive(num - 90),
+                int n when n >= 50 => "L" + ToRomanRecursive(num - 50),
+                int n when n >= 40 => "XL" + ToRomanRecursive(num - 40),
+                int n when n >= 10 => "X" + ToRomanRecursive(num - 10),
+                int n when n >= 9 => "IX" + ToRomanRecursive(num - 9),
+                int n when n >= 5 => "V" + ToRomanRecursive(num - 5),
+                int n when n >= 4 => "IV" + ToRomanRecursive(num - 4),
+                int n when n >= 1 => "I" + ToRomanRecursive(num - 1),
                 _ => "",
             };
         }

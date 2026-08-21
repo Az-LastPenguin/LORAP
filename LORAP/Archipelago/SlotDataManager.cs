@@ -1,5 +1,4 @@
 using LORAP.Playthru;
-using LORAP.Gameplay;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -110,7 +109,7 @@ namespace LORAP.Archipelago
 
         internal static bool LayeredModeEnabled => SettingsManager.RunProgressionMode == ProgressionMode.Layered;
 
-        internal static int GetBoEBundlesRequiredThroughSphere(int sphere)
+        internal static int GetBoEBundlesRequiredThroughSphere(int sphere) // TODO: Move to Playthru
         {
             if (BoEBundlesCumulative == null || sphere <= 0)
                 return 0;
@@ -128,7 +127,7 @@ namespace LORAP.Archipelago
             if (sphereNodes.Count == 0)
                 return true;
 
-            int percentage = Math.Max(0, Math.Min(100, SettingsManager.SphereClearPercentage.GetValue()));
+            int percentage = Math.Max(0, Math.Min(100, SettingsManager.ChapterClearPercentage.GetValue()));
             int required = (int)Math.Ceiling(sphereNodes.Count * percentage / 100.0);
             if (required <= 0)
                 return true;
@@ -150,7 +149,7 @@ namespace LORAP.Archipelago
             return (int)Math.Floor(cleared * 100.0 / sphereNodes.Count);
         }
 
-        private static List<BattleNode> GetLogicalSphereNodes(int sphere)
+        internal static List<BattleNode> GetLogicalSphereNodes(int sphere)
         {
             // 210005-210008 only exist on the client, so don't count them as four extra battles in the sphere.
             return BattleTree.Nodes.Values

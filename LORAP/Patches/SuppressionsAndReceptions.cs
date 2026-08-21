@@ -97,11 +97,10 @@ namespace LORAP.Patches
                             break;
                         // Black Silence V
                         case 210009:
+                            PlaythruManager.ProgressKeterRealization();
+                            goto default;
                         // Every other Suppression/Realization
                         default:
-                            if (stageModel.ClassInfo._id == 210009)
-                                PlaythruManager.ProgressKeterRealization();
-
                             Debug.Log("[LORAP] Floor Stage Complete");
                             LocationManager.SendStageChecks(stageId);
 
@@ -155,13 +154,14 @@ namespace LORAP.Patches
         static bool ReceptionEnd(StageController __instance)
         {
             StageController controller = __instance;
-
+            Debug.Log("D");
             StageModel stageModel = controller.GetStageModel();
             StageWaveModel wave = controller._stageModel.GetWave(controller._currentWave);
             StageLibraryFloorModel stageFloorModel = controller._stageModel.GetFloor(controller._currentFloor);
 
             if (controller._forceFloorChange)
             {
+                Debug.Log("E");
                 BattleManagerUI.Instance.ui_TargetArrow.ActiveTargetParent(on: false);
                 BattleManagerUI.Instance.ui_TargetArrow.ClearCloneArrows();
                 BattleManagerUI.Instance.ui_emotionInfoBar.targetingToggle.SetDefault();
@@ -192,6 +192,7 @@ namespace LORAP.Patches
             }
             else if (stageModel.GetFrontAvailableWave() == null || stageModel.GetFrontAvailableFloor() == null)
             {
+                Debug.Log("C");
                 bool won = stageModel.GetFrontAvailableWave() == null;
 
                 controller.battleState = BattleState.None;
@@ -217,6 +218,7 @@ namespace LORAP.Patches
                         SaveManager.SaveGame();
                         break;
                     default:
+                        Debug.Log("A");
                         GameSceneManager.Instance.ActivateUIController();
                         UI.UIController.Instance.CallUIPhase(UIPhase.BattleResult);
 
@@ -240,6 +242,7 @@ namespace LORAP.Patches
             }
             else
             {
+                Debug.Log("B");
                 controller.battleState = BattleState.Setting;
 
                 if (wave.IsUnavailable())
@@ -580,7 +583,7 @@ namespace LORAP.Patches
                 .InsertAndAdvance(Transpilers.EmitDelegate<Func<bool>>(() => {
                     int id = StageController.Instance.GetStageModel().ClassInfo.id.id;
 
-                    return id == 210005 || id == 210006 || id == 210007 || id == 210008 || id == 210009;
+                    return GameUtils.EndgoalStages[Endgoal.KeterRealization].Contains(id);
                 }))
                 .SetOpcodeAndAdvance(OpCodes.Brfalse_S);
 

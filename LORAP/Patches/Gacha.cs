@@ -68,7 +68,7 @@ namespace LORAP.Patches
                 string message = layersOpened == 1
                     ? $"New battle layer opened ({PlaythruManager.LayersUnlocked}/{SlotDataManager.LayerCount})."
                     : $"{layersOpened} new battle layers opened ({PlaythruManager.LayersUnlocked}/{SlotDataManager.LayerCount}).";
-                MessagePopup.ShowMessage(message);
+                MessagePopup.Instance.ShowMessage(message);
             }
 
             return false;
@@ -82,7 +82,7 @@ namespace LORAP.Patches
             int selectedBoE = __instance._currentAddedBookIdList.Count(id => id == new LorId("lorap", 123456));
             if (selectedBoE > 0 && BookDropManager.BooksOfEverythingOpened >= SlotDataManager.BoERequiredTotal)
             {
-                MessagePopup.ShowMessage("You have read everything.");
+                MessagePopup.Instance.ShowMessage("You have read everything.");
                 return false;
             }
 
@@ -93,7 +93,7 @@ namespace LORAP.Patches
                 string message = availableBoEBundles <= 0
                     ? "No unread Book of Everything chapters are available currently."
                     : $"Only {availableBoEBundles} unread Book of Everything chapters are available.";
-                MessagePopup.ShowMessage(message);
+                MessagePopup.Instance.ShowMessage(message);
                 return false;
             }
 
@@ -102,7 +102,7 @@ namespace LORAP.Patches
                 int selectedVanillaBooks = __instance._currentAddedBookIdList.Count(id => string.IsNullOrEmpty(id.packageId));
                 if (selectedVanillaBooks > PlaythruManager.GetUnlockableLayerCount())
                 {
-                    MessagePopup.ShowMessage(PlaythruManager.GetLayerUnlockBlockMessage());
+                    MessagePopup.Instance.ShowMessage(PlaythruManager.GetLayerUnlockBlockMessage());
                     return false;
                 }
             }

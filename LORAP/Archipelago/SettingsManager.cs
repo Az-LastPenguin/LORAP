@@ -53,7 +53,7 @@ namespace LORAP.Archipelago
 
     internal enum ProgressionMode
     {
-        BookRequirements,
+        BattleGraph,
         Layered
     }
 
@@ -195,7 +195,7 @@ namespace LORAP.Archipelago
         /* Battle Graph and Progression */
         internal static Setting<ProgressionMode> RunProgressionMode = new Setting<ProgressionMode>("Progression Mode", "progression_mode");
 
-        internal static Setting<int> SphereClearPercentage = new Setting<int>("Sphere Clear Percentage", "sphere_clear_percentage");
+        internal static Setting<int> ChapterClearPercentage = new Setting<int>("Chapter Clear Percentage", "chapter_clear_percentage");
 
         internal static Setting<bool> EnemiesTurnIntoChecks = new Setting<bool>("Enemies Turn Into Checks", "enemies_turn_into_checks", true);
 
@@ -222,7 +222,7 @@ namespace LORAP.Archipelago
         // Remove exclusiveness here
 
         /* Deathlink */
-        internal static Setting<bool> Deathlink = new Setting<bool>("Deathlink", "deathlink", true);
+        internal static Setting<bool> Deathlink = new Setting<bool>("Deathlink", "deathlink", true, desc: "Everything Deathlink related is NOT IMPLEMENTED!");
 
         internal static Setting<DeathlinkAction> IncomingDeathlink = new Setting<DeathlinkAction>("Incoming Deathlink", "incoming_deathlink", true);
 

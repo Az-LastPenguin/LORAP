@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using UI;
 using UnityEngine;
@@ -13,7 +14,17 @@ namespace LORAP.Utils
     // Some other general stuff
     internal static class GameUtils
     {
-        internal static List<SephirahType> FloorSephs = new List<SephirahType>()
+        internal static readonly Dictionary<Endgoal, List<int>> EndgoalStages = new Dictionary<Endgoal, List<int>>()
+        {
+            [Endgoal.BlackSilence] = new List<int>() { 60003 },
+            [Endgoal.DistortedEnsemble] = new List<int>() { 60004 },
+            [Endgoal.ReverberationEnsemble] = new List<int>() { 70001, 70002, 70003, 70004, 70005, 70006, 70007, 70008, 70009, 70010 },
+            [Endgoal.KeterRealization] = new List<int>() { 210005, 210006, 210007, 210008, 210009 },
+        };
+
+        internal static readonly List<int> AllEndgoalIds = EndgoalStages.Values.ToList().SelectMany(l => l).ToList();
+
+        internal static readonly List<SephirahType> FloorSephs = new List<SephirahType>()
         {
             SephirahType.Malkuth,
             SephirahType.Yesod,
@@ -26,6 +37,10 @@ namespace LORAP.Utils
             SephirahType.Hokma,
             SephirahType.Keter,
         };
+
+        internal static bool IsStageEndgoal(int stageId) => AllEndgoalIds.Contains(stageId);
+
+        internal static Endgoal GetStageEndgoal(int stageId) => EndgoalStages.FirstOrDefault(p => p.Value.Contains(stageId)).Key;
 
         private static uint MixHash(uint hash, int value)
         {
@@ -146,6 +161,7 @@ namespace LORAP.Utils
 
         internal static Sprite CheckmarkSprite = AssetBundleHelper.GetAsset<Sprite>("checkmark");
         internal static Sprite ExclamationSprite = AssetBundleHelper.GetAsset<Sprite>("exclamation");
+        internal static Sprite StarSprite = AssetBundleHelper.GetAsset<Sprite>("star");
 
         internal static Sprite Transparent = AssetBundleHelper.GetAsset<Sprite>("Transparent");
 
@@ -200,8 +216,8 @@ namespace LORAP.Utils
 
         internal static UIIconManager.IconSet GetFloorIconSet(int stageId, SephirahType seph)
         {
-            if (stageId >= 210005 && stageId <= 210008)
-                stageId = 210009;
+            //if (stageId >= 210005 && stageId <= 210008)
+            //    stageId = 210009;
 
             return FloorTierSprites[seph][SlotDataManager.AbnoFightOrder[seph].IndexOf(stageId)];
         }
