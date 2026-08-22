@@ -32,7 +32,7 @@ namespace LORAP.CustomUI
             GameObject.Instantiate(MessagePopupPrefab).AddComponent<MessagePopup>();
 
             // AbnoEgoPagePopup (Received Abno/EGO pages)
-            UIGetAbnormalityPanel.instance.gameObject.AddComponent<AbnoEgoPagePopup>();
+            new GameObject("AbnoPagePopupController").AddComponent<AbnoEgoPagePopup>();
 
             // APClientWindow (Archipelago Client, LORAP Settings & Debug window)
             GameObject.Instantiate(APClienntWindowPrefab).AddComponent<APClientWindow>();
