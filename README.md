@@ -28,8 +28,8 @@ Planned and existing features, not in any particular order:
 - [ ] Randomized enemies
 - [ ] Filler/Trap items
 - [ ] Pop Tracker (?)
-- [ ] In-game Text (and more!) Client
-- [ ] YAML Generator
+- [X] In-game Text (and more!) Client
+- [ ] YAML Generator (?)
 - [ ] Extended player/AI capabilities (Acquiring enemies pages, enemies using abno pages and etc.)
 
 ## How do i..? / Can i..?
@@ -50,9 +50,9 @@ You can send screenshots and descriptions of bugs you found in the aforementione
 I'm using [SemVer 2.0.0](https://semver.org) as a guideline:
 X.Y.Z-W where
 - X is major version which is only incremented when something really big is added/changed which breaks literally everything. (Like entire mod rewrites. Likely will never happen after 1.0 release)
-- Y is the minor version which is only incremented when something not that big is added/changed which can pontentially break something and require a new run. 
-- X is the patch version which is incremented when really small fixes/updates are made.
-- W is the testing version, denoted by a greek alphabet letter. Testing versions happen when i want to get feedback to things i'm doing but don't want to release an update to workshop just yet. Next letter is picked from the alphabet every time a testing version update is released.
+- Y is the minor version which is only incremented when something not that big is added/changed which can pontentially break something and requires a new run. 
+- X is the patch version which is incremented when fixes or really smalupdates are made.
+- W is the in-dev/testing version, denoted by a greek alphabet letter with possible additional numbers after a dot. These versions get released to everyone when i want to get feedback for things i'm doing but don't want to release an update to workshop just yet.
 
 ## Compiling and Contributing
 If you wish to try and build this beast (not in a good way) of a spaghetti monster:
