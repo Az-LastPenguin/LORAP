@@ -28,8 +28,8 @@ Planned and existing features, not in any particular order:
 - [ ] Randomized enemies
 - [ ] Filler/Trap items
 - [ ] Pop Tracker (?)
-- [ ] In-game Text (and more!) Client
-- [ ] YAML Generator
+- [X] In-game Text (and more!) Client
+- [ ] YAML Generator (?)
 - [ ] Extended player/AI capabilities (Acquiring enemies pages, enemies using abno pages and etc.)
 
 ## How do i..? / Can i..?
