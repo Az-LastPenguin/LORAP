@@ -47,6 +47,7 @@ namespace LORAP.CustomUI
 
             // Make Esc menu above everything else
             GameObject.Find("[Canvas][Script]PopupCanvas").GetComponent<Canvas>().sortingOrder = 90;
+            GameObject.Find("[Canvas][Script]PopupCanvas/[Prefab]PopupAlarm").GetComponent<Canvas>().sortingOrder = 102;
             GameObject.Find("[Canvas][Script]PopupCanvas/[Script]PopupManager").transform.SetAsLastSibling();
             Canvas newCanvas = GameObject.Find("[Canvas][Script]PopupCanvas/[Script]PopupManager").AddComponent<Canvas>();
             newCanvas.overrideSorting = true;
@@ -194,7 +195,7 @@ namespace LORAP.CustomUI
             GameObject textObject = apHelp.transform.Find("Title_TextMesh").gameObject;
             textObject.GetComponent<UITextDataLoader>().enabled = false;
             textObject.GetComponent<RectTransform>().sizeDelta = new Vector2(670, 30);
-            textObject.GetComponent<TextMeshProUGUI>().text = "[AP Client: Tab to Toggle]       [AP Feed: F2 to Toggle | Drag to Move | LeftCtrl + Drag to Resize]";
+            textObject.GetComponent<TextMeshProUGUI>().text = "[AP Client: F2 to Toggle]       [AP Feed: F3 to Toggle | Drag to Move | LeftCtrl + Drag to Resize]";
         }
     
         internal static void RunJoinReset()

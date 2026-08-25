@@ -41,10 +41,14 @@ namespace LORAP.CustomUI.Components.ClientTabs
 
         public void UpdateTab()
         {
-            ClearHints();
+            // Emergency patch. TODO: Figure out a better way (if there even is one)
+            Timing.Instance.InvokeDelayed(() =>
+            {
+                ClearHints();
 
-            foreach (Hint hint in LocationManager.KnownHints)
-                AddHint(hint);
+                foreach (Hint hint in LocationManager.KnownHints)
+                    AddHint(hint);
+            }, 0);
         }
 
         public void ResetTab()

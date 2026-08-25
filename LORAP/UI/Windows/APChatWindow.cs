@@ -36,7 +36,7 @@ namespace LORAP.CustomUI
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.F2))
+            if (Input.GetKeyDown(KeyCode.F3))
             {
                 if (Panel.activeSelf)
                     Close();
