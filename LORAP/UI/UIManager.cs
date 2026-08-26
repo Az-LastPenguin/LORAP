@@ -47,7 +47,7 @@ namespace LORAP.CustomUI
 
             // Make Esc menu above everything else
             GameObject.Find("[Canvas][Script]PopupCanvas").GetComponent<Canvas>().sortingOrder = 90;
-            GameObject.Find("[Canvas][Script]PopupCanvas/[Prefab]PopupAlarm").GetComponent<Canvas>().sortingOrder = 102;
+            UIAlarmPopup.instance.gameObject.GetComponent<Canvas>().sortingOrder = 102;
             GameObject.Find("[Canvas][Script]PopupCanvas/[Script]PopupManager").transform.SetAsLastSibling();
             Canvas newCanvas = GameObject.Find("[Canvas][Script]PopupCanvas/[Script]PopupManager").AddComponent<Canvas>();
             newCanvas.overrideSorting = true;
